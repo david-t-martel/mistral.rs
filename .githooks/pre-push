@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+#
+# Pre-push hook for mistral.rs
+# This hook runs before pushing to ensure all tests pass
+#
+# To install: run scripts/setup/install-git-hooks.ps1
+#
+# Exit codes:
+#   0 - Success
+#   1 - Failure (blocks push)
+
+set -e
+
+echo "============================================"
+echo "Pre-push: Running comprehensive checks"
+echo "============================================"
+
+# Change to repository root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if Makefile exists
+if [ ! -f "Makefile" ]; then
+    echo -e "${RED}ERROR: Makefile not found!${NC}"
+    exit 1
+fi
+
+echo ""
+echo "[1/3] Running test suite..."
+echo "----------------------------------------"
+
+# Run all tests
+if make test; then
+    echo -e "${GREEN}✓ All tests passed${NC}"
+else
+    echo -e "${RED}✗ Tests failed${NC}"
+    echo ""
+    echo "Fix failing tests before pushing."
+    echo "Run 'make test' for detailed error messages."
+    exit 1
+fi
+
+echo ""
+echo "[2/3] Running PowerShell tests (if available)..."
+echo "----------------------------------------"
+
+# Check if PowerShell is available
+if command -v pwsh &> /dev/null; then
+    if [ -f "run-tests.ps1" ]; then
+        # Run quick PowerShell tests
+        if pwsh -File run-tests.ps1 -QuickTest -ErrorAction Stop; then
+            echo -e "${GREEN}✓ PowerShell tests passed${NC}"
+        else
+            echo -e "${YELLOW}⚠ PowerShell tests had issues (not blocking)${NC}"
+            # Don't block on PowerShell test failures
+        fi
+    else
+        echo -e "${YELLOW}⚠ run-tests.ps1 not found (skipping)${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ PowerShell not available (skipping)${NC}"
+fi
+
+echo ""
+echo "[3/3] Checking for uncommitted changes..."
+echo "----------------------------------------"
+
+# Check if there are any uncommitted changes
+if git diff --exit-code > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ No uncommitted changes${NC}"
+else
+    echo -e "${RED}✗ Uncommitted changes detected${NC}"
+    echo ""
+    echo "You have uncommitted changes. Commit or stash them before pushing."
+    echo ""
+    git status --short
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}============================================${NC}"
+echo -e "${GREEN}✓ Pre-push checks passed${NC}"
+echo -e "${GREEN}============================================${NC}"
+echo ""
+
+exit 0

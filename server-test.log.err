@@ -1,0 +1,5 @@
+error: unexpected argument '-p' found
+
+Usage: mistralrs-server.exe gguf [OPTIONS] --quantized-model-id <QUANTIZED_MODEL_ID> --quantized-filename <QUANTIZED_FILENAME>
+
+For more information, try '--help'.

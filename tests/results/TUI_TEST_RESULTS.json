@@ -1,0 +1,11 @@
+{
+  "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+  "log_lines": 1,
+  "checks_passed": 1,
+  "checks_total": 5,
+  "phase": "3A-TUI",
+  "status": "FAIL",
+  "timestamp": "2025-10-03T06:09:06.9010687-04:00",
+  "log_file": "T:\\projects\\rust-mistral\\mistral.rs\\.testlogs\\tui-test.log",
+  "duration_seconds": 0.8
+}

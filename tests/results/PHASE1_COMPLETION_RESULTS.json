@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-10-03 03:15:10",
+  "tests": {
+    "binaryVerification": {
+      "status": "PASSED",
+      "size_mb": 382.32
+    },
+    "dllDependencies": {
+      "status": "PASSED",
+      "missing": [],
+      "found": [
+        "cudart64_12.dll",
+        "cublas64_12.dll",
+        "cudnn64_9.dll"
+      ]
+    },
+    "modelVerification": {
+      "status": "PASSED",
+      "size_mb": 940.37,
+      "model": "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+    },
+    "serverStartup": {
+      "pid": 54900,
+      "status": "FAILED",
+      "error": "Process exited with code 2"
+    },
+    "gpuDetection": {
+      "status": "PASSED",
+      "output": "NVIDIA GeForce RTX 5060 Ti, 576.88, 16311 MiB"
+    }
+  },
+  "summary": {
+    "total_tests": 5,
+    "success_rate": 80.0,
+    "passed_tests": 4
+  }
+}

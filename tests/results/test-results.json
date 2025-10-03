@@ -1,0 +1,100 @@
+[
+  {
+    "Category": "Binary",
+    "Test": "File Exists",
+    "Status": "PASS",
+    "Details": "Size: 382.32 MB",
+    "Duration": 0.004093
+  },
+  {
+    "Category": "Binary",
+    "Test": "Version Check",
+    "Status": "PASS",
+    "Details": "mistralrs-server 0.6.0",
+    "Duration": 0.7754693
+  },
+  {
+    "Category": "Binary",
+    "Test": "Help Command",
+    "Status": "PASS",
+    "Details": "Help output received",
+    "Duration": 0.1179742
+  },
+  {
+    "Category": "Dependencies",
+    "Test": "CUDA/GPU",
+    "Status": "PASS",
+    "Details": "NVIDIA GeForce RTX 5060 Ti, 576.88, 16311 MiB",
+    "Duration": 0.0643612
+  },
+  {
+    "Category": "Dependencies",
+    "Test": "Bun",
+    "Status": "PASS",
+    "Details": "v1.2.21",
+    "Duration": 0.0740259
+  },
+  {
+    "Category": "Dependencies",
+    "Test": "Redis",
+    "Status": "FAIL",
+    "Details": "No response",
+    "Duration": 1.0331827
+  },
+  {
+    "Category": "Dependencies",
+    "Test": "Model File",
+    "Status": "PASS",
+    "Details": "Size: 1.59 GB",
+    "Duration": 0.0013621
+  },
+  {
+    "Category": "MCP",
+    "Test": "Memory",
+    "Status": "PASS",
+    "Details": "Server available",
+    "Duration": 0.6119491
+  },
+  {
+    "Category": "MCP",
+    "Test": "Filesystem",
+    "Status": "PASS",
+    "Details": "Server available",
+    "Duration": 0.5998272
+  },
+  {
+    "Category": "MCP",
+    "Test": "Sequential Thinking",
+    "Status": "PASS",
+    "Details": "Server available",
+    "Duration": 0.4530465
+  },
+  {
+    "Category": "MCP",
+    "Test": "GitHub",
+    "Status": "PASS",
+    "Details": "Server available",
+    "Duration": 0.4973971
+  },
+  {
+    "Category": "MCP",
+    "Test": "Fetch",
+    "Status": "PASS",
+    "Details": "Server available",
+    "Duration": 0.4618344
+  },
+  {
+    "Category": "MCP",
+    "Test": "Time",
+    "Status": "DEPRECATED",
+    "Details": "Server is deprecated",
+    "Duration": 0
+  },
+  {
+    "Category": "MCP",
+    "Test": "RAG-Redis",
+    "Status": "PASS",
+    "Details": "Binary exists",
+    "Duration": 0.0003
+  }
+]

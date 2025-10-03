@@ -1,0 +1,272 @@
+# mistral.rs - Local CUDA-Accelerated LLM Inference with MCP Tools
+
+## Purpose
+Local coding agent using mistral.rs with CUDA 12.9, Flash Attention, cuDNN 9.8, and Intel MKL.
+Integrated with 9 MCP servers for filesystem, memory, web search, database operations, and more.
+
+## Quick Start
+
+### Start Server (Basic)
+```powershell
+.\start-mistralrs.ps1
+```
+
+### Start Server (with MCP Tools)
+```powershell
+.\start-mistralrs.ps1 -EnableMCP
+```
+
+### API Endpoint
+- Base URL: `http://localhost:11434/v1`
+- OpenAI-compatible API
+- Model name: `"default"` or `"gemma-2-2b-it"`
+
+## Environment Requirements
+
+### Critical PATH Components
+**MUST PRESERVE**: `C:\Users\david\.local\bin` must remain on PATH
+
+### Runtime DLL Paths (automatically configured by start script)
+- CUDA: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin`
+- cuDNN: `C:\Program Files\NVIDIA\CUDNN\v9.8\bin\12.8`
+- Intel oneAPI: `C:\Program Files (x86)\Intel\oneAPI\2025.0\bin`
+
+### Environment Variables
+- `CUDA_PATH`: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9`
+- `CUDNN_PATH`: `C:\Program Files\NVIDIA\CUDNN\v9.8`
+- `MKLROOT`: `C:\Program Files (x86)\Intel\oneAPI\mkl\latest`
+
+## Model Configuration
+
+### Active Model
+- **Name**: Gemma 2 2B Instruct
+- **Format**: GGUF (Q4_K_M quantization)
+- **Size**: 1.59 GB
+- **Location**: `C:\codedev\llm\.models\gemma-2-2b-it-gguf\gemma-2-2b-it-Q4_K_M.gguf`
+- **Context**: 8192 tokens
+- **VRAM**: ~2-3 GB
+
+### Binary
+- **Path**: `C:\Users\david\.cargo\shared-target\release\mistralrs-server.exe`
+- **Size**: 382.32 MB
+- **Version**: 0.6.0
+- **Features**: CUDA, Flash Attention, cuDNN, MKL
+
+## MCP Tool Integration
+
+### Configuration File
+`T:\projects\rust-mistral\mistral.rs\MCP_CONFIG.json`
+
+### Available Tools (9 Servers)
+
+1. **Memory** - Persistent key-value storage across sessions
+   - Store/retrieve information between conversations
+   - Location: `C:/Users/david/.claude/memory.json`
+
+2. **Filesystem** - Local file operations
+   - Scoped to: `T:/projects/rust-mistral/mistral.rs`
+   - Read/write/list files within project directory
+
+3. **Sequential Thinking** - Step-by-step reasoning chains
+   - Multi-step problem solving
+   - Planning and decomposition
+
+4. **GitHub** - Repository and issue management
+   - Requires: `$env:GITHUB_PERSONAL_ACCESS_TOKEN`
+   - Read repos, create issues, manage PRs
+
+5. **Fetch** - HTTP requests and web data retrieval
+   - GET/POST requests
+   - Web scraping capabilities
+
+6. **Time** - Date/time operations
+   - Current time, timezone conversions
+   - Date calculations
+
+7. **Serena Claude** - Advanced reasoning wrapper
+   - Location: `T:/projects/mcp_servers/serena/scripts/mcp_server.py`
+
+8. **Python FileOps Enhanced** - Advanced file operations
+   - High-performance file I/O
+   - Pattern matching, bulk operations
+   - Location: `C:/Users/david/.claude/python_fileops`
+
+9. **RAG Redis** - Vector search and semantic retrieval
+   - Redis-backed document storage
+   - Semantic search over codebase
+   - Requires: Redis server at `redis://127.0.0.1:6379`
+
+### Tool Usage Policy
+
+**Filesystem Operations**
+- ALWAYS use Filesystem tool for reading/writing code
+- Scoped to project directory only
+- Never modify system folders
+
+**Memory Management**
+- Use Memory tool for session state and context
+- Store important decisions and context
+
+**Planning and Reasoning**
+- Use Sequential Thinking for complex multi-step tasks
+- Break down large problems
+
+**External Resources**
+- GitHub: metadata queries only unless explicitly authorized
+- Fetch: web search and API calls
+- RAG Redis: code search and documentation lookup
+
+**Safety Guardrails**
+- Never modify files outside project scope
+- Require confirmation for destructive operations
+- Always validate file paths before operations
+- Use Memory to track user preferences and constraints
+
+## API Usage Examples
+
+### Chat Completion
+```python
+import openai
+client = openai.OpenAI(
+    base_url="http://localhost:11434/v1",
+    api_key="EMPTY"
+)
+
+response = client.chat.completions.create(
+    model="default",
+    messages=[
+        {"role": "user", "content": "List files in the project root and explain the build process"}
+    ],
+    max_tokens=2000,
+    temperature=0.2
+)
+print(response.choices[0].message.content)
+```
+
+### With Tool Calling (when MCP enabled)
+```python
+# Tools are automatically available when server started with -EnableMCP
+response = client.chat.completions.create(
+    model="default",
+    messages=[
+        {"role": "user", "content": "Search the codebase for CUDA initialization and create a summary file"}
+    ]
+)
+# Model will automatically use Filesystem and RAG Redis tools
+```
+
+## Performance Characteristics
+
+### Hardware
+- GPU: NVIDIA GeForce RTX 5060 Ti (16 GB)
+- Compute Capability: 12.0 (Blackwell)
+- CUDA: 12.9
+- Driver: 576.88
+
+### Expected Performance
+- **Tokens/sec**: 30-50 tokens/sec (Gemma 2 2B Q4)
+- **Time-to-first-token**: 200-500ms
+- **VRAM usage**: 2-3 GB for model + 1-2 GB for context
+- **Max throughput**: ~16 concurrent sequences
+
+### Optimization Settings
+- Flash Attention: Enabled
+- KV Cache: FP16
+- Quantization: Q4_K_M (4-bit)
+
+## Build Information
+
+### Compilation
+- **Toolchain**: Rust 1.89.0-msvc
+- **Build time**: ~20 minutes (first build)
+- **Rebuild time**: 4-5 minutes (with sccache)
+- **Features**: cuda, flash-attn, cudnn, mkl
+- **Profile**: release (opt-level=3, lto=fat)
+
+### Build Optimizations
+- **sccache**: Enabled (cache at `T:\projects\rust-mistral\sccache-cache`)
+- **Linker**: rust-lld (30-50% faster than link.exe)
+- **Codegen**: Optimized for runtime performance
+
+## Development Workflow
+
+### Rebuild (Fast)
+```powershell
+cd T:\projects\rust-mistral\mistral.rs
+cargo build -p mistralrs-server --profile release-dev --features "cuda,flash-attn,cudnn,mkl"
+```
+
+### Check Build Cache
+```powershell
+cargo stats  # or: sccache --show-stats
+```
+
+### Configuration Files
+- `.cargo/config.toml` - Project build config
+- `MCP_CONFIG.json` - MCP server definitions
+- `start-mistralrs.ps1` - Launch script
+
+## Troubleshooting
+
+### DLL Not Found Errors
+Ensure PATH includes:
+1. `C:\Program Files\NVIDIA\CUDNN\v9.8\bin\12.8`
+2. `C:\Program Files (x86)\Intel\oneAPI\2025.0\bin`
+
+Or copy DLLs to binary directory:
+```powershell
+Copy-Item "C:\Program Files (x86)\Intel\oneAPI\2025.0\bin\*.dll" -Destination "C:\Users\david\.cargo\shared-target\release\"
+```
+
+### MCP Tools Not Working
+1. Check `bun` is installed: `bun --version`
+2. Verify Redis is running (for RAG): `redis-cli ping`
+3. Check GitHub token (for GitHub tools): `$env:GITHUB_PERSONAL_ACCESS_TOKEN`
+
+### Out of Memory (VRAM)
+- Current model uses ~2-3 GB
+- Reduce context length if needed
+- Consider Q4 or Q5 quantization
+
+## Security Considerations
+
+### File Access
+- Filesystem tool scoped to project directory
+- Python FileOps has security enabled
+- Audit logging enabled
+
+### API Security
+- Server binds to 0.0.0.0 by default (local network access)
+- No authentication by default (add reverse proxy for production)
+- Use MCP tools responsibly
+
+### Secrets
+- GitHub tokens from environment variables
+- Never log or expose secrets
+- Use secure credential storage
+
+## Maintenance
+
+### PATH Validation
+```powershell
+$env:PATH -split ';' | Select-String 'david\.local'
+# Must show: C:\Users\david\.local\bin
+```
+
+### Binary Verification
+```powershell
+& "C:\Users\david\.cargo\shared-target\release\mistralrs-server.exe" --version
+# Should show: mistralrs-server 0.6.0
+```
+
+### GPU Status
+```powershell
+nvidia-smi
+# Check VRAM usage during inference
+```
+
+## References
+- Project: `T:\projects\rust-mistral\mistral.rs`
+- Documentation: `T:\projects\rust-mistral\mistral.rs\docs\`
+- MCP Docs: `T:\projects\rust-mistral\mistral.rs\docs\MCP\README.md`
+- Canonical MCP Config: `C:\Users\david\mcp.json`

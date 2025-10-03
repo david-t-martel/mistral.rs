@@ -1,0 +1,15 @@
+{
+  "wheel_directory_exists": false,
+  "wheels_built": 0,
+  "status": "NEEDS_BUILD",
+  "pyo3_crate_present": true,
+  "timestamp": "2025-10-03T06:10:57.0639353-04:00",
+  "pyd_files": 0,
+  "features_checked": [
+    "cuda",
+    "cudnn",
+    "flash-attn",
+    "mkl"
+  ],
+  "import_test_passed": false
+}

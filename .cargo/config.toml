@@ -1,5 +1,38 @@
+# Project-specific Cargo configuration for mistral.rs
+# Optimized for CUDA builds on Windows with sccache and fast linking
+
 [build]
-rustflags = ["-C", "target-cpu=native"]
+# Use local target directory (overrides CARGO_TARGET_DIR env var)
+target-dir = "target"
+# Use sccache for compilation caching (30-80% faster rebuilds)
+rustc-wrapper = "sccache"
+# Parallel compilation jobs
+jobs = 8
+
+[env]
+# sccache configuration
+RUSTC_WRAPPER = "sccache"
+SCCACHE_DIR = "T:\\projects\\rust-mistral\\sccache-cache"
+SCCACHE_CACHE_SIZE = "20G"
+SCCACHE_IDLE_TIMEOUT = "3600"
+SCCACHE_DIRECT = "true"
+CARGO_INCREMENTAL = "0"  # Required for sccache compatibility
+
+# CUDA/cuDNN/MKL runtime paths
+CUDA_PATH = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9"
+CUDNN_PATH = "C:\\Program Files\\NVIDIA\\CUDNN\\v9.8"
+CUDNN_LIB = "C:\\Program Files\\NVIDIA\\CUDNN\\v9.8\\lib\\12.8\\x64"
+MKLROOT = "C:\\Program Files (x86)\\Intel\\oneAPI\\mkl\\latest"
+
+[target.x86_64-pc-windows-msvc]
+# Use rust-lld for 30-50% faster linking than link.exe
+linker = "rust-lld.exe"
+rustflags = [
+    "-C", "target-cpu=native",
+    "-C", "link-arg=/INCREMENTAL:NO",
+    "-C", "link-arg=/OPT:REF",
+    "-C", "link-arg=/OPT:ICF",
+]
 
 [target.aarch64-apple-darwin]
 rustflags = [
@@ -15,3 +48,42 @@ rustflags = [
 
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "target-feature=+simd128"]
+
+# Build profiles optimized for development speed
+
+[profile.release]
+# Maximum optimization for production
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = false
+strip = true
+panic = "abort"
+
+[profile.release-dev]
+# Fast release builds for development (2-3x faster compile than release)
+inherits = "release"
+opt-level = 2
+lto = "thin"
+codegen-units = 4
+debug = false
+strip = true
+
+[profile.dev]
+# Fast development builds
+opt-level = 0
+debug = 1
+incremental = false  # Required for sccache
+lto = false
+codegen-units = 256
+
+[profile.dev.package."*"]
+# Optimize dependencies in dev mode
+opt-level = 1
+
+[alias]
+# Convenient build aliases
+br = "build --release"
+brd = "build --profile release-dev"
+stats = "!sccache --show-stats"
+zero-stats = "!sccache --zero-stats"

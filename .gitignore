@@ -6,3 +6,14 @@
 .idea
 mistral.rs/
 mistralrs-web-chat/cache
+
+# Test outputs and logs
+*.log
+test-output.log
+mcp-test.log
+mcp-validation-results.json
+server.log
+
+# Temporary files
+*.tmp
+*.temp

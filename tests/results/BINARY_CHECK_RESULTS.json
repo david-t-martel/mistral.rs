@@ -1,0 +1,9 @@
+{
+  "binary_exists": true,
+  "cuda_path": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8",
+  "help_exit_code": -1073741515,
+  "cudnn_path": null,
+  "help_works": false,
+  "timestamp": "2025-10-03T06:11:41.8489728-04:00",
+  "binary_size_mb": 382.3
+}
