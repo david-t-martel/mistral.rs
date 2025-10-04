@@ -113,13 +113,13 @@
 //!         tool_timeout_secs: Some(30),
 //!         max_concurrent_calls: Some(5),
 //!     };
-//!     
+//!
 //!     let model = TextModelBuilder::new("path/to/model".to_string())
 //!         .with_isq(IsqType::Q8_0)
 //!         .with_mcp_client(mcp_config)  // MCP tools automatically registered
 //!         .build()
 //!         .await?;
-//!     
+//!
 //!     // MCP tools are now available for automatic tool calling
 //!     Ok(())
 //! }
@@ -134,6 +134,7 @@ mod lora_model;
 mod messages;
 mod model;
 mod multi_model;
+pub mod react_agent;
 mod speculative;
 mod speech_model;
 mod text_model;
@@ -153,6 +154,7 @@ pub use mistralrs_core::{
 pub use mistralrs_core::{SearchCallback, SearchResult, ToolCallback};
 pub use model::{best_device, Model};
 pub use multi_model::MultiModel;
+pub use react_agent::{AgentIteration, AgentResponse, ReActAgent, ReActAgentBuilder, ToolResult};
 pub use speculative::TextSpeculativeBuilder;
 pub use speech_model::SpeechModelBuilder;
 pub use text_model::{PagedAttentionMetaBuilder, TextModelBuilder, UqffTextModelBuilder};

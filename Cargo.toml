@@ -4,6 +4,7 @@ members = [
     "mistralrs-server",
     "mistralrs-core",
     "mistralrs-pyo3",
+    "mistralrs-agent-tools",
     "mistralrs",
     "mistralrs-bench",
     "mistralrs-vision",
@@ -26,6 +27,19 @@ categories = ["science"]
 license = "MIT"
 rust-version = "1.86"
 
+# Workspace-level feature documentation
+# Agent mode features (opt-in, not in default builds):
+#   pyo3-tools  - PyO3 filesystem bindings for agent operations
+#   tui-agent   - TUI agent mode with command interpreter
+#   mcp         - MCP (Model Context Protocol) server/client
+# GPU acceleration features:
+#   cuda        - NVIDIA CUDA support
+#   cuda-full   - CUDA + Flash Attention + cuDNN + MKL (use this for full GPU)
+#   metal       - Apple Metal support (macOS)
+#   flash-attn  - Flash Attention (requires CUDA)
+#   cudnn       - cuDNN support
+#   mkl         - Intel MKL support
+
 [workspace.dependencies]
 candle-core = { git = "https://github.com/EricLBuehler/candle.git", version = "0.9.1", rev = "5e6c385" }
 candle-nn = { git = "https://github.com/EricLBuehler/candle.git", version = "0.9.1", rev = "5e6c385" }
@@ -38,7 +52,7 @@ candle-flash-attn = { git = "https://github.com/EricLBuehler/candle.git", versio
 
 axum = "0.8.4"
 anyhow = "1.0.98"
-serde = "1.0.219"
+serde = "1.0.220"
 serde_json = "1.0.140"
 indexmap = { version = "2.9.0", features = ["serde"] }
 either = { version = "1.15.0", features = ["serde"] }

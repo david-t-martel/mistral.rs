@@ -81,15 +81,15 @@ impl BertEmbeddings {
 
     fn forward(&self, input_ids: &Tensor, token_type_ids: &Tensor) -> Result<Tensor> {
         let _enter = self.span.enter();
-        let (_bsize, seq_len) = input_ids.dims2()?;
+        let (batch_size, seq_len) = input_ids.dims2()?;
         let input_embeddings = self.word_embeddings.forward(input_ids)?;
         let token_type_embeddings = self.token_type_embeddings.forward(token_type_ids)?;
         let mut embeddings = (&input_embeddings + token_type_embeddings)?;
         if let Some(position_embeddings) = &self.position_embeddings {
-            // TODO: Proper absolute positions?
-            let position_ids = (0..seq_len as u32).collect::<Vec<_>>();
-            let position_ids = Tensor::new(&position_ids[..], input_ids.device())?;
-            embeddings = embeddings.broadcast_add(&position_embeddings.forward(&position_ids)?)?
+            let position_ids = Tensor::arange(0i64, seq_len as i64, input_ids.device())?
+                .reshape((1, seq_len))?
+                .expand((batch_size, seq_len))?;
+            embeddings = (embeddings + position_embeddings.forward(&position_ids)?)?
         }
         let embeddings = self.layer_norm.forward(&embeddings)?;
         Ok(embeddings)

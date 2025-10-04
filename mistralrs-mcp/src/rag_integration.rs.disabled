@@ -1,0 +1,641 @@
+// RAG-Redis Integration for mistral.rs
+// Provides context-aware query augmentation using project documentation
+
+use crate::client::{McpClient, McpServerConnection};
+use anyhow::Result;
+use lru::LruCache;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::VecDeque;
+use std::num::NonZeroUsize;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::{RwLock, Semaphore};
+use tracing::{debug, info, warn};
+
+// ============================================================================
+// Core Types
+// ============================================================================
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ContextQuery {
+    /// The query text
+    pub query: String,
+
+    /// Filter by document type
+    pub doc_type: Option<DocType>,
+
+    /// Maximum number of results
+    #[serde(default = "default_limit")]
+    pub limit: usize,
+
+    /// Minimum similarity threshold
+    #[serde(default = "default_threshold")]
+    pub threshold: f32,
+
+    /// Include code examples
+    #[serde(default = "default_include_code")]
+    pub include_code: bool,
+
+    /// Specific to a crate/module
+    pub scope: Option<String>,
+}
+
+fn default_limit() -> usize {
+    5
+}
+
+fn default_threshold() -> f32 {
+    0.7
+}
+
+fn default_include_code() -> bool {
+    false
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum DocType {
+    BuildInstructions,
+    ApiDocumentation,
+    Examples,
+    Architecture,
+    Testing,
+    Configuration,
+    Agent,
+    MCP,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ContextResult {
+    pub chunks: Vec<DocumentChunk>,
+    pub total_tokens: usize,
+    pub query_time_ms: u64,
+    pub cache_hit: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DocumentChunk {
+    pub content: String,
+    pub source: String,
+    pub section: Option<String>,
+    pub relevance_score: f32,
+    pub metadata: ChunkMetadata,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChunkMetadata {
+    pub doc_type: DocType,
+    pub language: Option<String>,
+    pub token_count: usize,
+    pub tags: Vec<String>,
+}
+
+// ============================================================================
+// Rate Limiter
+// ============================================================================
+
+pub struct RateLimiter {
+    max_qpm: u32,
+    max_concurrent: u32,
+    window: Arc<RwLock<VecDeque<Instant>>>,
+    semaphore: Arc<Semaphore>,
+}
+
+impl RateLimiter {
+    pub fn new(max_qpm: u32, max_concurrent: u32) -> Self {
+        Self {
+            max_qpm,
+            max_concurrent,
+            window: Arc::new(RwLock::new(VecDeque::new())),
+            semaphore: Arc::new(Semaphore::new(max_concurrent as usize)),
+        }
+    }
+
+    pub async fn acquire(&self) -> Result<()> {
+        // Acquire concurrency permit
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to acquire semaphore"))?;
+
+        // Check rate limit
+        let mut window = self.window.write().await;
+        let now = Instant::now();
+
+        // Remove old entries
+        while let Some(front) = window.front() {
+            if now.duration_since(*front) > Duration::from_secs(60) {
+                window.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        // Check if under limit
+        if window.len() >= self.max_qpm as usize {
+            if let Some(oldest) = window.front() {
+                let wait_time = Duration::from_secs(60) - now.duration_since(*oldest);
+                drop(window); // Release lock during sleep
+                tokio::time::sleep(wait_time).await;
+                window = self.window.write().await;
+            }
+        }
+
+        window.push_back(now);
+        Ok(())
+    }
+}
+
+// ============================================================================
+// Cache Implementation
+// ============================================================================
+
+pub struct MultiTierCache {
+    l1_cache: Arc<RwLock<LruCache<String, CachedResult>>>,
+    l1_ttl: Duration,
+    // L2 and L3 would be Redis and disk cache in production
+}
+
+#[derive(Clone)]
+struct CachedResult {
+    result: ContextResult,
+    cached_at: Instant,
+}
+
+impl MultiTierCache {
+    pub fn new(l1_size: usize, l1_ttl_seconds: u64) -> Self {
+        Self {
+            l1_cache: Arc::new(RwLock::new(LruCache::new(
+                NonZeroUsize::new(l1_size).unwrap(),
+            ))),
+            l1_ttl: Duration::from_secs(l1_ttl_seconds),
+        }
+    }
+
+    pub async fn get(&self, key: &str) -> Option<ContextResult> {
+        let mut cache = self.l1_cache.write().await;
+
+        if let Some(cached) = cache.get_mut(key) {
+            // Check if expired
+            if cached.cached_at.elapsed() < self.l1_ttl {
+                debug!("Cache hit for query: {}", key);
+                let mut result = cached.result.clone();
+                result.cache_hit = true;
+                return Some(result);
+            } else {
+                debug!("Cache expired for query: {}", key);
+                cache.pop(key);
+            }
+        }
+
+        None
+    }
+
+    pub async fn put(&self, key: String, value: ContextResult) {
+        let mut cache = self.l1_cache.write().await;
+        cache.put(
+            key,
+            CachedResult {
+                result: value,
+                cached_at: Instant::now(),
+            },
+        );
+    }
+}
+
+// ============================================================================
+// RAG MCP Client
+// ============================================================================
+
+pub struct RagMcpClient {
+    client: Arc<McpClient>,
+    rate_limiter: RateLimiter,
+    cache: MultiTierCache,
+}
+
+impl RagMcpClient {
+    pub fn new(client: Arc<McpClient>) -> Self {
+        Self {
+            client,
+            rate_limiter: RateLimiter::new(60, 3),
+            cache: MultiTierCache::new(100, 300),
+        }
+    }
+
+    pub async fn query_context(&self, query: ContextQuery) -> Result<ContextResult> {
+        let cache_key = format!("{:?}", query);
+
+        // Check cache first
+        if let Some(cached) = self.cache.get(&cache_key).await {
+            return Ok(cached);
+        }
+
+        // Acquire rate limit
+        self.rate_limiter.acquire().await?;
+
+        let start = Instant::now();
+
+        // Call RAG-Redis MCP server
+        let args = json!({
+            "query": query.query,
+            "doc_type": query.doc_type,
+            "limit": query.limit,
+            "threshold": query.threshold,
+            "include_code": query.include_code,
+            "scope": query.scope,
+        });
+
+        let response = self
+            .client
+            .get_servers()
+            .get("RAG Redis")
+            .ok_or_else(|| anyhow::anyhow!("RAG Redis server not found"))?
+            .call_tool("search", args)
+            .await?;
+
+        let mut result: ContextResult = serde_json::from_str(&response)?;
+        result.query_time_ms = start.elapsed().as_millis() as u64;
+        result.cache_hit = false;
+
+        // Cache the result
+        self.cache.put(cache_key, result.clone()).await;
+
+        Ok(result)
+    }
+
+    pub async fn ingest_document(&self, path: &str, doc_type: DocType) -> Result<()> {
+        self.rate_limiter.acquire().await?;
+
+        let args = json!({
+            "path": path,
+            "doc_type": doc_type,
+            "chunking": {
+                "max_size": 1500,
+                "overlap": 200,
+                "preserve_code": true
+            }
+        });
+
+        self.client
+            .get_servers()
+            .get("RAG Redis")
+            .ok_or_else(|| anyhow::anyhow!("RAG Redis server not found"))?
+            .call_tool("ingest", args)
+            .await?;
+
+        info!("Successfully ingested document: {}", path);
+        Ok(())
+    }
+}
+
+// ============================================================================
+// Agent Context Manager
+// ============================================================================
+
+pub struct AgentContextManager {
+    rag_client: Arc<RagMcpClient>,
+}
+
+impl AgentContextManager {
+    pub fn new(rag_client: Arc<RagMcpClient>) -> Self {
+        Self { rag_client }
+    }
+
+    /// Get build instructions for a specific target
+    pub async fn get_build_context(&self, target: &str) -> Result<String> {
+        let query = ContextQuery {
+            query: format!("build instructions {} makefile cargo", target),
+            doc_type: Some(DocType::BuildInstructions),
+            limit: 3,
+            threshold: 0.8,
+            include_code: true,
+            scope: None,
+        };
+
+        let result = self.rag_client.query_context(query).await?;
+
+        Ok(self.format_context_for_agent(result))
+    }
+
+    /// Get API documentation for a module
+    pub async fn get_api_docs(&self, module: &str, function: Option<&str>) -> Result<String> {
+        let query_text = match function {
+            Some(f) => format!("{} {} function implementation", module, f),
+            None => format!("{} module documentation API", module),
+        };
+
+        let query = ContextQuery {
+            query: query_text,
+            doc_type: Some(DocType::ApiDocumentation),
+            limit: 5,
+            threshold: 0.75,
+            include_code: true,
+            scope: Some(module.to_string()),
+        };
+
+        let result = self.rag_client.query_context(query).await?;
+
+        Ok(self.format_context_for_agent(result))
+    }
+
+    /// Get relevant examples for a topic
+    pub async fn get_examples(&self, topic: &str) -> Result<Vec<String>> {
+        let query = ContextQuery {
+            query: format!("example code {} implementation usage", topic),
+            doc_type: Some(DocType::Examples),
+            limit: 3,
+            threshold: 0.7,
+            include_code: true,
+            scope: None,
+        };
+
+        let result = self.rag_client.query_context(query).await?;
+
+        Ok(result
+            .chunks
+            .iter()
+            .filter(|c| c.metadata.language.is_some())
+            .map(|c| c.content.clone())
+            .collect())
+    }
+
+    /// Get agent-specific documentation
+    pub async fn get_agent_docs(&self, agent_type: &str) -> Result<String> {
+        let query = ContextQuery {
+            query: format!("{} agent implementation ReAct", agent_type),
+            doc_type: Some(DocType::Agent),
+            limit: 4,
+            threshold: 0.75,
+            include_code: true,
+            scope: None,
+        };
+
+        let result = self.rag_client.query_context(query).await?;
+
+        Ok(self.format_context_for_agent(result))
+    }
+
+    /// Get MCP integration documentation
+    pub async fn get_mcp_context(&self, server: Option<&str>) -> Result<String> {
+        let query_text = match server {
+            Some(s) => format!("MCP {} server configuration integration", s),
+            None => "MCP Model Context Protocol integration client server".to_string(),
+        };
+
+        let query = ContextQuery {
+            query: query_text,
+            doc_type: Some(DocType::MCP),
+            limit: 4,
+            threshold: 0.7,
+            include_code: true,
+            scope: None,
+        };
+
+        let result = self.rag_client.query_context(query).await?;
+
+        Ok(self.format_context_for_agent(result))
+    }
+
+    /// Format context result for agent consumption
+    fn format_context_for_agent(&self, result: ContextResult) -> String {
+        let mut output = String::new();
+
+        output.push_str(&format!(
+            "# Retrieved Context ({} chunks, {:.0}ms, cache: {})\n\n",
+            result.chunks.len(),
+            result.query_time_ms,
+            if result.cache_hit { "hit" } else { "miss" }
+        ));
+
+        for (i, chunk) in result.chunks.iter().enumerate() {
+            output.push_str(&format!(
+                "## [{}/{}] {} (relevance: {:.2})\n",
+                i + 1,
+                result.chunks.len(),
+                chunk.source,
+                chunk.relevance_score
+            ));
+
+            if let Some(section) = &chunk.section {
+                output.push_str(&format!("**Section**: {}\n", section));
+            }
+
+            if let Some(lang) = &chunk.metadata.language {
+                output.push_str(&format!("\n```{}\n{}\n```\n", lang, chunk.content));
+            } else {
+                output.push_str(&format!("\n{}\n", chunk.content));
+            }
+
+            output.push_str("\n---\n\n");
+        }
+
+        output
+    }
+
+    /// Batch ingest project documentation
+    pub async fn ingest_project_docs(&self) -> Result<()> {
+        info!("Starting project documentation ingestion...");
+
+        let doc_patterns = vec![
+            ("*.md", DocType::Configuration),
+            (".claude/*.md", DocType::BuildInstructions),
+            ("docs/*.md", DocType::ApiDocumentation),
+            ("examples/*/README.md", DocType::Examples),
+            ("mistralrs-*/README.md", DocType::Architecture),
+            ("AGENT*.md", DocType::Agent),
+            ("docs/AGENT*.md", DocType::Agent),
+            ("tests/*/README.md", DocType::Testing),
+        ];
+
+        let mut total_ingested = 0;
+
+        for (pattern, doc_type) in doc_patterns {
+            let paths = glob::glob(pattern)?;
+
+            for path_result in paths {
+                if let Ok(path) = path_result {
+                    let path_str = path.to_string_lossy().to_string();
+
+                    // Skip temporary files and templates
+                    if path_str.contains("ISSUE_TEMPLATE") || path_str.contains(".tmp") {
+                        continue;
+                    }
+
+                    match self.rag_client.ingest_document(&path_str, doc_type.clone()).await {
+                        Ok(_) => {
+                            total_ingested += 1;
+                            debug!("Ingested: {}", path_str);
+                        }
+                        Err(e) => {
+                            warn!("Failed to ingest {}: {}", path_str, e);
+                        }
+                    }
+
+                    // Rate limit between documents
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            }
+        }
+
+        info!("Successfully ingested {} documents", total_ingested);
+        Ok(())
+    }
+}
+
+// ============================================================================
+// Performance Metrics
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RagMetrics {
+    pub total_queries: u64,
+    pub cache_hit_rate: f64,
+    pub avg_latency_ms: f64,
+    pub p95_latency_ms: f64,
+    pub error_rate: f64,
+}
+
+pub struct MetricsCollector {
+    queries: Arc<RwLock<Vec<u64>>>,
+    cache_hits: Arc<RwLock<u64>>,
+    cache_misses: Arc<RwLock<u64>>,
+    errors: Arc<RwLock<u64>>,
+}
+
+impl MetricsCollector {
+    pub fn new() -> Self {
+        Self {
+            queries: Arc::new(RwLock::new(Vec::new())),
+            cache_hits: Arc::new(RwLock::new(0)),
+            cache_misses: Arc::new(RwLock::new(0)),
+            errors: Arc::new(RwLock::new(0)),
+        }
+    }
+
+    pub async fn record_query(&self, latency_ms: u64, cache_hit: bool, error: bool) {
+        let mut queries = self.queries.write().await;
+        queries.push(latency_ms);
+
+        if cache_hit {
+            *self.cache_hits.write().await += 1;
+        } else {
+            *self.cache_misses.write().await += 1;
+        }
+
+        if error {
+            *self.errors.write().await += 1;
+        }
+    }
+
+    pub async fn get_metrics(&self) -> RagMetrics {
+        let queries = self.queries.read().await;
+        let cache_hits = *self.cache_hits.read().await;
+        let cache_misses = *self.cache_misses.read().await;
+        let errors = *self.errors.read().await;
+
+        let total_queries = queries.len() as u64;
+        let cache_total = cache_hits + cache_misses;
+        let cache_hit_rate = if cache_total > 0 {
+            cache_hits as f64 / cache_total as f64
+        } else {
+            0.0
+        };
+
+        let avg_latency_ms = if !queries.is_empty() {
+            queries.iter().sum::<u64>() as f64 / queries.len() as f64
+        } else {
+            0.0
+        };
+
+        let mut sorted_queries = queries.clone();
+        sorted_queries.sort_unstable();
+        let p95_latency_ms = if !sorted_queries.is_empty() {
+            let p95_index = (sorted_queries.len() as f64 * 0.95) as usize;
+            sorted_queries[p95_index.min(sorted_queries.len() - 1)] as f64
+        } else {
+            0.0
+        };
+
+        let error_rate = if total_queries > 0 {
+            errors as f64 / total_queries as f64
+        } else {
+            0.0
+        };
+
+        RagMetrics {
+            total_queries,
+            cache_hit_rate,
+            avg_latency_ms,
+            p95_latency_ms,
+            error_rate,
+        }
+    }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_rate_limiter() {
+        let limiter = RateLimiter::new(10, 2);
+
+        // Should allow first two immediately
+        let _g1 = limiter.acquire().await.unwrap();
+        let _g2 = limiter.acquire().await.unwrap();
+
+        // Third should wait
+        let start = Instant::now();
+        let result = tokio::time::timeout(Duration::from_millis(100), limiter.acquire()).await;
+
+        assert!(result.is_err()); // Should timeout
+        assert!(start.elapsed() >= Duration::from_millis(100));
+    }
+
+    #[tokio::test]
+    async fn test_cache() {
+        let cache = MultiTierCache::new(10, 1);
+
+        let result = ContextResult {
+            chunks: vec![],
+            total_tokens: 0,
+            query_time_ms: 10,
+            cache_hit: false,
+        };
+
+        cache.put("test_key".to_string(), result.clone()).await;
+
+        // Should hit cache
+        let cached = cache.get("test_key").await.unwrap();
+        assert!(cached.cache_hit);
+
+        // Wait for expiry
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // Should miss cache
+        assert!(cache.get("test_key").await.is_none());
+    }
+
+    #[test]
+    fn test_query_serialization() {
+        let query = ContextQuery {
+            query: "test query".to_string(),
+            doc_type: Some(DocType::BuildInstructions),
+            limit: 5,
+            threshold: 0.7,
+            include_code: true,
+            scope: Some("mistralrs-core".to_string()),
+        };
+
+        let json = serde_json::to_string(&query).unwrap();
+        let deserialized: ContextQuery = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(query.query, deserialized.query);
+        assert_eq!(query.limit, deserialized.limit);
+    }
+}

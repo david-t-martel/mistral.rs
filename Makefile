@@ -312,6 +312,31 @@ test-ps1-ci: ## Run PowerShell tests in CI mode
 test-full: test test-ps1 ## Run all tests (Rust + PowerShell)
 	@echo "✓ All tests complete"
 
+.PHONY: test-agent
+test-agent: ## Run agent mode autonomous test suite
+	@echo "Running agent mode tests..."
+	@powershell -ExecutionPolicy Bypass -File tests/agent/test-agent-autonomous.ps1
+
+.PHONY: test-agent-json
+test-agent-json: ## Run agent tests with JSON output
+	@echo "Running agent tests (JSON output)..."
+	@powershell -ExecutionPolicy Bypass -File tests/agent/test-agent-autonomous.ps1 -OutputFormat json
+
+.PHONY: test-agent-markdown
+test-agent-markdown: ## Run agent tests with Markdown output
+	@echo "Running agent tests (Markdown output)..."
+	@powershell -ExecutionPolicy Bypass -File tests/agent/test-agent-autonomous.ps1 -OutputFormat markdown
+
+.PHONY: demo-agent
+demo-agent: ## Launch interactive agent mode demo
+	@echo "Launching agent mode demo..."
+	@powershell -ExecutionPolicy Bypass -File tests/agent/demo-agent-mode.ps1 -Interactive
+
+.PHONY: demo-agent-gguf
+demo-agent-gguf: ## Launch agent demo with GGUF model
+	@echo "Launching agent mode demo (GGUF)..."
+	@powershell -ExecutionPolicy Bypass -File tests/agent/demo-agent-mode.ps1 -ModelType gguf -ModelPath "T:/models" -ModelFile "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+
 # ============================================================================
 # Code Quality
 # ============================================================================
@@ -411,7 +436,11 @@ wheel: build-python ## Create Python wheel distribution
 .PHONY: run
 run: ## Run server in interactive mode (requires MODEL variable)
 	@echo "Starting mistral.rs server..."
+ifeq ($(PLATFORM),windows)
+	@cmd /c "set PATH=%CUDA_PATH%\bin;%CUDNN_PATH%\bin;%CUDNN_PATH%\cuda\bin;C:\\Users\\david\\.local\\bin;C:\\Users\\david\\bin;%PATH% && \"$(SERVER_BINARY)\" -i plain -m $(MODEL)"
+else
 	@$(SERVER_BINARY) -i plain -m $(MODEL)
+endif
 
 .PHONY: run-tui
 run-tui: ## Run TUI with smallest test model
@@ -422,12 +451,20 @@ run-tui: ## Run TUI with smallest test model
 .PHONY: run-server
 run-server: ## Run HTTP server on port 8080
 	@echo "Starting HTTP server on port 8080..."
+ifeq ($(PLATFORM),windows)
+	@cmd /c "set PATH=%CUDA_PATH%\bin;%CUDNN_PATH%\bin;%CUDNN_PATH%\cuda\bin;C:\\Users\\david\\.local\\bin;C:\\Users\\david\\bin;%PATH% && \"$(SERVER_BINARY)\" --port 8080 plain -m $(MODEL)"
+else
 	@$(SERVER_BINARY) --port 8080 plain -m $(MODEL)
+endif
 
 .PHONY: run-with-mcp
 run-with-mcp: ## Run server with MCP integration
 	@echo "Starting server with MCP integration..."
+ifeq ($(PLATFORM),windows)
+	@cmd /c "set PATH=%CUDA_PATH%\bin;%CUDNN_PATH%\bin;%CUDNN_PATH%\cuda\bin;C:\\Users\\david\\.local\\bin;C:\\Users\\david\\bin;%PATH% && \"$(SERVER_BINARY)\" --port 8080 --mcp-config MCP_CONFIG.json gguf -m $(MODEL_DIR) -f $(MODEL_FILE)"
+else
 	@$(SERVER_BINARY) --port 8080 --mcp-config MCP_CONFIG.json gguf -m $(MODEL_DIR) -f $(MODEL_FILE)
+endif
 
 # ============================================================================
 # Benchmarking & Profiling
@@ -524,6 +561,14 @@ rebuild: clean-all build-cuda-full ## Complete rebuild from scratch
 
 .PHONY: validate
 validate: fmt-check lint check test ## Full validation (format, lint, check, test)
+
+# ============================================================================
+# Include Deployment & Validation Targets
+# ============================================================================
+
+# Include comprehensive deployment, testing, and validation targets
+# See Makefile.deployment for detailed deployment workflows
+-include Makefile.deployment
 
 # ============================================================================
 # End of Makefile

@@ -1,0 +1,96 @@
+# Prometheus Configuration for mistral.rs
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'mistralrs-monitor'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
+# Load alert rules
+rule_files:
+  - '/etc/prometheus/alert-rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # mistral.rs metrics endpoint
+  - job_name: 'mistralrs'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'mistralrs-server'
+          component: 'inference'
+    metrics_path: /metrics
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # MCP servers metrics
+  - job_name: 'mcp-servers'
+    static_configs:
+      - targets:
+          - 'localhost:9091'  # memory server
+          - 'localhost:9092'  # filesystem server
+          - 'localhost:9093'  # sequential-thinking server
+          - 'localhost:9094'  # github server
+          - 'localhost:9095'  # fetch server
+        labels:
+          service: 'mcp'
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Node exporter for system metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+        labels:
+          service: 'system'
+
+  # NVIDIA GPU exporter (for CUDA builds)
+  - job_name: 'nvidia-gpu'
+    static_configs:
+      - targets: ['localhost:9835']
+        labels:
+          service: 'gpu'
+
+  # Process exporter for detailed process metrics
+  - job_name: 'process'
+    static_configs:
+      - targets: ['localhost:9256']
+        labels:
+          service: 'process'
+
+  # Blackbox exporter for endpoint monitoring
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://localhost:8080/health
+          - http://localhost:8080/ready
+          - http://localhost:8080/v1/models
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+
+# Remote write for long-term storage (optional)
+# remote_write:
+#   - url: "http://cortex:9009/api/v1/push"
+#     queue_config:
+#       capacity: 10000
+#       max_shards: 200
+#       min_shards: 1
+#       max_samples_per_send: 1000
+#       batch_send_deadline: 5s
+#       min_backoff: 30ms
+#       max_backoff: 100ms

@@ -1,0 +1,192 @@
+groups:
+  - name: mistralrs_critical
+    interval: 30s
+    rules:
+      # Latency alerts
+      - alert: HighLatencyP95Critical
+        expr: histogram_quantile(0.95, rate(mistralrs_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          component: performance
+        annotations:
+          summary: "P95 latency exceeds 500ms"
+          description: "P95 latency is {{ $value }}s (threshold: 500ms) for {{ $labels.instance }}"
+          dashboard: "http://grafana/d/performance"
+
+      # Memory alerts
+      - alert: HighMemoryUsageCritical
+        expr: process_resident_memory_bytes{job="mistralrs"} > 3221225472  # 3GB
+        for: 5m
+        labels:
+          severity: critical
+          component: resource
+        annotations:
+          summary: "Memory usage exceeds 3GB"
+          description: "Memory usage is {{ humanize $value }} (threshold: 3GB) for {{ $labels.instance }}"
+
+      # Error rate alerts
+      - alert: HighErrorRateCritical
+        expr: |
+          (
+            sum(rate(mistralrs_requests_failed_total[5m]))
+            /
+            sum(rate(mistralrs_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "Error rate exceeds 5%"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      # MCP server down
+      - alert: MCPServerDown
+        expr: up{job="mcp-servers"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: mcp
+        annotations:
+          summary: "MCP server is down"
+          description: "MCP server {{ $labels.instance }} has been down for more than 1 minute"
+
+      # Circuit breaker open
+      - alert: CircuitBreakerOpen
+        expr: mistralrs_circuit_breaker_state{state="open"} == 1
+        for: 30s
+        labels:
+          severity: critical
+          component: resilience
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Circuit breaker {{ $labels.name }} is open for {{ $labels.instance }}"
+
+  - name: mistralrs_warning
+    interval: 30s
+    rules:
+      # Latency warnings
+      - alert: HighLatencyP95Warning
+        expr: histogram_quantile(0.95, rate(mistralrs_request_duration_seconds_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "P95 latency exceeds 200ms"
+          description: "P95 latency is {{ $value }}s (threshold: 200ms) for {{ $labels.instance }}"
+
+      # Memory warnings
+      - alert: HighMemoryUsageWarning
+        expr: process_resident_memory_bytes{job="mistralrs"} > 2684354560  # 2.5GB
+        for: 10m
+        labels:
+          severity: warning
+          component: resource
+        annotations:
+          summary: "Memory usage exceeds 2.5GB"
+          description: "Memory usage is {{ humanize $value }} (threshold: 2.5GB) for {{ $labels.instance }}"
+
+      # Error rate warnings
+      - alert: HighErrorRateWarning
+        expr: |
+          (
+            sum(rate(mistralrs_requests_failed_total[5m]))
+            /
+            sum(rate(mistralrs_requests_total[5m]))
+          ) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          component: availability
+        annotations:
+          summary: "Error rate exceeds 2%"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      # Low connection reuse
+      - alert: LowConnectionReuseRate
+        expr: |
+          (
+            sum(rate(mistralrs_connection_reused_total[5m]))
+            /
+            sum(rate(mistralrs_connection_created_total[5m]))
+          ) < 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Connection reuse rate below 90%"
+          description: "Connection reuse rate is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # High tool call latency
+      - alert: HighToolCallLatency
+        expr: histogram_quantile(0.95, rate(mistralrs_tool_call_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: mcp
+        annotations:
+          summary: "Tool call P95 latency exceeds 100ms"
+          description: "Tool call P95 latency is {{ $value }}s (threshold: 100ms)"
+
+      # GPU memory pressure (if CUDA enabled)
+      - alert: HighGPUMemoryUsage
+        expr: nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "GPU memory usage exceeds 90%"
+          description: "GPU {{ $labels.gpu }} memory usage is {{ $value | humanizePercentage }}"
+
+  - name: mistralrs_info
+    interval: 60s
+    rules:
+      # Circuit breaker state changes
+      - alert: CircuitBreakerStateChange
+        expr: changes(mistralrs_circuit_breaker_state[5m]) > 0
+        labels:
+          severity: info
+          component: resilience
+        annotations:
+          summary: "Circuit breaker state changed"
+          description: "Circuit breaker {{ $labels.name }} changed state"
+
+      # Deployment events
+      - alert: NewDeployment
+        expr: changes(mistralrs_build_info[5m]) > 0
+        labels:
+          severity: info
+          component: deployment
+        annotations:
+          summary: "New deployment detected"
+          description: "New deployment of version {{ $labels.version }} on {{ $labels.instance }}"
+
+      # Slow startup
+      - alert: SlowStartup
+        expr: mistralrs_startup_time_seconds > 0.3
+        labels:
+          severity: info
+          component: performance
+        annotations:
+          summary: "Startup time exceeds 300ms"
+          description: "Startup took {{ $value }}s (threshold: 300ms)"
+
+      # Resource leak detection
+      - alert: PotentialResourceLeak
+        expr: |
+          (
+            deriv(process_open_fds{job="mistralrs"}[10m]) > 0
+            and
+            process_open_fds{job="mistralrs"} > 1000
+          )
+        for: 15m
+        labels:
+          severity: info
+          component: resource
+        annotations:
+          summary: "Potential file descriptor leak"
+          description: "File descriptors continuously increasing: {{ $value }} FDs"

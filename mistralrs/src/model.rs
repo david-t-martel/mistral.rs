@@ -335,4 +335,42 @@ impl Model {
     pub fn inner(&self) -> &MistralRs {
         &self.runner
     }
+
+    /// Get tool callbacks for direct tool execution
+    ///
+    /// This allows agents like ReActAgent to execute tools directly
+    /// rather than relying on the automatic tool calling during inference.
+    ///
+    /// Returns the registered tool callbacks including:
+    /// - Native callbacks added via `.with_tool_callback()`
+    /// - MCP auto-registered tools from `.with_mcp_client()`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if tool callbacks cannot be retrieved from the model engine.
+    pub fn get_tool_callbacks(
+        &self,
+    ) -> anyhow::Result<std::collections::HashMap<String, std::sync::Arc<ToolCallback>>> {
+        self.runner
+            .get_tool_callbacks(None)
+            .map_err(|e| anyhow::anyhow!("Failed to get tool callbacks: {}", e))
+    }
+
+    /// Get tool callbacks with their associated Tool definitions
+    ///
+    /// Returns tool callbacks along with their Tool metadata, which includes:
+    /// - Function names and descriptions
+    /// - Parameter schemas for validation
+    /// - Tool type information
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if tool callbacks cannot be retrieved from the model engine.
+    pub fn get_tool_callbacks_with_tools(
+        &self,
+    ) -> anyhow::Result<std::collections::HashMap<String, ToolCallbackWithTool>> {
+        self.runner
+            .get_tool_callbacks_with_tools(None)
+            .map_err(|e| anyhow::anyhow!("Failed to get tool callbacks with tools: {}", e))
+    }
 }

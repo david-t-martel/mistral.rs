@@ -7,13 +7,53 @@
 mistral.rs/
 mistralrs-web-chat/cache
 
+# Python & virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Node & web artifacts
+node_modules/
+dist/
+build/
+
+# Coverage & profiling
+coverage/
+coverage.*
+*.lcov
+profdata/
+*.profraw
+
 # Test outputs and logs
 *.log
 test-output.log
 mcp-test.log
 mcp-validation-results.json
 server.log
+logs/
+*.trace
+
+# RAG / cache data
+rag-data/
+rag-cache/
+*.embedding-cache
+
+# Generated context / memory files
+memory.json
+.claude/context/*.json
+.claude/context/*.md
+
+# Docker & runtime
+docker-data/
+.docker/
 
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.swp
+*.swo
+~$*
+Thumbs.db
+nul

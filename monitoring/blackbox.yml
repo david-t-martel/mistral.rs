@@ -1,0 +1,112 @@
+modules:
+  # HTTP 2xx check
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: []  # Defaults to 2xx
+      method: GET
+      headers:
+        User-Agent: "mistralrs-blackbox-exporter"
+      follow_redirects: true
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+
+  # Health check endpoint
+  http_health:
+    prober: http
+    timeout: 2s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      path: /health
+      fail_if_body_not_matches_regexp:
+        - '"status"\s*:\s*"healthy"'
+
+  # Readiness check endpoint
+  http_ready:
+    prober: http
+    timeout: 2s
+    http:
+      valid_status_codes: [200, 503]
+      method: GET
+      path: /ready
+
+  # Metrics endpoint check
+  http_metrics:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      path: /metrics
+      fail_if_body_not_matches_regexp:
+        - 'mistralrs_'
+
+  # OpenAI API compatibility check
+  http_openai_models:
+    prober: http
+    timeout: 10s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      path: /v1/models
+      headers:
+        Authorization: "Bearer test-key"
+      fail_if_body_not_matches_regexp:
+        - '"object"\s*:\s*"list"'
+
+  # MCP server check (TCP)
+  tcp_mcp:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      tls: false
+
+  # WebSocket check
+  ws_check:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [101]
+      method: GET
+      headers:
+        Upgrade: websocket
+        Connection: Upgrade
+        Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+        Sec-WebSocket-Version: "13"
+
+  # JSON-RPC check
+  jsonrpc_check:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: '{"jsonrpc": "2.0", "method": "health", "params": {}, "id": 1}'
+      fail_if_body_not_matches_regexp:
+        - '"jsonrpc"\s*:\s*"2.0"'
+
+  # High load test (for stress testing)
+  http_load_test:
+    prober: http
+    timeout: 30s
+    http:
+      valid_status_codes: [200]
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        Content-Type: "application/json"
+        Authorization: "Bearer test-key"
+      body: |
+        {
+          "model": "test",
+          "messages": [{"role": "user", "content": "test"}],
+          "temperature": 0.7,
+          "max_tokens": 10
+        }

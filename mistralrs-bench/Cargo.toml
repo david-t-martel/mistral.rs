@@ -11,19 +11,6 @@ keywords.workspace = true
 categories.workspace = true
 license.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-anyhow.workspace = true
-candle-core.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-clap.workspace = true
-mistralrs-core.workspace = true
-tracing.workspace = true
-tokio.workspace = true
-cli-table.workspace = true
-
 [features]
 cuda = ["mistralrs-core/cuda"]
 cudnn = ["mistralrs-core/cudnn"]
@@ -33,3 +20,16 @@ accelerate = ["mistralrs-core/accelerate"]
 mkl = ["mistralrs-core/mkl"]
 nccl = ["mistralrs-core/nccl"]
 ring = ["mistralrs-core/ring"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+candle-core.workspace = true
+clap.workspace = true
+cli-table.workspace = true
+mistralrs-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true

@@ -12,6 +12,16 @@ categories.workspace = true
 license.workspace = true
 homepage.workspace = true
 
+[features]
+cuda = ["mistralrs-core/cuda"]
+cudnn = ["mistralrs-core/cudnn"]
+metal = ["mistralrs-core/metal"]
+flash-attn = ["cuda", "mistralrs-core/flash-attn"]
+accelerate = ["mistralrs-core/accelerate"]
+mkl = ["mistralrs-core/mkl"]
+nccl = ["mistralrs-core/nccl"]
+ring = ["mistralrs-core/ring"]
+
 [dependencies]
 anyhow.workspace = true
 axum = { workspace = true, features = ["tokio"] }
@@ -38,13 +48,3 @@ uuid.workspace = true
 
 accelerate-src = { workspace = true, optional = true }
 intel-mkl-src = { workspace = true, optional = true }
-
-[features]
-cuda = ["mistralrs-core/cuda"]
-cudnn = ["mistralrs-core/cudnn"]
-metal = ["mistralrs-core/metal"]
-flash-attn = ["cuda", "mistralrs-core/flash-attn"]
-accelerate = ["mistralrs-core/accelerate"]
-mkl = ["mistralrs-core/mkl"]
-nccl = ["mistralrs-core/nccl"]
-ring = ["mistralrs-core/ring"]

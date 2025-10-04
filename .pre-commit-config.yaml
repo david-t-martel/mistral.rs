@@ -1,0 +1,143 @@
+# Pre-commit configuration for mistral.rs
+# See https://pre-commit.com for more information
+
+default_language_version:
+  python: python3.12
+
+repos:
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.json)$
+      - id: end-of-file-fixer
+        exclude: ^(target/|dist/|node_modules/)
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-toml
+      - id: check-json
+        exclude: ^(.vscode/|.claude/context/)
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Typos (auto-fix spelling issues)
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.23.6
+    hooks:
+      - id: typos
+        args: [--write-changes]
+        stages: [pre-commit]
+
+  # Ruff for Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python]
+      - id: ruff-format
+        types_or: [python]
+
+  # ShellCheck for bash/sh scripts
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        files: ^(scripts/|monitoring/|health-check\.sh|docker-entrypoint\.sh)
+        types: [shell]
+        args: [-x]
+
+  # Markdown lint + formatting (mdformat)
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.19
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-frontmatter
+        exclude: ^(CHANGELOG\.md)$
+
+  # Rust formatting
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all --
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-sort
+        name: cargo sort (workspace)
+        entry: bash -c 'if ! command -v cargo-sort >/dev/null 2>&1; then cargo install cargo-sort --locked >/dev/null 2>&1 || exit 0; fi; files=$(git ls-files Cargo.toml); status=0; for f in $files; do if grep -q "^[[:space:]]*\[package\]" "$f"; then dir=$(dirname "$f"); echo "sorting crate $dir"; if ! cargo sort --grouped --check "$dir"; then cargo sort --grouped "$dir" || status=1; fi; else echo "skip workspace-only $f"; fi; done; exit $status'
+        language: system
+        types: [toml]
+        pass_filenames: false
+      - id: cargo-clippy-fix
+        name: cargo clippy (auto-fix)
+        entry: bash -c 'cargo clippy --workspace --tests --all-targets -- -D warnings || true'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: cargo-check
+        name: cargo check (fast compile validation)
+        entry: cargo check --workspace --all-targets
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # Local custom hooks
+  - repo: local
+    hooks:
+      # auto-claude for commit message generation and context
+      - id: auto-claude
+        name: auto-claude
+        entry: node C:\Users\david\.claude\auto-claude\scripts\auto-claude.cjs --staged
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
+
+      # semantic_index for code analysis
+      - id: semantic-index
+        name: semantic_index
+        entry: uv run --python 3.12 python C:\Users\david\.claude\semantic_index\semantic_index_cli.py --staged
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
+
+      # ast-grep for AST-level linting
+      - id: ast-grep
+        name: ast-grep
+        entry: ast-grep scan -c tools/ast-grep/sgconfig.yml
+        language: system
+        types_or: [rust, toml, python, javascript, ts]
+        exclude: ^(target/|node_modules/|dist/|\.venv/)
+        stages: [pre-commit]
+        pass_filenames: false
+
+      # biome for JS/TS/JSON formatting
+      - id: biome
+        name: biome check
+        entry: bash -c 'if [ -f node_modules/.bin/biome ]; then node_modules/.bin/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched .; else echo "biome not installed, skipping"; fi'
+        language: system
+        types_or: [javascript, ts, json]
+        exclude: ^(target/|dist/|package-lock\.json$|tsconfig\.json$)
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # PowerShell script analysis (PSScriptAnalyzer)
+      - id: pwsh-analyze
+        name: PowerShell Script Analyzer (errors only)
+        entry: pwsh -NoLogo -NoProfile -Command "if (!(Get-Module -ListAvailable -Name PSScriptAnalyzer)) { try { Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -ErrorAction Stop } catch { Write-Host 'PSScriptAnalyzer install failed, skipping'; exit 0 } }; $paths = @(); if (Test-Path 'scripts') { $paths += 'scripts' }; if (Test-Path 'tests/agent') { $paths += 'tests/agent' }; $rootPs1 = Get-ChildItem -Path . -Filter *.ps1 -File -ErrorAction SilentlyContinue; if ($rootPs1) { $paths += ($rootPs1 | ForEach-Object { $_.FullName }) }; if ($paths.Count -eq 0) { exit 0 }; $results = Invoke-ScriptAnalyzer -Path $paths -Recurse -Severity Error -ExcludeRule PSAvoidTrailingWhitespace,PSUseConsistentIndentation -ErrorAction Continue; if ($results | Where-Object Severity -eq 'Error') { $results | Format-Table; exit 1 } else { exit 0 }"
+        language: system
+        pass_filenames: false
+        files: ^(scripts/|tests/agent/|.*\.ps1$)
+        stages: [pre-commit]
+
+# Configuration
+fail_fast: false
+minimum_pre_commit_version: '3.0.0'

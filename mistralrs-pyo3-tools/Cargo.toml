@@ -1,0 +1,39 @@
+[package]
+name = "mistralrs-pyo3-tools"
+version = "0.6.0"
+edition.workspace = true
+description = "Sandboxed filesystem operations for mistral.rs agent mode"
+license.workspace = true
+homepage.workspace = true
+keywords = ["llm", "inference", "pyo3", "filesystem", "agent"]
+categories.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+# PyO3 Python bindings (opt-in)
+pyo3-bindings = ["pyo3"]
+# Sandbox enforcement (enabled by default in agent builds)
+sandbox = []
+
+[dependencies]
+# Core dependencies
+anyhow = "1.0"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = "2.0"
+tracing = { workspace = true }
+
+# Path and file handling
+camino = "1.1"
+fs4 = "0.11"  # File locking
+globset = "0.4"
+ignore = "0.4"  # .gitignore-aware traversal
+
+# Optional PyO3 for Python bindings
+pyo3 = { workspace = true, optional = true, features = ["extension-module"] }
+
+[dev-dependencies]
+tempfile = "3.15"

@@ -1,0 +1,33 @@
+# ast-grep configuration for mistral.rs
+# See https://ast-grep.github.io/guide/rule-config.html
+
+ruleDirs:
+  - rules
+
+testConfigs:
+  - testDir: test
+
+# Language-specific settings
+languageGlobs:
+  rust:
+    - "**/*.rs"
+  toml:
+    - "**/Cargo.toml"
+    - "**/*.toml"
+  python:
+    - "**/*.py"
+  javascript:
+    - "**/*.js"
+    - "**/*.cjs"
+    - "**/*.mjs"
+  typescript:
+    - "**/*.ts"
+
+# Ignore patterns
+ignore:
+  - "**/target/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/.venv/**"
+  - "**/build/**"
+  - "**/.git/**"

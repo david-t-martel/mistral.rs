@@ -1022,6 +1022,76 @@ impl MistralRs {
         }
     }
 
+    /// Get tool callbacks for direct tool execution (e.g., for ReAct agents)
+    ///
+    /// Returns a cloned HashMap of tool callbacks that can be used to execute
+    /// tools directly outside of the normal inference pipeline. This is useful
+    /// for agent patterns that need to execute tools between LLM calls.
+    pub fn get_tool_callbacks(
+        &self,
+        model_id: Option<&str>,
+    ) -> Result<tools::ToolCallbacks, String> {
+        let resolved_model_id = match model_id {
+            Some(id) => id.to_string(),
+            None => {
+                let default_lock = self
+                    .default_engine_id
+                    .read()
+                    .map_err(|_| "Failed to acquire read lock")?;
+                default_lock
+                    .as_ref()
+                    .ok_or("No default engine set")?
+                    .clone()
+            }
+        };
+
+        let engines = self
+            .engines
+            .read()
+            .map_err(|_| "Failed to acquire read lock on engines")?;
+        if let Some(engine_instance) = engines.get(&resolved_model_id) {
+            Ok(engine_instance.reboot_state.tool_callbacks.clone())
+        } else {
+            Err(format!("Model {resolved_model_id} not found"))
+        }
+    }
+
+    /// Get tool callbacks with tool definitions for direct execution
+    ///
+    /// Returns tool callbacks along with their Tool definitions, which include
+    /// parameter schemas needed for automatic tool discovery and validation.
+    pub fn get_tool_callbacks_with_tools(
+        &self,
+        model_id: Option<&str>,
+    ) -> Result<tools::ToolCallbacksWithTools, String> {
+        let resolved_model_id = match model_id {
+            Some(id) => id.to_string(),
+            None => {
+                let default_lock = self
+                    .default_engine_id
+                    .read()
+                    .map_err(|_| "Failed to acquire read lock")?;
+                default_lock
+                    .as_ref()
+                    .ok_or("No default engine set")?
+                    .clone()
+            }
+        };
+
+        let engines = self
+            .engines
+            .read()
+            .map_err(|_| "Failed to acquire read lock on engines")?;
+        if let Some(engine_instance) = engines.get(&resolved_model_id) {
+            Ok(engine_instance
+                .reboot_state
+                .tool_callbacks_with_tools
+                .clone())
+        } else {
+            Err(format!("Model {resolved_model_id} not found"))
+        }
+    }
+
     /// Get config for a specific model
     pub fn config(&self, model_id: Option<&str>) -> Result<MistralRsConfig, String> {
         let resolved_model_id = match model_id {

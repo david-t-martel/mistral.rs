@@ -1,0 +1,149 @@
+global:
+  # The smarthost and SMTP sender used for mail notifications.
+  smtp_smarthost: 'localhost:25'
+  smtp_from: 'alertmanager@mistralrs.local'
+  smtp_require_tls: false
+
+  # The root route on which each incoming alert enters.
+route:
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service', 'severity']
+
+  # When a new group of alerts is created, wait at least
+  # 'group_wait' to send the initial notification.
+  group_wait: 30s
+
+  # When the first notification was sent, wait 'group_interval' to send a batch
+  # of new alerts that started firing for that group.
+  group_interval: 5m
+
+  # If an alert has successfully been sent, wait 'repeat_interval' to
+  # resend them.
+  repeat_interval: 12h
+
+  # Default receiver
+  receiver: 'default'
+
+  # Child routes
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: critical
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+
+    # Warning alerts - batched notifications
+    - match:
+        severity: warning
+      receiver: warning
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 4h
+
+    # Info alerts - daily digest
+    - match:
+        severity: info
+      receiver: info
+      group_wait: 30m
+      group_interval: 1h
+      repeat_interval: 24h
+
+# Receivers configuration
+receivers:
+  # Default receiver (catches all)
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook'
+        send_resolved: true
+        http_config:
+          bearer_token: 'your-bearer-token-here'
+
+  # Critical alerts receiver
+  - name: 'critical'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/critical'
+        send_resolved: true
+        max_alerts: 0  # Send all alerts
+
+    # PagerDuty integration (optional)
+    # pagerduty_configs:
+    #   - service_key: 'your-pagerduty-service-key'
+    #     severity: 'critical'
+
+    # Slack integration (optional)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts-critical'
+    #     title: 'Critical Alert'
+    #     text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+
+    # Email notification (optional)
+    # email_configs:
+    #   - to: 'oncall@example.com'
+    #     headers:
+    #       Subject: 'Critical: {{ .GroupLabels.alertname }}'
+    #     html: |
+    #       <h2>Critical Alert</h2>
+    #       {{ range .Alerts }}
+    #       <p><strong>{{ .Labels.alertname }}</strong><br/>
+    #       {{ .Annotations.description }}<br/>
+    #       <a href="{{ .Annotations.dashboard }}">View Dashboard</a></p>
+    #       {{ end }}
+
+  # Warning alerts receiver
+  - name: 'warning'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/warning'
+        send_resolved: true
+        max_alerts: 10  # Limit to 10 alerts per notification
+
+    # Slack integration (optional)
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts-warning'
+    #     send_resolved: true
+
+  # Info alerts receiver (low priority)
+  - name: 'info'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/info'
+        send_resolved: false  # Don't send resolution for info alerts
+
+    # Email digest (optional)
+    # email_configs:
+    #   - to: 'team@example.com'
+    #     send_resolved: false
+    #     headers:
+    #       Subject: 'Daily Alert Digest'
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning alerts if critical alert is firing for same service
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  # Inhibit info alerts if warning or critical alert is firing
+  - source_match_re:
+      severity: 'critical|warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'service']
+
+  # Inhibit low memory warnings if high memory critical is firing
+  - source_match:
+      alertname: 'HighMemoryUsageCritical'
+    target_match:
+      alertname: 'HighMemoryUsageWarning'
+    equal: ['instance']
+
+  # Inhibit connection reuse warning if circuit breaker is open
+  - source_match:
+      alertname: 'CircuitBreakerOpen'
+    target_match:
+      alertname: 'LowConnectionReuseRate'
+    equal: ['instance']

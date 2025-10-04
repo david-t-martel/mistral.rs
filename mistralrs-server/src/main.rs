@@ -18,6 +18,8 @@ use mistralrs_server_core::{
 
 mod interactive_mode;
 use interactive_mode::interactive_mode;
+mod agent_mode;
+use agent_mode::agent_mode;
 mod mcp_server;
 
 #[derive(Parser)]
@@ -152,6 +154,10 @@ struct Args {
     /// Enable thinking for interactive mode and models that support it.
     #[arg(long = "enable-thinking")]
     enable_thinking: bool,
+
+    /// Enter agent mode for autonomous ReAct-style reasoning with automatic tool execution.
+    #[clap(long, action)]
+    agent_mode: bool,
 
     /// Port to serve MCP protocol on
     #[arg(long)]
@@ -406,6 +412,11 @@ async fn main() -> Result<()> {
 
     // TODO: refactor this
     let bert_model = get_bert_model(args.enable_search, args.search_bert_model);
+
+    if args.agent_mode {
+        agent_mode(mistralrs, bert_model.is_some()).await;
+        return Ok(());
+    }
 
     if args.interactive_mode {
         interactive_mode(

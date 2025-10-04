@@ -31,7 +31,7 @@ fn terminate_handler() {
     TERMINATE_ALL_NEXT_STEP.store(true, Ordering::SeqCst);
 }
 
-fn history_file_path() -> PathBuf {
+pub fn history_file_path() -> PathBuf {
     // Replace these with your own org/app identifiers.
     let proj_dirs = ProjectDirs::from("com", "", "mistral.rs")
         .expect("Could not determine project directories");
@@ -71,7 +71,7 @@ fn read_line<H: Helper, I: History>(editor: &mut Editor<H, I>) -> String {
     }
 }
 
-static CTRLC_HANDLER: Lazy<Mutex<&'static (dyn Fn() + Sync)>> =
+pub static CTRLC_HANDLER: Lazy<Mutex<&'static (dyn Fn() + Sync)>> =
     Lazy::new(|| Mutex::new(&exit_handler));
 
 pub async fn interactive_mode(

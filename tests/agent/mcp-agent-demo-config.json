@@ -1,0 +1,29 @@
+{
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "Filesystem Tools",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+        "env": null,
+        "work_dir": null
+      }
+    },
+    {
+      "id": "time",
+      "name": "Time Tools",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-time"],
+        "env": null,
+        "work_dir": null
+      }
+    }
+  ],
+  "auto_register_tools": true,
+  "tool_timeout_secs": 30,
+  "max_concurrent_calls": 5
+}

@@ -4,9 +4,12 @@ use futures_util::{SinkExt, StreamExt};
 use http::{Request, Uri};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use tracing::{debug, error, info, warn};
 
 /// Transport layer for MCP communication
 #[async_trait::async_trait]
@@ -86,6 +89,10 @@ pub struct HttpTransport {
     base_url: String,
     headers: HashMap<String, String>,
     request_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// Track if this transport is being dropped to prevent double cleanup
+    dropped: std::sync::Arc<AtomicBool>,
+    /// Track active requests for graceful shutdown
+    active_requests: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl HttpTransport {
@@ -147,6 +154,8 @@ impl HttpTransport {
             base_url,
             headers: headers.unwrap_or_default(),
             request_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            dropped: std::sync::Arc::new(AtomicBool::new(false)),
+            active_requests: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         })
     }
 
@@ -247,21 +256,34 @@ impl McpTransport for HttpTransport {
     ///         None,
     ///         None
     ///     )?;
-    ///     
+    ///
     ///     // List available tools
     ///     let tools = transport.send_request("tools/list", serde_json::Value::Null).await?;
-    ///     
+    ///
     ///     // Call a specific tool
     ///     let params = json!({
     ///         "name": "search",
     ///         "arguments": {"query": "example search"}
     ///     });
     ///     let result = transport.send_request("tools/call", params).await?;
-    ///     
+    ///
     ///     Ok(())
     /// }
     /// ```
     async fn send_request(&self, method: &str, params: Value) -> Result<Value> {
+        // Check if transport is being dropped
+        if self.dropped.load(Ordering::Acquire) {
+            return Err(anyhow::anyhow!("Transport is shutting down"));
+        }
+
+        // Increment active request counter
+        self.active_requests.fetch_add(1, Ordering::SeqCst);
+
+        // Ensure cleanup even on error
+        let _guard = scopeguard::guard((), |_| {
+            self.active_requests.fetch_sub(1, Ordering::SeqCst);
+        });
+
         // Ensure params is an object, not null
         let params = if params.is_null() {
             serde_json::json!({})
@@ -374,6 +396,27 @@ impl McpTransport for HttpTransport {
     }
 }
 
+impl Drop for HttpTransport {
+    fn drop(&mut self) {
+        // Mark as dropped to prevent new requests
+        self.dropped.store(true, Ordering::Release);
+
+        // Log if there are active requests being dropped
+        let active = self.active_requests.load(Ordering::Acquire);
+        if active > 0 {
+            warn!(
+                "HttpTransport dropped with {} active requests - requests may be cancelled",
+                active
+            );
+        } else {
+            debug!("HttpTransport dropped cleanly with no active requests");
+        }
+
+        // Note: The underlying reqwest::Client will handle connection cleanup
+        // Connection pools are automatically cleaned up when the client is dropped
+    }
+}
+
 /// Process-based MCP transport using stdin/stdout communication
 ///
 /// Provides communication with local MCP servers running as separate processes
@@ -454,6 +497,12 @@ pub struct ProcessTransport {
     stdin: std::sync::Arc<tokio::sync::Mutex<tokio::process::ChildStdin>>,
     stdout_reader:
         std::sync::Arc<tokio::sync::Mutex<tokio::io::BufReader<tokio::process::ChildStdout>>>,
+    /// Track if this transport is being dropped
+    dropped: std::sync::Arc<AtomicBool>,
+    /// Track active requests for graceful shutdown
+    active_requests: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    /// Process ID for logging and debugging
+    pid: std::sync::Arc<tokio::sync::RwLock<Option<u32>>>,
 }
 
 impl ProcessTransport {
@@ -539,6 +588,8 @@ impl ProcessTransport {
         }
 
         let mut child = cmd.spawn()?;
+        let pid = child.id();
+
         let stdin = child
             .stdin
             .take()
@@ -549,11 +600,16 @@ impl ProcessTransport {
             .ok_or_else(|| anyhow::anyhow!("Failed to get stdout handle"))?;
         let stdout_reader = BufReader::new(stdout);
 
+        debug!("Spawned MCP process with PID: {:?}", pid);
+
         Ok(Self {
             child: std::sync::Arc::new(tokio::sync::Mutex::new(child)),
             request_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
             stdin: std::sync::Arc::new(tokio::sync::Mutex::new(stdin)),
             stdout_reader: std::sync::Arc::new(tokio::sync::Mutex::new(stdout_reader)),
+            dropped: std::sync::Arc::new(AtomicBool::new(false)),
+            active_requests: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+            pid: std::sync::Arc::new(tokio::sync::RwLock::new(pid)),
         })
     }
 }
@@ -598,22 +654,35 @@ impl McpTransport for ProcessTransport {
     ///         None,
     ///         None
     ///     ).await?;
-    ///     
+    ///
     ///     // List available tools
     ///     let tools = transport.send_request("tools/list", serde_json::Value::Null).await?;
-    ///     
+    ///
     ///     // Call a specific tool
     ///     let params = json!({
     ///         "name": "read_file",
     ///         "arguments": {"path": "/tmp/example.txt"}
     ///     });
     ///     let result = transport.send_request("tools/call", params).await?;
-    ///     
+    ///
     ///     Ok(())
     /// }
     /// ```
     async fn send_request(&self, method: &str, params: Value) -> Result<Value> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+
+        // Check if transport is being dropped
+        if self.dropped.load(Ordering::Acquire) {
+            return Err(anyhow::anyhow!("Process transport is shutting down"));
+        }
+
+        // Increment active request counter
+        self.active_requests.fetch_add(1, Ordering::SeqCst);
+
+        // Ensure cleanup even on error
+        let _guard = scopeguard::guard((), |_| {
+            self.active_requests.fetch_sub(1, Ordering::SeqCst);
+        });
 
         // Ensure params is an object, not null
         let params = if params.is_null() {
@@ -722,6 +791,134 @@ impl McpTransport for ProcessTransport {
     }
 }
 
+impl Drop for ProcessTransport {
+    fn drop(&mut self) {
+        // Mark as dropped to prevent new requests
+        self.dropped.store(true, Ordering::Release);
+
+        let active = self.active_requests.load(Ordering::Acquire);
+        let pid = self.pid.clone();
+
+        // Spawn a background task to handle graceful shutdown
+        // We need to do this because Drop cannot be async
+        tokio::spawn(async move {
+            let pid_value = pid.read().await;
+
+            if active > 0 {
+                warn!(
+                    "ProcessTransport (PID: {:?}) dropped with {} active requests, initiating graceful shutdown",
+                    pid_value, active
+                );
+            } else {
+                debug!("ProcessTransport (PID: {:?}) dropped cleanly", pid_value);
+            }
+        });
+
+        // The actual process cleanup will happen when the child mutex is dropped
+        // which will call the Child's Drop implementation.
+        // We'll also implement a manual cleanup method for graceful shutdown scenarios.
+    }
+}
+
+impl ProcessTransport {
+    /// Gracefully shut down the process with timeout
+    ///
+    /// Sends SIGTERM first, waits for graceful shutdown, then SIGKILL if needed.
+    ///
+    /// # Arguments
+    ///
+    /// * `graceful_timeout` - How long to wait for graceful shutdown before forcing
+    ///
+    /// # Returns
+    ///
+    /// Ok(()) if process was terminated successfully
+    pub async fn shutdown_graceful(&self, graceful_timeout: Duration) -> Result<()> {
+        self.dropped.store(true, Ordering::Release);
+
+        let active = self.active_requests.load(Ordering::Acquire);
+        if active > 0 {
+            info!(
+                "Waiting for {} active requests to complete (timeout: {:?})",
+                active, graceful_timeout
+            );
+
+            // Wait for active requests to complete or timeout
+            let start = tokio::time::Instant::now();
+            while self.active_requests.load(Ordering::Acquire) > 0 {
+                if start.elapsed() >= graceful_timeout {
+                    warn!(
+                        "Timeout waiting for requests, {} still active",
+                        self.active_requests.load(Ordering::Acquire)
+                    );
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+
+        let mut child = self.child.lock().await;
+        let pid = child.id();
+
+        debug!("Sending SIGTERM to process (PID: {:?})", pid);
+
+        // Try graceful termination first (SIGTERM on Unix, kill on Windows)
+        #[cfg(unix)]
+        {
+            use nix::sys::signal::{kill, Signal};
+            use nix::unistd::Pid;
+
+            if let Some(pid) = pid {
+                let nix_pid = Pid::from_raw(pid as i32);
+                // Send SIGTERM for graceful shutdown
+                if let Err(e) = kill(nix_pid, Signal::SIGTERM) {
+                    warn!("Failed to send SIGTERM: {}", e);
+                } else {
+                    // Wait for graceful shutdown with timeout
+                    match tokio::time::timeout(Duration::from_secs(5), child.wait()).await {
+                        Ok(Ok(status)) => {
+                            info!("Process exited gracefully with status: {}", status);
+                            return Ok(());
+                        }
+                        Ok(Err(e)) => {
+                            warn!("Error waiting for process: {}", e);
+                        }
+                        Err(_) => {
+                            warn!("Graceful shutdown timeout, sending SIGKILL");
+                        }
+                    }
+                }
+
+                // If still running, send SIGKILL
+                if let Err(e) = kill(nix_pid, Signal::SIGKILL) {
+                    error!("Failed to send SIGKILL: {}", e);
+                    return Err(anyhow::anyhow!("Failed to kill process: {}", e));
+                }
+            }
+        }
+
+        #[cfg(not(unix))]
+        {
+            // On Windows, just kill the process
+            if let Err(e) = child.kill().await {
+                error!("Failed to kill process (PID: {:?}): {}", pid, e);
+                return Err(anyhow::anyhow!("Failed to kill process: {}", e));
+            }
+        }
+
+        // Wait for the process to actually exit
+        match child.wait().await {
+            Ok(status) => {
+                info!("Process terminated with status: {}", status);
+                Ok(())
+            }
+            Err(e) => {
+                error!("Error waiting for process termination: {}", e);
+                Err(anyhow::anyhow!("Failed to wait for process: {}", e))
+            }
+        }
+    }
+}
+
 /// WebSocket-based MCP transport
 ///
 /// Provides real-time bidirectional communication with MCP servers over WebSocket connections.
@@ -781,6 +978,10 @@ pub struct WebSocketTransport {
     read:
         std::sync::Arc<tokio::sync::Mutex<SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>>>,
     request_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// Track if this transport is being dropped
+    dropped: std::sync::Arc<AtomicBool>,
+    /// Track active requests for graceful shutdown
+    active_requests: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl WebSocketTransport {
@@ -813,13 +1014,13 @@ impl WebSocketTransport {
     /// async fn main() -> anyhow::Result<()> {
     ///     let mut headers = HashMap::new();
     ///     headers.insert("Authorization".to_string(), "Bearer token123".to_string());
-    ///     
+    ///
     ///     let transport = WebSocketTransport::new(
     ///         "wss://mcp.example.com/api".to_string(),
     ///         Some(30),
     ///         Some(headers)
     ///     ).await?;
-    ///     
+    ///
     ///     Ok(())
     /// }
     /// ```
@@ -859,10 +1060,14 @@ impl WebSocketTransport {
         // Split the stream
         let (write, read) = ws_stream.split();
 
+        debug!("WebSocket connection established to {}", url);
+
         Ok(Self {
             write: std::sync::Arc::new(tokio::sync::Mutex::new(write)),
             read: std::sync::Arc::new(tokio::sync::Mutex::new(read)),
             request_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            dropped: std::sync::Arc::new(AtomicBool::new(false)),
+            active_requests: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         })
     }
 }
@@ -889,7 +1094,7 @@ impl McpTransport for WebSocketTransport {
     /// # Errors
     ///
     /// - WebSocket connection errors
-    /// - JSON serialization/deserialization errors  
+    /// - JSON serialization/deserialization errors
     /// - MCP server errors (returned in JSON-RPC error field)
     /// - Timeout or connection closure
     ///
@@ -906,18 +1111,31 @@ impl McpTransport for WebSocketTransport {
     ///         None,
     ///         None
     ///     ).await?;
-    ///     
+    ///
     ///     // List available tools
     ///     let tools = transport.send_request("tools/list", serde_json::Value::Null).await?;
-    ///     
+    ///
     ///     // Call a specific tool
     ///     let params = json!({"query": "example search"});
     ///     let result = transport.send_request("tools/call", params).await?;
-    ///     
+    ///
     ///     Ok(())
     /// }
     /// ```
     async fn send_request(&self, method: &str, params: Value) -> Result<Value> {
+        // Check if transport is being dropped
+        if self.dropped.load(Ordering::Acquire) {
+            return Err(anyhow::anyhow!("WebSocket transport is shutting down"));
+        }
+
+        // Increment active request counter
+        self.active_requests.fetch_add(1, Ordering::SeqCst);
+
+        // Ensure cleanup even on error
+        let _guard = scopeguard::guard((), |_| {
+            self.active_requests.fetch_sub(1, Ordering::SeqCst);
+        });
+
         // Ensure params is an object, not null
         let params = if params.is_null() {
             serde_json::json!({})
@@ -1062,5 +1280,129 @@ impl McpTransport for WebSocketTransport {
                 .map_err(|e| anyhow::anyhow!("Failed to send WebSocket message: {}", e))?;
         }
         Ok(())
+    }
+}
+
+impl Drop for WebSocketTransport {
+    fn drop(&mut self) {
+        // Mark as dropped to prevent new requests
+        self.dropped.store(true, Ordering::Release);
+
+        let active = self.active_requests.load(Ordering::Acquire);
+        let write = Arc::clone(&self.write);
+
+        // Spawn a background task to handle graceful shutdown
+        tokio::spawn(async move {
+            if active > 0 {
+                warn!(
+                    "WebSocketTransport dropped with {} active requests, sending close frame",
+                    active
+                );
+            } else {
+                debug!("WebSocketTransport dropped cleanly, sending close frame");
+            }
+
+            // Try to send a close frame
+            let mut write = write.lock().await;
+            if let Err(e) = write.send(Message::Close(None)).await {
+                debug!("Failed to send WebSocket close frame: {}", e);
+            }
+
+            // Give the close frame time to be sent
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        });
+    }
+}
+
+impl WebSocketTransport {
+    /// Gracefully shut down the WebSocket connection
+    ///
+    /// Sends a close frame and waits for the server's close response.
+    ///
+    /// # Arguments
+    ///
+    /// * `timeout` - Maximum time to wait for close handshake
+    ///
+    /// # Returns
+    ///
+    /// Ok(()) if connection was closed successfully
+    pub async fn shutdown_graceful(&self, timeout_duration: Duration) -> Result<()> {
+        self.dropped.store(true, Ordering::Release);
+
+        let active = self.active_requests.load(Ordering::Acquire);
+        if active > 0 {
+            info!(
+                "Waiting for {} active WebSocket requests to complete (timeout: {:?})",
+                active, timeout_duration
+            );
+
+            // Wait for active requests to complete or timeout
+            let start = tokio::time::Instant::now();
+            while self.active_requests.load(Ordering::Acquire) > 0 {
+                if start.elapsed() >= timeout_duration {
+                    warn!(
+                        "Timeout waiting for WebSocket requests, {} still active",
+                        self.active_requests.load(Ordering::Acquire)
+                    );
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        }
+
+        debug!("Sending WebSocket close frame");
+
+        // Send close frame
+        {
+            let mut write = self.write.lock().await;
+            write
+                .send(Message::Close(None))
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to send close frame: {}", e))?;
+        }
+
+        // Wait for close response from server with timeout
+        let result =
+            tokio::time::timeout(Duration::from_secs(2), self.wait_for_close_response()).await;
+
+        match result {
+            Ok(Ok(())) => {
+                info!("WebSocket closed gracefully");
+                Ok(())
+            }
+            Ok(Err(e)) => {
+                warn!("Error during WebSocket close handshake: {}", e);
+                Ok(()) // Still consider it closed
+            }
+            Err(_) => {
+                warn!("Timeout waiting for WebSocket close response");
+                Ok(()) // Force close after timeout
+            }
+        }
+    }
+
+    /// Wait for the server's close frame response
+    async fn wait_for_close_response(&self) -> Result<()> {
+        let mut read = self.read.lock().await;
+
+        loop {
+            match read.next().await {
+                Some(Ok(Message::Close(_))) => {
+                    debug!("Received close frame from server");
+                    return Ok(());
+                }
+                Some(Ok(_)) => {
+                    // Ignore other messages during shutdown
+                    continue;
+                }
+                Some(Err(e)) => {
+                    return Err(anyhow::anyhow!("WebSocket error during close: {}", e));
+                }
+                None => {
+                    // Connection closed
+                    return Ok(());
+                }
+            }
+        }
     }
 }

@@ -1,0 +1,10 @@
+# Rust code quality rules for mistral.rs
+# Basic rule to catch common quality issues
+
+id: no-unwrap-in-production
+language: rust
+severity: warning
+message: Avoid using .unwrap() in production code. Use proper error handling.
+rule:
+  pattern: $EXPR.unwrap()
+note: Replace with .expect() or proper error handling

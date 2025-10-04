@@ -1,0 +1,59 @@
+[Unit]
+Description=mistral.rs LLM Inference Server
+Documentation=https://github.com/EricLBuehler/mistral.rs
+After=network.target
+
+[Service]
+Type=simple
+User=mistralrs
+Group=mistralrs
+WorkingDirectory=/opt/mistralrs
+
+# Binary location
+ExecStart=/opt/mistralrs/mistralrs-server \
+    --port 8080 \
+    --mcp-config /etc/mistralrs/mcp-config.json \
+    gguf \
+    -m /var/lib/mistralrs/models \
+    -f Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
+
+# Restart configuration
+Restart=always
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Environment variables
+Environment="RUST_LOG=info"
+Environment="RUST_BACKTRACE=1"
+Environment="CUDA_VISIBLE_DEVICES=0"
+Environment="HUGGINGFACE_HUB_CACHE=/var/lib/mistralrs/cache"
+
+# Resource limits
+MemoryLimit=8G
+MemoryHigh=6G
+TasksMax=512
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/mistralrs /var/log/mistralrs
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mistralrs
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,41 @@
+{
+  "servers": [
+    {
+      "name": "Memory",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory@2025.8.4"],
+        "env": {
+          "MEMORY_FILE_PATH": "./data/dev/memory.json",
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Filesystem",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.8.21", "."],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Time",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@theo.foobar/mcp-time"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    }
+  ],
+  "auto_register_tools": true,
+  "tool_timeout_secs": 60,
+  "max_concurrent_calls": 2
+}

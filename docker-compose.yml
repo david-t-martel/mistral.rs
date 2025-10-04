@@ -1,0 +1,172 @@
+# Docker Compose configuration for mistral.rs deployment
+# Includes: mistral.rs server, Redis (for RAG), Prometheus, Grafana
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Core Service: mistral.rs LLM Server
+  # ============================================================================
+  mistralrs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mistralrs:latest
+    container_name: mistralrs-server
+    restart: unless-stopped
+
+    # GPU support (NVIDIA)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Port mapping
+    ports:
+      - "8080:8080"    # HTTP API
+      - "8081:8081"    # WebSocket (if enabled)
+
+    # Volume mounts
+    volumes:
+      - ./models:/models:ro                    # Model files (read-only)
+      - ./configs:/config:ro                   # Configuration files
+      - ./logs:/logs                           # Application logs
+      - ./data:/data                           # Persistent data (cache, etc.)
+      - ./chat_templates:/app/chat_templates:ro
+
+    # Environment variables
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+      - MISTRALRS_PORT=8080
+      - MISTRALRS_HOST=0.0.0.0
+      - MISTRALRS_MAX_SEQS=256
+      - MISTRALRS_WORKERS=2
+      - CUDA_VISIBLE_DEVICES=0
+      - HUGGINGFACE_HUB_CACHE=/data/hf_cache
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Resource limits
+    mem_limit: 8g
+    memswap_limit: 16g
+
+    # Command override (example: GGUF model)
+    command: >
+      --port 8080
+      --mcp-config /config/mcp-config.json
+      gguf
+      -m /models
+      -f Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
+
+    # Dependencies
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # Networks
+    networks:
+      - mistralrs-network
+
+  # ============================================================================
+  # Redis: Cache and RAG backend
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: mistralrs-redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis-data:/data
+
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - mistralrs-network
+
+  # ============================================================================
+  # Prometheus: Metrics collection
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mistralrs-prometheus
+    restart: unless-stopped
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+
+    networks:
+      - mistralrs-network
+
+  # ============================================================================
+  # Grafana: Metrics visualization
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mistralrs-grafana
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    depends_on:
+      - prometheus
+
+    networks:
+      - mistralrs-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  mistralrs-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

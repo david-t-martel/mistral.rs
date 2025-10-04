@@ -1,0 +1,726 @@
+//! High-performance connection pooling for MCP transport layers
+//!
+//! This module provides connection pooling for HTTP, WebSocket, and Redis connections
+//! to reduce connection overhead and improve performance for MCP operations.
+//!
+//! Features:
+//! - HTTP connection reuse with keep-alive
+//! - WebSocket connection multiplexing
+//! - Redis connection pooling with health checks
+//! - Automatic connection pruning and recycling
+//! - Health monitoring and recovery
+
+use anyhow::Result;
+use futures_util::stream::{SplitSink, SplitStream};
+use futures_util::{SinkExt, StreamExt};
+use reqwest::Client as HttpClient;
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::net::TcpStream;
+use tokio::sync::{Mutex, RwLock, Semaphore};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use tracing::{debug, info, warn};
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+/// Connection pool configuration
+#[derive(Debug, Clone)]
+pub struct PoolConfig {
+    /// Maximum number of connections in the pool
+    pub max_size: usize,
+    /// Number of idle connections to maintain
+    pub min_idle: usize,
+    /// Maximum time a connection can be idle before being closed
+    pub idle_timeout: Duration,
+    /// Maximum lifetime of a connection
+    pub max_lifetime: Duration,
+    /// Timeout for creating a new connection
+    pub connection_timeout: Duration,
+    /// Interval for health checks
+    pub health_check_interval: Duration,
+}
+
+impl Default for PoolConfig {
+    fn default() -> Self {
+        Self {
+            max_size: 10,
+            min_idle: 5,
+            idle_timeout: Duration::from_secs(300), // 5 minutes
+            max_lifetime: Duration::from_secs(3600), // 1 hour
+            connection_timeout: Duration::from_secs(5),
+            health_check_interval: Duration::from_secs(30),
+        }
+    }
+}
+
+// ============================================================================
+// HTTP Connection Pool
+// ============================================================================
+
+/// Pooled HTTP client with connection reuse
+pub struct HttpConnectionPool {
+    client: Arc<HttpClient>,
+    metrics: Arc<RwLock<ConnectionMetrics>>,
+}
+
+impl HttpConnectionPool {
+    pub fn new(config: &PoolConfig) -> Result<Self> {
+        let client = HttpClient::builder()
+            .pool_max_idle_per_host(config.min_idle)
+            .pool_idle_timeout(config.idle_timeout)
+            .connect_timeout(config.connection_timeout)
+            .tcp_keepalive(Some(Duration::from_secs(60)))
+            .http2_keep_alive_interval(Some(Duration::from_secs(30)))
+            .http2_keep_alive_timeout(Duration::from_secs(10))
+            .http2_keep_alive_while_idle(true)
+            .build()?;
+
+        Ok(Self {
+            client: Arc::new(client),
+            metrics: Arc::new(RwLock::new(ConnectionMetrics::default())),
+        })
+    }
+
+    /// Get the HTTP client for making requests
+    pub fn client(&self) -> Arc<HttpClient> {
+        Arc::clone(&self.client)
+    }
+
+    /// Execute a request with connection reuse tracking
+    pub async fn execute_request(
+        &self,
+        url: &str,
+        body: Value,
+        headers: Option<HashMap<String, String>>,
+    ) -> Result<Value> {
+        let start = Instant::now();
+
+        let mut request = self.client.post(url).json(&body);
+
+        if let Some(headers_map) = headers {
+            for (key, value) in headers_map {
+                request = request.header(key, value);
+            }
+        }
+
+        let response = request.send().await?;
+
+        // Track metrics
+        let mut metrics = self.metrics.write().await;
+        metrics.total_requests += 1;
+
+        // Connection reuse is handled internally by reqwest
+        // We estimate reuse based on timing (new connections take longer)
+        let duration = start.elapsed();
+        if duration < Duration::from_millis(50) {
+            metrics.reused_connections += 1;
+        }
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            metrics.failed_requests += 1;
+            Err(anyhow::anyhow!("HTTP request failed: {}", response.status()))
+        }
+    }
+
+    /// Get current pool metrics
+    pub async fn metrics(&self) -> ConnectionMetrics {
+        self.metrics.read().await.clone()
+    }
+}
+
+// ============================================================================
+// Redis Connection Pool
+// ============================================================================
+
+/// Simple Redis connection pool wrapper
+pub struct SimpleRedisPool {
+    client: redis::Client,
+    connections: Arc<RwLock<Vec<redis::aio::MultiplexedConnection>>>,
+    max_size: usize,
+}
+
+impl SimpleRedisPool {
+    pub async fn new(url: &str, max_size: usize) -> Result<Self> {
+        let client = redis::Client::open(url)?;
+
+        // Pre-create some connections
+        let mut connections = Vec::new();
+        for _ in 0..(max_size / 2).min(3) {
+            if let Ok(conn) = client.get_multiplexed_tokio_connection().await {
+                connections.push(conn);
+            }
+        }
+
+        Ok(Self {
+            client,
+            connections: Arc::new(RwLock::new(connections)),
+            max_size,
+        })
+    }
+
+    pub async fn get(&self) -> Result<redis::aio::MultiplexedConnection> {
+        // Try to get existing connection
+        {
+            let mut conns = self.connections.write().await;
+            if let Some(conn) = conns.pop() {
+                return Ok(conn);
+            }
+        }
+
+        // Create new connection
+        Ok(self.client.get_multiplexed_tokio_connection().await?)
+    }
+
+    pub async fn put(&self, conn: redis::aio::MultiplexedConnection) {
+        let mut conns = self.connections.write().await;
+        if conns.len() < self.max_size {
+            conns.push(conn);
+        }
+    }
+}
+
+/// Pooled Redis connections with health monitoring
+pub struct RedisConnectionPool {
+    pool: Arc<SimpleRedisPool>,
+    metrics: Arc<RwLock<ConnectionMetrics>>,
+}
+
+impl RedisConnectionPool {
+    pub async fn new(url: &str, config: PoolConfig) -> Result<Self> {
+        let pool = Arc::new(SimpleRedisPool::new(url, config.max_size).await?);
+        let metrics = Arc::new(RwLock::new(ConnectionMetrics::default()));
+
+        // Start health monitoring task
+        let pool_clone = Arc::clone(&pool);
+        let metrics_clone = Arc::clone(&metrics);
+        let interval = config.health_check_interval;
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval);
+            loop {
+                interval.tick().await;
+
+                // Update metrics
+                let mut metrics = metrics_clone.write().await;
+                metrics.total_connections = pool_clone.connections.read().await.len() as u64;
+            }
+        });
+
+        Ok(Self { pool, metrics })
+    }
+
+    /// Get a connection from the pool
+    pub async fn get(&self) -> Result<redis::aio::MultiplexedConnection> {
+        let start = Instant::now();
+        let conn = self.pool.get().await?;
+
+        let mut metrics = self.metrics.write().await;
+        metrics.total_requests += 1;
+
+        // Fast acquisition likely means reused connection
+        if start.elapsed() < Duration::from_millis(5) {
+            metrics.reused_connections += 1;
+        }
+
+        Ok(conn)
+    }
+
+    /// Execute a Redis command with pooled connection
+    pub async fn execute<T>(&self, cmd: &str, args: Vec<String>) -> Result<T>
+    where
+        T: redis::FromRedisValue,
+    {
+        let mut conn = self.get().await?;
+
+        let mut redis_cmd = redis::cmd(cmd);
+        for arg in args {
+            redis_cmd.arg(arg);
+        }
+
+        let result = redis_cmd.query_async(&mut conn).await?;
+
+        // Return connection to pool
+        self.pool.put(conn).await;
+
+        Ok(result)
+    }
+
+    /// Get current pool metrics
+    pub async fn metrics(&self) -> ConnectionMetrics {
+        self.metrics.read().await.clone()
+    }
+
+    /// Manually trigger a health check
+    pub async fn health_check(&self) -> Result<()> {
+        // Try to get and immediately return a connection
+        let conn = self.pool.get().await?;
+
+        // Test with PING
+        let _: String = redis::cmd("PING").query_async(&mut conn.clone()).await?;
+
+        self.pool.put(conn).await;
+
+        info!("Redis pool health check passed");
+        Ok(())
+    }
+}
+
+// ============================================================================
+// WebSocket Connection Pool
+// ============================================================================
+
+type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+/// WebSocket connection wrapper
+pub struct WebSocketConnection {
+    sink: Arc<Mutex<SplitSink<WsStream, Message>>>,
+    stream: Arc<Mutex<SplitStream<WsStream>>>,
+    created_at: Instant,
+    last_used: Arc<Mutex<Instant>>,
+}
+
+impl WebSocketConnection {
+    pub async fn new(url: &str, headers: Option<HashMap<String, String>>) -> Result<Self> {
+        let mut request = http::Request::builder()
+            .uri(url)
+            .header("Upgrade", "websocket")
+            .header("Connection", "Upgrade")
+            .header("Sec-WebSocket-Version", "13")
+            .header("Sec-WebSocket-Key", tungstenite::handshake::client::generate_key());
+
+        if let Some(headers_map) = headers {
+            for (key, value) in headers_map {
+                request = request.header(key, value);
+            }
+        }
+
+        let request = request.body(())?;
+        let (ws_stream, _) = connect_async(request).await?;
+        let (sink, stream) = ws_stream.split();
+
+        Ok(Self {
+            sink: Arc::new(Mutex::new(sink)),
+            stream: Arc::new(Mutex::new(stream)),
+            created_at: Instant::now(),
+            last_used: Arc::new(Mutex::new(Instant::now())),
+        })
+    }
+
+    pub async fn send(&self, message: Message) -> Result<()> {
+        let mut sink = self.sink.lock().await;
+        sink.send(message).await?;
+        *self.last_used.lock().await = Instant::now();
+        Ok(())
+    }
+
+    pub async fn receive(&self) -> Result<Option<Message>> {
+        let mut stream = self.stream.lock().await;
+        let message = stream.next().await.transpose()?;
+        *self.last_used.lock().await = Instant::now();
+        Ok(message)
+    }
+
+    pub async fn is_healthy(&self) -> bool {
+        // Check if connection is still alive with a ping
+        if let Err(_) = self.send(Message::Ping(vec![])).await {
+            return false;
+        }
+
+        // Wait for pong (with timeout)
+        match tokio::time::timeout(Duration::from_secs(5), self.receive()).await {
+            Ok(Ok(Some(Message::Pong(_)))) => true,
+            _ => false,
+        }
+    }
+
+    pub fn age(&self) -> Duration {
+        self.created_at.elapsed()
+    }
+
+    pub async fn idle_time(&self) -> Duration {
+        self.last_used.lock().await.elapsed()
+    }
+}
+
+/// Pooled WebSocket connections with multiplexing support
+pub struct WebSocketConnectionPool {
+    connections: Arc<RwLock<HashMap<String, Vec<Arc<WebSocketConnection>>>>>,
+    config: PoolConfig,
+    metrics: Arc<RwLock<ConnectionMetrics>>,
+    semaphore: Arc<Semaphore>,
+}
+
+impl WebSocketConnectionPool {
+    pub fn new(config: PoolConfig) -> Self {
+        let semaphore = Arc::new(Semaphore::new(config.max_size));
+
+        let pool = Self {
+            connections: Arc::new(RwLock::new(HashMap::new())),
+            config: config.clone(),
+            metrics: Arc::new(RwLock::new(ConnectionMetrics::default())),
+            semaphore,
+        };
+
+        // Start cleanup task
+        let pool_clone = pool.connections.clone();
+        let config_clone = config.clone();
+        let metrics_clone = pool.metrics.clone();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+
+                let mut connections = pool_clone.write().await;
+                let mut total_removed = 0;
+
+                for (_, conns) in connections.iter_mut() {
+                    // Remove idle or old connections
+                    let before = conns.len();
+                    conns.retain(|conn| {
+                        let age = conn.age();
+                        let idle = tokio::runtime::Handle::current()
+                            .block_on(conn.idle_time());
+
+                        age < config_clone.max_lifetime && idle < config_clone.idle_timeout
+                    });
+                    total_removed += before - conns.len();
+                }
+
+                if total_removed > 0 {
+                    debug!("Cleaned up {} idle WebSocket connections", total_removed);
+                    let mut metrics = metrics_clone.write().await;
+                    metrics.total_connections -= total_removed as u64;
+                }
+            }
+        });
+
+        pool
+    }
+
+    /// Get or create a WebSocket connection
+    pub async fn get_connection(
+        &self,
+        url: &str,
+        headers: Option<HashMap<String, String>>,
+    ) -> Result<Arc<WebSocketConnection>> {
+        // Try to get existing healthy connection
+        {
+            let connections = self.connections.read().await;
+            if let Some(url_conns) = connections.get(url) {
+                for conn in url_conns {
+                    if conn.is_healthy().await {
+                        let mut metrics = self.metrics.write().await;
+                        metrics.reused_connections += 1;
+                        metrics.total_requests += 1;
+                        return Ok(Arc::clone(conn));
+                    }
+                }
+            }
+        }
+
+        // Create new connection with semaphore permit
+        let _permit = self.semaphore.acquire().await?;
+
+        let conn = Arc::new(WebSocketConnection::new(url, headers).await?);
+
+        // Add to pool
+        let mut connections = self.connections.write().await;
+        connections.entry(url.to_string())
+            .or_insert_with(Vec::new)
+            .push(Arc::clone(&conn));
+
+        let mut metrics = self.metrics.write().await;
+        metrics.total_connections += 1;
+        metrics.total_requests += 1;
+
+        Ok(conn)
+    }
+
+    /// Send a message through a pooled connection
+    pub async fn send_message(
+        &self,
+        url: &str,
+        message: Message,
+        headers: Option<HashMap<String, String>>,
+    ) -> Result<()> {
+        let conn = self.get_connection(url, headers).await?;
+        conn.send(message).await
+    }
+
+    /// Get current pool metrics
+    pub async fn metrics(&self) -> ConnectionMetrics {
+        self.metrics.read().await.clone()
+    }
+
+    /// Close all connections to a specific URL
+    pub async fn close_url(&self, url: &str) {
+        let mut connections = self.connections.write().await;
+        if let Some(conns) = connections.remove(url) {
+            let mut metrics = self.metrics.write().await;
+            metrics.total_connections -= conns.len() as u64;
+            info!("Closed {} connections to {}", conns.len(), url);
+        }
+    }
+
+    /// Close all connections in the pool
+    pub async fn close_all(&self) {
+        let mut connections = self.connections.write().await;
+        let total = connections.values().map(|v| v.len()).sum::<usize>();
+        connections.clear();
+
+        let mut metrics = self.metrics.write().await;
+        metrics.total_connections = 0;
+
+        info!("Closed all {} WebSocket connections", total);
+    }
+}
+
+// ============================================================================
+// Connection Metrics
+// ============================================================================
+
+#[derive(Debug, Clone, Default)]
+pub struct ConnectionMetrics {
+    pub total_connections: u64,
+    pub available: u64,
+    pub reused_connections: u64,
+    pub total_requests: u64,
+    pub failed_requests: u64,
+}
+
+impl ConnectionMetrics {
+    /// Calculate connection reuse percentage
+    pub fn reuse_percentage(&self) -> f64 {
+        if self.total_requests > 0 {
+            (self.reused_connections as f64 / self.total_requests as f64) * 100.0
+        } else {
+            0.0
+        }
+    }
+
+    /// Calculate failure rate
+    pub fn failure_rate(&self) -> f64 {
+        if self.total_requests > 0 {
+            (self.failed_requests as f64 / self.total_requests as f64) * 100.0
+        } else {
+            0.0
+        }
+    }
+}
+
+// ============================================================================
+// Unified Connection Pool Manager
+// ============================================================================
+
+/// Manages all connection pools for MCP transport
+pub struct ConnectionPoolManager {
+    http_pools: Arc<RwLock<HashMap<String, Arc<HttpConnectionPool>>>>,
+    redis_pool: Option<Arc<RedisConnectionPool>>,
+    websocket_pool: Arc<WebSocketConnectionPool>,
+    config: PoolConfig,
+}
+
+impl ConnectionPoolManager {
+    pub async fn new(config: PoolConfig, redis_url: Option<&str>) -> Result<Self> {
+        let redis_pool = if let Some(url) = redis_url {
+            Some(Arc::new(RedisConnectionPool::new(url, config.clone()).await?))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            http_pools: Arc::new(RwLock::new(HashMap::new())),
+            redis_pool,
+            websocket_pool: Arc::new(WebSocketConnectionPool::new(config.clone())),
+            config,
+        })
+    }
+
+    /// Get or create an HTTP connection pool for a specific base URL
+    pub async fn get_http_pool(&self, base_url: &str) -> Result<Arc<HttpConnectionPool>> {
+        let mut pools = self.http_pools.write().await;
+
+        if let Some(pool) = pools.get(base_url) {
+            return Ok(Arc::clone(pool));
+        }
+
+        let pool = Arc::new(HttpConnectionPool::new(&self.config)?);
+        pools.insert(base_url.to_string(), Arc::clone(&pool));
+        Ok(pool)
+    }
+
+    /// Get the Redis connection pool
+    pub fn redis_pool(&self) -> Option<Arc<RedisConnectionPool>> {
+        self.redis_pool.clone()
+    }
+
+    /// Get the WebSocket connection pool
+    pub fn websocket_pool(&self) -> Arc<WebSocketConnectionPool> {
+        Arc::clone(&self.websocket_pool)
+    }
+
+    /// Get aggregated metrics from all pools
+    pub async fn aggregate_metrics(&self) -> AggregateMetrics {
+        let mut total = AggregateMetrics::default();
+
+        // HTTP metrics
+        let http_pools = self.http_pools.read().await;
+        for pool in http_pools.values() {
+            let metrics = pool.metrics().await;
+            total.http_requests += metrics.total_requests;
+            total.http_reused += metrics.reused_connections;
+        }
+
+        // Redis metrics
+        if let Some(redis) = &self.redis_pool {
+            let metrics = redis.metrics().await;
+            total.redis_requests += metrics.total_requests;
+            total.redis_reused += metrics.reused_connections;
+            total.redis_connections = metrics.total_connections;
+        }
+
+        // WebSocket metrics
+        let ws_metrics = self.websocket_pool.metrics().await;
+        total.ws_connections = ws_metrics.total_connections;
+        total.ws_requests = ws_metrics.total_requests;
+        total.ws_reused = ws_metrics.reused_connections;
+
+        total
+    }
+
+    /// Perform health checks on all pools
+    pub async fn health_check(&self) -> HealthStatus {
+        let mut status = HealthStatus {
+            http_healthy: true,
+            redis_healthy: true,
+            websocket_healthy: true,
+            details: Vec::new(),
+        };
+
+        // Check HTTP pools
+        let http_pools = self.http_pools.read().await;
+        if http_pools.is_empty() {
+            status.details.push("No HTTP pools initialized".to_string());
+        }
+
+        // Check Redis pool
+        if let Some(redis) = &self.redis_pool {
+            match redis.health_check().await {
+                Ok(_) => status.details.push("Redis pool healthy".to_string()),
+                Err(e) => {
+                    status.redis_healthy = false;
+                    status.details.push(format!("Redis pool unhealthy: {}", e));
+                }
+            }
+        }
+
+        // WebSocket health is checked per-connection
+        status.details.push(format!(
+            "WebSocket pool has {} connections",
+            self.websocket_pool.metrics().await.total_connections
+        ));
+
+        status
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct AggregateMetrics {
+    pub http_requests: u64,
+    pub http_reused: u64,
+    pub redis_requests: u64,
+    pub redis_reused: u64,
+    pub redis_connections: u64,
+    pub ws_connections: u64,
+    pub ws_requests: u64,
+    pub ws_reused: u64,
+}
+
+impl AggregateMetrics {
+    pub fn total_reuse_percentage(&self) -> f64 {
+        let total_requests = self.http_requests + self.redis_requests + self.ws_requests;
+        let total_reused = self.http_reused + self.redis_reused + self.ws_reused;
+
+        if total_requests > 0 {
+            (total_reused as f64 / total_requests as f64) * 100.0
+        } else {
+            0.0
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct HealthStatus {
+    pub http_healthy: bool,
+    pub redis_healthy: bool,
+    pub websocket_healthy: bool,
+    pub details: Vec<String>,
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_http_connection_pool() {
+        let config = PoolConfig::default();
+        let pool = HttpConnectionPool::new(&config).unwrap();
+
+        let metrics = pool.metrics().await;
+        assert_eq!(metrics.total_requests, 0);
+        assert_eq!(metrics.reused_connections, 0);
+    }
+
+    #[tokio::test]
+    async fn test_connection_metrics() {
+        let mut metrics = ConnectionMetrics::default();
+        metrics.total_requests = 100;
+        metrics.reused_connections = 90;
+        metrics.failed_requests = 5;
+
+        assert_eq!(metrics.reuse_percentage(), 90.0);
+        assert_eq!(metrics.failure_rate(), 5.0);
+    }
+
+    #[tokio::test]
+    async fn test_pool_manager() {
+        let config = PoolConfig::default();
+        let manager = ConnectionPoolManager::new(config, None).await.unwrap();
+
+        // Get HTTP pool
+        let pool1 = manager.get_http_pool("https://api1.example.com").await.unwrap();
+        let pool2 = manager.get_http_pool("https://api1.example.com").await.unwrap();
+
+        // Should return the same pool
+        assert!(Arc::ptr_eq(&pool1, &pool2));
+
+        // Different URL should get different pool
+        let pool3 = manager.get_http_pool("https://api2.example.com").await.unwrap();
+        assert!(!Arc::ptr_eq(&pool1, &pool3));
+    }
+
+    #[tokio::test]
+    async fn test_aggregate_metrics() {
+        let mut metrics = AggregateMetrics::default();
+        metrics.http_requests = 100;
+        metrics.http_reused = 80;
+        metrics.redis_requests = 50;
+        metrics.redis_reused = 45;
+        metrics.ws_requests = 25;
+        metrics.ws_reused = 20;
+
+        assert_eq!(metrics.total_reuse_percentage(), (145.0 / 175.0) * 100.0);
+    }
+}

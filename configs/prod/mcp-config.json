@@ -1,0 +1,75 @@
+{
+  "servers": [
+    {
+      "name": "Memory",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory@2025.8.4"],
+        "env": {
+          "MEMORY_FILE_PATH": "/data/prod/memory.json",
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Filesystem",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.8.21", "/data/prod"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Fetch",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch@0.6.3"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Time",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@theo.foobar/mcp-time"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "Sequential Thinking",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@2025.7.1"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    },
+    {
+      "name": "GitHub",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github@2025.4.8"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      }
+    }
+  ],
+  "auto_register_tools": true,
+  "tool_timeout_secs": 180,
+  "max_concurrent_calls": 5
+}

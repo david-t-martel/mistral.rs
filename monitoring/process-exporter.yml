@@ -1,0 +1,82 @@
+process_names:
+  # mistral.rs main server process
+  - name: "{{.Matches}}"
+    cmdline:
+      - 'mistralrs-server'
+
+  # MCP server processes
+  - name: "mcp_{{.Matches}}"
+    cmdline:
+      - 'mcp.*server'
+
+  # Python processes (if using PyO3)
+  - name: "python_{{.Matches}}"
+    cmdline:
+      - 'python.*mistralrs'
+
+  # Node.js processes (for MCP servers)
+  - name: "node_{{.Matches}}"
+    cmdline:
+      - 'node.*mcp'
+
+  # Redis (if used for caching)
+  - name: "redis"
+    cmdline:
+      - 'redis-server'
+
+  # NVIDIA processes (for GPU monitoring)
+  - name: "nvidia_{{.Matches}}"
+    cmdline:
+      - 'nvidia-smi'
+
+  # System critical processes
+  - name: "systemd"
+    cmdline:
+      - '/lib/systemd/systemd'
+
+  # Docker containers
+  - name: "docker_{{.Matches}}"
+    cmdline:
+      - 'docker'
+
+# Process metrics to collect
+metrics:
+  - name: num_procs
+    help: Number of processes
+    type: gauge
+
+  - name: num_threads
+    help: Number of threads
+    type: gauge
+
+  - name: virtual_memory_bytes
+    help: Virtual memory size in bytes
+    type: gauge
+
+  - name: resident_memory_bytes
+    help: Resident memory size in bytes
+    type: gauge
+
+  - name: cpu_seconds_total
+    help: Total user and system CPU time spent in seconds
+    type: counter
+
+  - name: open_filedesc
+    help: Number of open file descriptors
+    type: gauge
+
+  - name: worst_fd_ratio
+    help: Worst ratio of open file descriptors to limit
+    type: gauge
+
+  - name: start_time_seconds
+    help: Start time of the process since unix epoch in seconds
+    type: gauge
+
+  - name: major_page_faults_total
+    help: Total major page faults
+    type: counter
+
+  - name: minor_page_faults_total
+    help: Total minor page faults
+    type: counter

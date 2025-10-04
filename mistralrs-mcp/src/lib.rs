@@ -62,15 +62,15 @@
 //!         ],
 //!         ..Default::default()
 //!     };
-//!     
+//!
 //!     // Initialize MCP client
 //!     let mut client = McpClient::new(config);
 //!     client.initialize().await?;
-//!     
+//!
 //!     // Get tool callbacks for integration with model builder
 //!     let tool_callbacks = client.get_tool_callbacks_with_tools();
 //!     println!("Registered {} MCP tools", tool_callbacks.len());
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -134,25 +134,39 @@
 //!         tool_timeout_secs: Some(30),
 //!         max_concurrent_calls: Some(5),
 //!     };
-//!     
+//!
 //!     // Initialize MCP client
 //!     let mut client = McpClient::new(config);
 //!     client.initialize().await?;
-//!     
+//!
 //!     // Get tool callbacks for integration with model builder
 //!     let tool_callbacks = client.get_tool_callbacks_with_tools();
 //!     println!("Registered {} MCP tools", tool_callbacks.len());
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
 
+pub mod capabilities;
 pub mod client;
+// pub mod connection_pool;  // Temporarily disabled - needs fixes
+// pub mod rag_integration;   // Temporarily disabled - needs fixes
+pub mod reliability;
+pub mod resource_monitor;
+pub mod runtime;
+pub mod shutdown;
 pub mod tools;
 pub mod transport;
 pub mod types;
 
+pub use capabilities::{
+    AuditPolicy, EnvironmentPolicy, FileOperation, FilesystemPolicy, InputContext, NetworkPolicy,
+    ProcessPolicy, RateLimitPolicy, SecurityContext, SecurityPolicy, SecurityValidator,
+};
 pub use client::{McpClient, McpServerConnection};
+pub use resource_monitor::{CleanupStats, ResourceLimits, ResourceMonitor, ResourceStats};
+pub use runtime::{calculate_optimal_threads, RuntimeConfig, WorkloadType};
+pub use shutdown::{ShutdownCoordinator, ShutdownSignal, ShutdownState, ShutdownStats};
 pub use tools::{CalledFunction, Function, Tool, ToolCallback, ToolCallbackWithTool, ToolType};
 pub use types::McpToolResult;
 
@@ -233,6 +247,13 @@ pub struct McpClientConfig {
     /// Limits resource usage and prevents overwhelming servers with too many
     /// simultaneous requests. Defaults to 1 if not specified.
     pub max_concurrent_calls: Option<usize>,
+    /// Global security policy applied to all servers unless overridden
+    ///
+    /// Provides defense-in-depth security controls including path validation,
+    /// input sanitization, and audit logging. If not specified, a restrictive
+    /// default policy is applied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub global_security_policy: Option<SecurityPolicy>,
 }
 
 /// Configuration for an individual MCP server
@@ -280,6 +301,14 @@ pub struct McpServerConfig {
     /// for HTTP and WebSocket connections. Process connections typically
     /// don't require authentication tokens.
     pub bearer_token: Option<String>,
+    /// Server-specific security policy
+    ///
+    /// Overrides the global security policy for this specific server.
+    /// If not specified, the global policy is used. Use this to apply
+    /// different trust levels to different servers (e.g., more permissive
+    /// for trusted internal servers, restrictive for external APIs).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub security_policy: Option<SecurityPolicy>,
 }
 
 /// Information about a tool discovered from an MCP server
@@ -306,6 +335,7 @@ impl Default for McpClientConfig {
             auto_register_tools: true,
             tool_timeout_secs: None,
             max_concurrent_calls: Some(1),
+            global_security_policy: Some(SecurityPolicy::restrictive()),
         }
     }
 }
@@ -336,6 +366,7 @@ impl Default for McpServerConfig {
             tool_prefix: generate_uuid_prefix(),
             resources: None,
             bearer_token: None,
+            security_policy: None, // Uses global policy by default
         }
     }
 }

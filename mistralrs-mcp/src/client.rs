@@ -1,3 +1,4 @@
+use crate::capabilities::{SecurityContext, SecurityPolicy, SecurityValidator};
 use crate::tools::{Function, Tool, ToolCallback, ToolCallbackWithTool, ToolType};
 use crate::transport::{HttpTransport, McpTransport, ProcessTransport, WebSocketTransport};
 use crate::types::McpToolResult;
@@ -58,13 +59,13 @@ pub trait McpServerConnection: Send + Sync {
 /// async fn main() -> anyhow::Result<()> {
 ///     let config = McpClientConfig::default();
 ///     let mut client = McpClient::new(config);
-///     
+///
 ///     // Initialize all configured server connections
 ///     client.initialize().await?;
-///     
+///
 ///     // Get tool callbacks for model integration
 ///     let callbacks = client.get_tool_callbacks_with_tools();
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -81,12 +82,17 @@ pub struct McpClient {
     tool_callbacks_with_tools: HashMap<String, ToolCallbackWithTool>,
     /// Semaphore to control maximum concurrent tool calls
     concurrency_semaphore: Arc<Semaphore>,
+    /// Security validators for each server, indexed by server ID
+    security_validators: HashMap<String, Arc<SecurityValidator>>,
+    /// Global security policy (if configured)
+    global_security_policy: Option<SecurityPolicy>,
 }
 
 impl McpClient {
     /// Create a new MCP client with the given configuration
     pub fn new(config: McpClientConfig) -> Self {
         let max_concurrent = config.max_concurrent_calls.unwrap_or(10);
+        let global_policy = config.global_security_policy.clone();
         Self {
             config,
             servers: HashMap::new(),
@@ -94,6 +100,8 @@ impl McpClient {
             tool_callbacks: HashMap::new(),
             tool_callbacks_with_tools: HashMap::new(),
             concurrency_semaphore: Arc::new(Semaphore::new(max_concurrent)),
+            security_validators: HashMap::new(),
+            global_security_policy: global_policy,
         }
     }
 
@@ -101,6 +109,18 @@ impl McpClient {
     pub async fn initialize(&mut self) -> Result<()> {
         for server_config in &self.config.servers {
             if server_config.enabled {
+                // Create security validator for this server
+                let policy = server_config
+                    .security_policy
+                    .clone()
+                    .or_else(|| self.global_security_policy.clone())
+                    .unwrap_or_else(SecurityPolicy::restrictive);
+
+                let validator = Arc::new(SecurityValidator::new(policy));
+                self.security_validators
+                    .insert(server_config.id.clone(), validator);
+
+                // Create connection with security-aware environment if it's a process
                 let connection = self.create_connection(server_config).await?;
                 self.servers.insert(server_config.id.clone(), connection);
             }
@@ -161,13 +181,22 @@ impl McpClient {
                 work_dir,
                 env,
             } => {
+                // Get security validator for this server
+                let sanitized_env =
+                    if let Some(validator) = self.security_validators.get(&config.id) {
+                        // Sanitize environment variables through security policy
+                        env.as_ref().map(|e| validator.sanitize_environment(e))
+                    } else {
+                        env.clone()
+                    };
+
                 let connection = ProcessMcpConnection::new(
                     config.id.clone(),
                     config.name.clone(),
                     command.clone(),
                     args.clone(),
                     work_dir.clone(),
-                    env.clone(),
+                    sanitized_env,
                 )
                 .await?;
                 Ok(Arc::new(connection))
@@ -220,6 +249,9 @@ impl McpClient {
                 let semaphore_clone = Arc::clone(&self.concurrency_semaphore);
                 let timeout_duration =
                     Duration::from_secs(self.config.tool_timeout_secs.unwrap_or(30));
+                let server_id_clone = server_id.clone();
+                let validator_opt = self.security_validators.get(&server_id_clone).cloned();
+                let tool_name_for_validation = tool_name.clone();
 
                 let callback: Arc<ToolCallback> = Arc::new(move |called_function| {
                     let connection = Arc::clone(&connection_clone);
@@ -227,6 +259,9 @@ impl McpClient {
                     let semaphore = Arc::clone(&semaphore_clone);
                     let arguments: serde_json::Value =
                         serde_json::from_str(&called_function.arguments)?;
+                    let validator = validator_opt.clone();
+                    let tool_name_validation = tool_name_for_validation.clone();
+                    let server_id = server_id_clone.clone();
 
                     // Use tokio::task::spawn_blocking to handle the async-to-sync bridge
                     let rt = tokio::runtime::Handle::current();
@@ -237,10 +272,26 @@ impl McpClient {
                                 anyhow::anyhow!("Failed to acquire concurrency permit")
                             })?;
 
+                            // Apply security validation if validator is available
+                            let validated_args = if let Some(ref validator) = validator {
+                                let context = SecurityContext {
+                                    server_id: server_id.clone(),
+                                    tool_name: tool_name_validation.clone(),
+                                    operation_id: uuid::Uuid::new_v4().to_string(),
+                                    timestamp: std::time::SystemTime::now(),
+                                    user_context: None,
+                                };
+                                validator
+                                    .validate_tool_call(&tool_name, &arguments, &context)
+                                    .await?
+                            } else {
+                                arguments
+                            };
+
                             // Execute tool call with timeout
                             match tokio::time::timeout(
                                 timeout_duration,
-                                connection.call_tool(&tool_name, arguments),
+                                connection.call_tool(&tool_name, validated_args),
                             )
                             .await
                             {

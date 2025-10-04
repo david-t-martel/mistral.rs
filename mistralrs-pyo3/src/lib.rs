@@ -2174,6 +2174,8 @@ pub struct McpServerConfigPy {
     pub resources: Option<Vec<String>>,
     #[pyo3(get, set)]
     pub bearer_token: Option<String>,
+    // Note: security_policy field is not exposed to Python as it's complex.
+    // The Rust default (restrictive) is used when not specified.
 }
 
 #[pymethods]
@@ -2211,6 +2213,7 @@ impl From<McpServerConfigPy> for McpServerConfig {
             tool_prefix: config.tool_prefix,
             resources: config.resources,
             bearer_token: config.bearer_token,
+            security_policy: None, // Use default restrictive policy
         }
     }
 }
@@ -2227,6 +2230,8 @@ pub struct McpClientConfigPy {
     pub tool_timeout_secs: Option<u64>,
     #[pyo3(get, set)]
     pub max_concurrent_calls: Option<usize>,
+    // Note: global_security_policy field is not exposed to Python as it's complex.
+    // The Rust default (restrictive) is used when not specified.
 }
 
 #[pymethods]
@@ -2255,6 +2260,7 @@ impl From<McpClientConfigPy> for McpClientConfig {
             auto_register_tools: config.auto_register_tools,
             tool_timeout_secs: config.tool_timeout_secs,
             max_concurrent_calls: config.max_concurrent_calls,
+            global_security_policy: None, // Use default restrictive policy
         }
     }
 }

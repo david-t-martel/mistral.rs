@@ -1,0 +1,213 @@
+version: '3.8'
+
+services:
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mistralrs-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mistralrs-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=mistralrs
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-dashboard-overview.json:/var/lib/grafana/dashboards/overview.json:ro
+      - ./grafana-dashboard-performance.json:/var/lib/grafana/dashboards/performance.json:ro
+      - ./grafana-provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Grafana renderer for PDF/image export
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    container_name: mistralrs-grafana-renderer
+    ports:
+      - "8081:8081"
+    environment:
+      - ENABLE_METRICS=true
+      - RENDERING_CLUSTERING_MODE=context
+      - RENDERING_CLUSTERING_MAX_CONCURRENCY=5
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Alertmanager for alert routing
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: mistralrs-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Loki for log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: mistralrs-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Promtail for log collection
+  promtail:
+    image: grafana/promtail:latest
+    container_name: mistralrs-promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - ./promtail-config.yaml:/etc/promtail/config.yml:ro
+      - promtail-positions:/positions
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mistralrs-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # NVIDIA GPU Exporter (optional, for CUDA builds)
+  nvidia-exporter:
+    image: utkuozdemir/nvidia_gpu_exporter:latest
+    container_name: mistralrs-nvidia-exporter
+    ports:
+      - "9835:9835"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    runtime: nvidia
+    networks:
+      - monitoring
+    restart: unless-stopped
+    profiles:
+      - gpu
+
+  # Process Exporter for detailed process metrics
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    container_name: mistralrs-process-exporter
+    ports:
+      - "9256:9256"
+    volumes:
+      - /proc:/host/proc:ro
+      - ./process-exporter.yml:/config/process-exporter.yml:ro
+    command:
+      - '--procfs=/host/proc'
+      - '--config.path=/config/process-exporter.yml'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Blackbox Exporter for endpoint monitoring
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: mistralrs-blackbox-exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - '--config.file=/etc/blackbox_exporter/config.yml'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Redis for caching (if needed by mistralrs)
+  redis:
+    image: redis:7-alpine
+    container_name: mistralrs-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru
+    networks:
+      - monitoring
+    restart: unless-stopped
+    profiles:
+      - cache
+
+  # Redis Exporter (if Redis is used)
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: mistralrs-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - redis
+    profiles:
+      - cache
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  loki-data:
+  promtail-positions:
+  redis-data:

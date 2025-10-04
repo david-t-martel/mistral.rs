@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
     // Simple MCP client configuration using defaults
     // Most fields use sensible defaults (enabled=true, UUID for id/prefix, no timeouts)
     let mcp_config_simple = McpClientConfig {
+        global_security_policy: Default::default(),
         servers: vec![McpServerConfig {
             name: "Filesystem Tools".to_string(),
             source: McpServerSource::Process {
@@ -32,6 +33,7 @@ async fn main() -> Result<()> {
                 work_dir: None,
                 env: None,
             },
+            security_policy: Default::default(),
             ..Default::default()
         }],
         ..Default::default()
@@ -53,6 +55,7 @@ async fn main() -> Result<()> {
                     env: None,
                 },
                 tool_prefix: Some("fs".to_string()),
+                security_policy: Default::default(),
                 ..Default::default()
             },
             // Example: HTTP-based MCP server with Bearer token authentication (disabled by default)
@@ -68,6 +71,7 @@ async fn main() -> Result<()> {
                 tool_prefix: Some("hf".to_string()), // Prefixes tool names to avoid conflicts
                 resources: None,
                 bearer_token: Some("hf_xxx".to_string()), // Replace with your actual Hugging Face token
+                security_policy: Default::default(),
             },
             //
             // // Example with both Bearer token and additional headers (uncomment HashMap import above)
@@ -102,6 +106,7 @@ async fn main() -> Result<()> {
                 tool_prefix: Some("ws".to_string()),
                 resources: None,
                 bearer_token: Some("your-websocket-token".to_string()), // WebSocket Bearer token support
+                security_policy: Default::default(),
             },
         ],
         // Automatically discover and register tools from connected MCP servers
@@ -110,6 +115,7 @@ async fn main() -> Result<()> {
         tool_timeout_secs: Some(30),
         // Maximum concurrent tool calls across all servers
         max_concurrent_calls: Some(5),
+        global_security_policy: Default::default(),
     };
 
     // Use the simple configuration for this example

@@ -1,0 +1,359 @@
+# Centralized Logging Configuration for mistral.rs
+# Supports multiple backends: ELK Stack, Loki, or CloudWatch
+
+# Filebeat configuration (for ELK Stack)
+filebeat:
+  inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/mistralrs/*.log
+      fields:
+        service: mistralrs
+        environment: production
+      multiline:
+        pattern: '^\d{4}-\d{2}-\d{2}'
+        negate: true
+        match: after
+      processors:
+        - decode_json_fields:
+            fields: ["message"]
+            target: ""
+            overwrite_keys: true
+        - timestamp:
+            field: timestamp
+            layouts:
+              - '2006-01-02T15:04:05.000Z'
+            test:
+              - '2024-01-15T10:30:45.123Z'
+        - drop_event:
+            when:
+              regexp:
+                message: ".*health.*"  # Drop health check logs
+
+  output:
+    elasticsearch:
+      hosts: ["localhost:9200"]
+      index: "mistralrs-%{+yyyy.MM.dd}"
+      template:
+        name: "mistralrs"
+        pattern: "mistralrs-*"
+        settings:
+          index.number_of_shards: 3
+          index.number_of_replicas: 1
+
+    # Alternative: Logstash output
+    # logstash:
+    #   hosts: ["localhost:5044"]
+
+# Promtail configuration (for Loki)
+promtail:
+  server:
+    http_listen_port: 9080
+    grpc_listen_port: 0
+
+  positions:
+    filename: /var/log/positions.yaml
+
+  clients:
+    - url: http://localhost:3100/loki/api/v1/push
+      tenant_id: mistralrs
+
+  scrape_configs:
+    - job_name: mistralrs
+      static_configs:
+        - targets:
+            - localhost
+          labels:
+            job: mistralrs
+            environment: production
+            __path__: /var/log/mistralrs/*.log
+
+      pipeline_stages:
+        - json:
+            expressions:
+              timestamp: timestamp
+              level: level
+              message: message
+              module: module
+              request_id: request_id
+              latency: latency_ms
+              error: error
+
+        - timestamp:
+            source: timestamp
+            format: RFC3339
+
+        - labels:
+            level:
+            module:
+
+        - metrics:
+            log_lines_total:
+              type: Counter
+              description: "Total log lines"
+              source: level
+              config:
+                action: inc
+
+            latency_histogram:
+              type: Histogram
+              description: "Request latency"
+              source: latency
+              config:
+                buckets: [10, 50, 100, 200, 500, 1000, 2000, 5000]
+
+# Fluent Bit configuration (lightweight alternative)
+fluent_bit:
+  service:
+    flush: 1
+    log_level: info
+    parsers_file: parsers.conf
+
+  inputs:
+    - name: tail
+      path: /var/log/mistralrs/*.log
+      tag: mistralrs.*
+      parser: json
+      refresh_interval: 5
+      mem_buf_limit: 50MB
+      skip_long_lines: On
+
+    - name: systemd
+      tag: mistralrs.systemd
+      systemd_filter: _SYSTEMD_UNIT=mistralrs.service
+
+  filters:
+    - name: record_modifier
+      match: mistralrs.*
+      record:
+        hostname: ${HOSTNAME}
+        service: mistralrs
+        environment: production
+
+    - name: throttle
+      match: mistralrs.*
+      rate: 1000
+      window: 5
+      interval: 1s
+
+    - name: lua
+      match: mistralrs.*
+      script: |
+        function enrich(tag, timestamp, record)
+          -- Add severity based on level
+          if record["level"] == "ERROR" then
+            record["severity"] = 3
+          elseif record["level"] == "WARN" then
+            record["severity"] = 4
+          else
+            record["severity"] = 6
+          end
+
+          -- Extract metrics
+          if record["latency_ms"] then
+            record["metric_latency"] = tonumber(record["latency_ms"])
+          end
+
+          return 1, timestamp, record
+        end
+
+  outputs:
+    - name: es
+      match: mistralrs.*
+      host: localhost
+      port: 9200
+      index: mistralrs
+      type: _doc
+      logstash_format: On
+      logstash_prefix: mistralrs
+      logstash_dateformat: "%Y.%m.%d"
+      buffer_size: 10MB
+      retry_limit: 5
+
+    # Alternative: Loki output
+    # - name: loki
+    #   match: mistralrs.*
+    #   host: localhost
+    #   port: 3100
+    #   tenant_id: mistralrs
+    #   labels: job=mistralrs,environment=production
+    #   label_keys: level,module,hostname
+
+# Vector configuration (modern Rust-based alternative)
+vector:
+  sources:
+    mistralrs_logs:
+      type: file
+      include:
+        - /var/log/mistralrs/*.log
+      file_key: file
+      host_key: host
+
+    mistralrs_metrics:
+      type: prometheus_scrape
+      endpoints:
+        - http://localhost:9090/metrics
+
+  transforms:
+    parse_logs:
+      type: json_parser
+      inputs:
+        - mistralrs_logs
+      drop_invalid: false
+
+    enrich_logs:
+      type: lua
+      inputs:
+        - parse_logs
+      version: "2"
+      hooks:
+        process: |
+          function (event, emit)
+            -- Add computed fields
+            if event.log.latency_ms then
+              event.log.latency_seconds = event.log.latency_ms / 1000
+            end
+
+            -- Add alert flag for high latency
+            if event.log.latency_ms and event.log.latency_ms > 500 then
+              event.log.alert = true
+              event.log.alert_reason = "high_latency"
+            end
+
+            -- Add alert flag for errors
+            if event.log.level == "ERROR" then
+              event.log.alert = true
+              event.log.alert_reason = "error"
+            end
+
+            emit(event)
+          end
+
+    sample_logs:
+      type: sample
+      inputs:
+        - enrich_logs
+      rate: 100  # Keep 100 events per second max
+      key_field: "level"
+      exclude:
+        "level": ["DEBUG", "TRACE"]
+
+  sinks:
+    elasticsearch:
+      type: elasticsearch
+      inputs:
+        - sample_logs
+      endpoints:
+        - http://localhost:9200
+      index: "mistralrs-%F"
+      doc_type: "_doc"
+      compression: gzip
+      batch:
+        max_bytes: 10485760  # 10MB
+        timeout_secs: 1
+      buffer:
+        type: disk
+        max_size: 268435456  # 256MB
+        when_full: drop_newest
+
+    loki:
+      type: loki
+      inputs:
+        - sample_logs
+      endpoint: http://localhost:3100
+      tenant_id: mistralrs
+      labels:
+        service: mistralrs
+        environment: production
+        level: "{{ level }}"
+        module: "{{ module }}"
+      batch:
+        max_bytes: 1048576  # 1MB
+        timeout_secs: 1
+
+    prometheus_metrics:
+      type: prometheus_exporter
+      inputs:
+        - mistralrs_metrics
+      address: 0.0.0.0:9598
+
+    alerts:
+      type: webhook
+      inputs:
+        - enrich_logs
+      uri: http://localhost:9093/api/v1/alerts
+      method: POST
+      headers:
+        Content-Type: application/json
+      encoding:
+        codec: json
+      when:
+        "log.alert": true
+
+# Log rotation configuration
+logrotate:
+  /var/log/mistralrs/*.log:
+    daily: true
+    rotate: 7
+    compress: true
+    delaycompress: true
+    missingok: true
+    notifempty: true
+    create: "0640 mistralrs mistralrs"
+    postrotate: |
+      systemctl reload mistralrs || true
+    size: 100M
+
+# Structured logging format for mistralrs application
+application_logging:
+  format: json
+  level: info
+  outputs:
+    - type: file
+      path: /var/log/mistralrs/mistralrs.log
+      max_size: 100MB
+      max_backups: 10
+      max_age: 30
+    - type: stdout
+      format: pretty  # Pretty print for development
+
+  fields:
+    - timestamp
+    - level
+    - message
+    - module
+    - file
+    - line
+    - request_id
+    - user_id
+    - endpoint
+    - method
+    - status_code
+    - latency_ms
+    - error
+    - stack_trace
+    - mcp_server
+    - tool_name
+    - circuit_breaker_state
+    - memory_usage_mb
+    - cpu_percent
+    - connection_pool_size
+    - gpu_memory_mb
+
+  sampling:
+    enabled: true
+    initial: 100  # Log first 100 of each type
+    thereafter: 10  # Then log every 10th
+
+  filters:
+    - type: rate_limit
+      max_per_second: 1000
+    - type: drop
+      fields:
+        level: ["TRACE", "DEBUG"]  # Drop in production
+    - type: redact
+      patterns:
+        - "api_key=.*"
+        - "token=.*"
+        - "password=.*"

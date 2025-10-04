@@ -1,0 +1,429 @@
+{
+  "servers": [
+    {
+      "name": "Memory",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory@2025.8.4"],
+        "env": {
+          "MEMORY_FILE_PATH": "T:/projects/rust-mistral/mistral.rs/memory.json",
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "memory-moderate",
+        "description": "Moderate policy for memory server - file access only to memory.json",
+        "filesystem": {
+          "allowed_paths": ["T:/projects/rust-mistral/mistral.rs"],
+          "blocked_paths": [],
+          "allowed_extensions": [".json"],
+          "blocked_extensions": [".exe", ".dll", ".so", ".ps1", ".sh"],
+          "max_file_size": 10485760,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": true,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": [],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": [],
+          "blocked_urls": ["*"],
+          "allowed_protocols": [],
+          "allowed_ports": null,
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["PATH", "HOME", "USER", "MEMORY_FILE_PATH", "MCP_PROTOCOL_VERSION"],
+          "blocked_vars": ["LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 60,
+          "max_concurrent": 5,
+          "max_total_operations": 1000
+        },
+        "audit": {
+          "log_all_operations": false,
+          "log_failures": true,
+          "log_sensitive_access": true,
+          "include_arguments": false
+        },
+        "strict_mode": true
+      }
+    },
+    {
+      "name": "Filesystem",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.8.21", "T:/projects/rust-mistral/mistral.rs/sandbox"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "filesystem-restrictive",
+        "description": "Highly restrictive policy for filesystem server - sandboxed access only",
+        "filesystem": {
+          "allowed_paths": ["T:/projects/rust-mistral/mistral.rs/sandbox"],
+          "blocked_paths": [
+            "T:/projects/rust-mistral/mistral.rs/.git",
+            "T:/projects/rust-mistral/mistral.rs/.env",
+            "T:/projects/rust-mistral/mistral.rs/target"
+          ],
+          "allowed_extensions": [".txt", ".json", ".md", ".rs", ".toml", ".yaml", ".yml"],
+          "blocked_extensions": [".exe", ".dll", ".so", ".dylib", ".ps1", ".sh", ".bat", ".cmd"],
+          "max_file_size": 5242880,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": true,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": ["*"],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": [],
+          "blocked_urls": ["*"],
+          "allowed_protocols": [],
+          "allowed_ports": null,
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["PATH", "HOME", "USER", "MCP_PROTOCOL_VERSION"],
+          "blocked_vars": ["LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 60,
+          "max_concurrent": 3,
+          "max_total_operations": 500
+        },
+        "audit": {
+          "log_all_operations": true,
+          "log_failures": true,
+          "log_sensitive_access": true,
+          "include_arguments": false
+        },
+        "strict_mode": true
+      }
+    },
+    {
+      "name": "Sequential Thinking",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@2025.7.1"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "thinking-safe",
+        "description": "Safe policy for sequential thinking - no filesystem or network access",
+        "filesystem": {
+          "allowed_paths": [],
+          "blocked_paths": ["*"],
+          "allowed_extensions": [],
+          "blocked_extensions": ["*"],
+          "max_file_size": 0,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": false,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": ["*"],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": [],
+          "blocked_urls": ["*"],
+          "allowed_protocols": [],
+          "allowed_ports": null,
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["MCP_PROTOCOL_VERSION"],
+          "blocked_vars": ["*"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 120,
+          "max_concurrent": 10,
+          "max_total_operations": null
+        },
+        "audit": {
+          "log_all_operations": false,
+          "log_failures": true,
+          "log_sensitive_access": false,
+          "include_arguments": false
+        },
+        "strict_mode": false
+      }
+    },
+    {
+      "name": "GitHub",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github@2025.4.8"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "github-network-only",
+        "description": "Network-only policy for GitHub API access",
+        "filesystem": {
+          "allowed_paths": [],
+          "blocked_paths": ["*"],
+          "allowed_extensions": [],
+          "blocked_extensions": ["*"],
+          "max_file_size": 0,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": false,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": ["*"],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": ["^https://api\\.github\\.com/.*", "^https://github\\.com/.*"],
+          "blocked_urls": [],
+          "allowed_protocols": ["https"],
+          "allowed_ports": [443],
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["GITHUB_PERSONAL_ACCESS_TOKEN", "MCP_PROTOCOL_VERSION"],
+          "blocked_vars": ["LD_PRELOAD", "LD_LIBRARY_PATH"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 30,
+          "max_concurrent": 3,
+          "max_total_operations": 500
+        },
+        "audit": {
+          "log_all_operations": false,
+          "log_failures": true,
+          "log_sensitive_access": true,
+          "include_arguments": false
+        },
+        "strict_mode": true
+      }
+    },
+    {
+      "name": "Fetch",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch@0.6.3"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "fetch-public-only",
+        "description": "Public internet access only - no private networks",
+        "filesystem": {
+          "allowed_paths": [],
+          "blocked_paths": ["*"],
+          "allowed_extensions": [],
+          "blocked_extensions": ["*"],
+          "max_file_size": 0,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": false,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": ["*"],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": [],
+          "blocked_urls": ["^.*://localhost.*", "^.*://127\\..*", "^.*://192\\.168\\..*", "^.*://10\\..*", "^.*://172\\..*"],
+          "allowed_protocols": ["https", "http"],
+          "allowed_ports": [80, 443, 8080, 8443],
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["MCP_PROTOCOL_VERSION"],
+          "blocked_vars": ["*"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 30,
+          "max_concurrent": 3,
+          "max_total_operations": 200
+        },
+        "audit": {
+          "log_all_operations": true,
+          "log_failures": true,
+          "log_sensitive_access": true,
+          "include_arguments": true
+        },
+        "strict_mode": true
+      }
+    },
+    {
+      "name": "Time",
+      "source": {
+        "type": "Process",
+        "command": "npx",
+        "args": ["-y", "@theo.foobar/mcp-time"],
+        "env": {
+          "MCP_PROTOCOL_VERSION": "2025-06-18"
+        }
+      },
+      "security_policy": {
+        "id": "time-minimal",
+        "description": "Minimal policy for time server - no external access needed",
+        "filesystem": {
+          "allowed_paths": [],
+          "blocked_paths": ["*"],
+          "allowed_extensions": [],
+          "blocked_extensions": ["*"],
+          "max_file_size": 0,
+          "allow_hidden": false,
+          "allow_symlinks": false,
+          "allow_write": false,
+          "allow_delete": false
+        },
+        "process": {
+          "allowed_commands": [],
+          "blocked_commands": ["*"],
+          "allowed_args_patterns": [],
+          "blocked_args_patterns": ["*"],
+          "max_args": 0,
+          "max_arg_length": 0,
+          "allow_shell": false
+        },
+        "network": {
+          "allowed_urls": [],
+          "blocked_urls": ["*"],
+          "allowed_protocols": [],
+          "allowed_ports": null,
+          "block_private_ips": true,
+          "block_loopback": true
+        },
+        "environment": {
+          "allowed_vars": ["MCP_PROTOCOL_VERSION", "TZ"],
+          "blocked_vars": ["*"],
+          "sanitize_vars": [],
+          "allow_passthrough": false
+        },
+        "rate_limits": {
+          "max_requests_per_minute": 120,
+          "max_concurrent": 10,
+          "max_total_operations": null
+        },
+        "audit": {
+          "log_all_operations": false,
+          "log_failures": false,
+          "log_sensitive_access": false,
+          "include_arguments": false
+        },
+        "strict_mode": false
+      }
+    }
+  ],
+  "auto_register_tools": true,
+  "tool_timeout_secs": 30,
+  "max_concurrent_calls": 3,
+  "global_security_policy": {
+    "id": "global-restrictive",
+    "description": "Default restrictive global policy",
+    "filesystem": {
+      "allowed_paths": [],
+      "blocked_paths": ["/etc", "/sys", "/proc", "C:\\Windows", "C:\\Program Files"],
+      "allowed_extensions": [".txt", ".json", ".md"],
+      "blocked_extensions": [".exe", ".dll", ".so", ".dylib", ".sh", ".ps1", ".bat", ".cmd"],
+      "max_file_size": 10485760,
+      "allow_hidden": false,
+      "allow_symlinks": false,
+      "allow_write": false,
+      "allow_delete": false
+    },
+    "process": {
+      "allowed_commands": [],
+      "blocked_commands": ["rm", "del", "format", "sudo", "su", "chmod", "chown"],
+      "allowed_args_patterns": [],
+      "blocked_args_patterns": [".*[;&|`$].*", ".*\\.\\..*"],
+      "max_args": 10,
+      "max_arg_length": 1000,
+      "allow_shell": false
+    },
+    "network": {
+      "allowed_urls": [],
+      "blocked_urls": [],
+      "allowed_protocols": ["https"],
+      "allowed_ports": [443, 8443],
+      "block_private_ips": true,
+      "block_loopback": true
+    },
+    "environment": {
+      "allowed_vars": ["PATH", "HOME", "USER", "LANG", "TZ"],
+      "blocked_vars": ["LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES"],
+      "sanitize_vars": [],
+      "allow_passthrough": false
+    },
+    "rate_limits": {
+      "max_requests_per_minute": 60,
+      "max_concurrent": 5,
+      "max_total_operations": 1000
+    },
+    "audit": {
+      "log_all_operations": false,
+      "log_failures": true,
+      "log_sensitive_access": true,
+      "include_arguments": false
+    },
+    "strict_mode": true
+  }
+}

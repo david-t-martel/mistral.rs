@@ -166,8 +166,41 @@ function Get-RAGRedisBinary {
     return $null
 }
 
+function Ensure-PyO3Python {
+    # Ensure PYO3_PYTHON is set for PyO3 compilation
+    if ($env:PYO3_PYTHON -and (Test-Path $env:PYO3_PYTHON)) {
+        Write-Verbose "PYO3_PYTHON already set: $env:PYO3_PYTHON"
+        return $env:PYO3_PYTHON
+    }
+
+    try {
+        $pyPath = (uv run -q -p 3.12 python -c "import sys; print(sys.executable)").Trim()
+        if (Test-Path $pyPath) {
+            $env:PYO3_PYTHON = $pyPath
+            [System.Environment]::SetEnvironmentVariable('PYO3_PYTHON', $pyPath, 'User')
+            Write-Verbose "PYO3_PYTHON set to: $pyPath"
+            return $pyPath
+        }
+    } catch {
+        Write-Warning "Failed to find Python 3.12 via uv. Install with: uv python install 3.12"
+        throw "PYO3_PYTHON not configured. PyO3 compilation will fail."
+    }
+}
+
+function Ensure-PathContainsLocalBin {
+    $localBin = "C:\Users\david\.local\bin"
+    if (-not ($env:PATH -split ';' | Where-Object { $_ -ieq $localBin })) {
+        Write-Verbose "Adding $localBin to PATH"
+        $env:PATH = "$env:PATH;$localBin"
+        [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'User')
+    } else {
+        Write-Verbose "$localBin already in PATH"
+    }
+}
+
 # Export all resolved paths as a hashtable
 function Get-AllProjectPaths {
+    Ensure-PathContainsLocalBin
     @{
         ProjectRoot = Get-ProjectRoot
         Binary = Get-MistralRSBinary
@@ -177,6 +210,7 @@ function Get-AllProjectPaths {
         GitHubToken = if (Get-GitHubToken) { "[REDACTED]" } else { $null }
         ModelDirectory = Get-ModelDirectory
         RAGRedisBinary = Get-RAGRedisBinary
+        PyO3Python = try { Ensure-PyO3Python } catch { $null }
     }
 }
 
