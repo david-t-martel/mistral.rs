@@ -702,6 +702,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement XLora forward for multimodal mistral variant (handle vision + text adapter fusion)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

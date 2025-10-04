@@ -210,6 +210,7 @@ impl LinearLayerLike for QLoraLinear {
         None
     }
     fn weight(&self) -> &Tensor {
+        // TODO: Provide access to underlying weight tensor for QLoraLinear (expose quantized base weight or merged view)
         unimplemented!()
     }
     fn quantized_act_type(&self) -> Option<DType> {

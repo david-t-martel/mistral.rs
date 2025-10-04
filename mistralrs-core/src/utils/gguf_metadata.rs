@@ -347,7 +347,10 @@ impl DeviceMappedModelLoader for GgufDeviceMapLoaderInner<'_, '_> {
                 };
                 token_embd + output_norm + output
             }
-            _ => unimplemented!(),
+            _ => {
+                // TODO: Implement size_in_bytes support for remaining GGUF architectures (add tensor accounting logic here)
+                unimplemented!()
+            }
         };
         Ok(size_in_bytes)
     }

@@ -1145,6 +1145,7 @@ impl NormalModel for DeepSeekV2 {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Provide XLora forward path (merge adapter deltas or route through expanded LoRA layers)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

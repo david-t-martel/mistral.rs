@@ -726,6 +726,7 @@ async fn audio_interactive_mode(
     _do_search: bool,
     _enable_thinking: Option<bool>,
 ) {
+    // TODO: Implement interactive audio mode (speech-to-text + text generation + optional tool calls)
     unimplemented!("Using audio models isn't supported yet")
 }
 
