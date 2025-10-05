@@ -3960,12 +3960,15 @@ version = "0.6.0"
 dependencies = [
  "anyhow",
  "camino",
+ "futures",
  "ignore",
+ "mistralrs-mcp",
  "regex",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.12",
+ "tokio",
  "tracing",
  "walkdir",
 ]

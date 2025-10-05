@@ -16,6 +16,9 @@ pub mod pathlib;
 pub mod tools;
 pub mod types;
 
+// Core integration with mistralrs-core
+pub mod core_integration;
+
 // Test utilities (only available in tests)
 #[cfg(test)]
 pub mod test_utils;
@@ -31,6 +34,9 @@ pub use types::{
     GrepOptions, HeadOptions, LineEnding, LsOptions, LsResult, SandboxConfig, ShellType,
     SortOptions, TailOptions, UniqOptions, WcOptions, WcResult,
 };
+
+// Core integration exports
+pub use core_integration::AgentToolProvider;
 
 /// Main agent toolkit providing high-level API for all operations
 #[derive(Debug, Clone)]
