@@ -78,15 +78,19 @@ impl WinutilCommand {
 /// # Example
 /// ```no_run
 /// use mistralrs_agent_tools::tools::winutils::{WinutilCommand, winutil_exec};
-/// use mistralrs_agent_tools::{Sandbox, SandboxConfig};
+/// use mistralrs_agent_tools::tools::sandbox::Sandbox;
+/// use mistralrs_agent_tools::types::{AgentResult, SandboxConfig};
 ///
-/// let sandbox = Sandbox::new(SandboxConfig::default())?;
-/// let cmd = WinutilCommand::new("base64")
-///     .arg("--encode")
-///     .arg("file.txt");
+/// fn main() -> AgentResult<()> {
+///     let sandbox = Sandbox::new(SandboxConfig::default());
+///     let cmd = WinutilCommand::new("base64")
+///         .arg("--encode")
+///         .arg("file.txt");
 ///
-/// let result = winutil_exec(&sandbox, &cmd)?;
-/// println!("{}", result.stdout);
+///     let result = winutil_exec(&sandbox, &cmd)?;
+///     println!("{}", result.stdout);
+///     Ok(())
+/// }
 /// ```
 pub fn winutil_exec(sandbox: &Sandbox, command: &WinutilCommand) -> AgentResult<CommandResult> {
     // Determine winutils path
