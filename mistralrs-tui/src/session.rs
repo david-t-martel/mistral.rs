@@ -190,8 +190,6 @@ impl SessionStore {
         session_id: Uuid,
         tool_call: &crate::agent::toolkit::ToolCall,
     ) -> Result<()> {
-        use crate::agent::toolkit::ToolCallResult;
-
         let arguments_json = serde_json::to_string(&tool_call.arguments)
             .context("Failed to serialize tool call arguments")?;
 
@@ -211,7 +209,7 @@ impl SessionStore {
         let created_at = tool_call.timestamp.to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO tool_calls (id, session_id, tool_name, arguments_json, result_json, success, error_message, duration_ms, created_at) 
+            "INSERT INTO tool_calls (id, session_id, tool_name, arguments_json, result_json, success, error_message, duration_ms, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
         .bind(tool_call.id.to_string())
@@ -240,7 +238,7 @@ impl SessionStore {
         use std::time::Duration;
 
         let rows = sqlx::query(
-            "SELECT id, tool_name, arguments_json, result_json, success, error_message, duration_ms, created_at 
+            "SELECT id, tool_name, arguments_json, result_json, success, error_message, duration_ms, created_at
              FROM tool_calls WHERE session_id = ? ORDER BY datetime(created_at) ASC"
         )
         .bind(session_id.to_string())

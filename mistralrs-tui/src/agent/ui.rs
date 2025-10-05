@@ -11,10 +11,12 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
+use std::time::Instant;
 
+use super::events::ExecutionEvent;
 use super::toolkit::ToolCall;
 
 /// Agent UI state management
@@ -32,6 +34,10 @@ pub struct AgentUiState {
     pub history_cursor: usize,
     /// Filter text for tool browser search
     pub filter_text: String,
+    /// Active tool execution (if any)
+    pub active_execution: Option<ActiveExecution>,
+    /// Whether execution panel is visible
+    pub execution_panel_visible: bool,
 }
 
 impl Default for AgentUiState {
@@ -43,6 +49,8 @@ impl Default for AgentUiState {
             tool_cursor: 0,
             history_cursor: 0,
             filter_text: String::new(),
+            active_execution: None,
+            execution_panel_visible: false,
         }
     }
 }
@@ -73,6 +81,158 @@ impl AgentUiState {
         self.panel_visible = false;
         self.browser_visible = false;
         self.history_visible = false;
+    }
+
+    /// Start tracking a new tool execution
+    pub fn start_execution(
+        &mut self,
+        call_id: uuid::Uuid,
+        tool_name: String,
+        arguments: serde_json::Value,
+    ) {
+        self.active_execution = Some(ActiveExecution::new(call_id, tool_name, arguments));
+        self.execution_panel_visible = true;
+    }
+
+    /// Update active execution from event
+    pub fn update_execution(&mut self, event: &ExecutionEvent) {
+        if let Some(execution) = &mut self.active_execution {
+            execution.update_from_event(event);
+        }
+    }
+
+    /// Clear active execution
+    pub fn clear_execution(&mut self) {
+        self.active_execution = None;
+        self.execution_panel_visible = false;
+    }
+
+    /// Toggle execution panel visibility
+    pub fn toggle_execution_panel(&mut self) {
+        self.execution_panel_visible = !self.execution_panel_visible;
+    }
+
+    /// Update UI state from execution event
+    pub fn update_from_event(&mut self, event: &ExecutionEvent) {
+        match event {
+            ExecutionEvent::Started {
+                call_id, tool_name, ..
+            } => {
+                // Start new execution tracking
+                let call_id_copy = *call_id;
+                self.start_execution(
+                    call_id_copy,
+                    tool_name.clone(),
+                    serde_json::Value::Null, // Arguments will be known from tool call history
+                );
+            }
+            ExecutionEvent::Progress { call_id, .. }
+            | ExecutionEvent::Completed { call_id, .. }
+            | ExecutionEvent::Failed { call_id, .. } => {
+                // Update existing execution if call_id matches
+                if let Some(execution) = &mut self.active_execution {
+                    if execution.call_id == *call_id {
+                        execution.update_from_event(event);
+
+                        // Clear execution panel after completion
+                        if execution.completed {
+                            // Keep panel visible for a moment to show final state
+                            // UI tick will eventually clear it or user can dismiss
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Active tool execution state for real-time display
+#[derive(Debug, Clone)]
+pub struct ActiveExecution {
+    /// Tool call ID
+    pub call_id: uuid::Uuid,
+    /// Tool name
+    pub tool_name: String,
+    /// Tool arguments
+    pub arguments: serde_json::Value,
+    /// Execution start time
+    pub started_at: Instant,
+    /// Current progress (0.0 to 1.0)
+    pub progress: f64,
+    /// Streaming output lines
+    pub output_lines: Vec<String>,
+    /// Current status message
+    pub status_message: String,
+    /// Whether execution has completed
+    pub completed: bool,
+    /// Whether execution succeeded
+    pub success: bool,
+    /// Error message if failed
+    pub error_message: Option<String>,
+}
+
+impl ActiveExecution {
+    /// Create new active execution from tool call
+    pub fn new(call_id: uuid::Uuid, tool_name: String, arguments: serde_json::Value) -> Self {
+        Self {
+            call_id,
+            tool_name,
+            arguments,
+            started_at: Instant::now(),
+            progress: 0.0,
+            output_lines: Vec::new(),
+            status_message: "Starting...".to_string(),
+            completed: false,
+            success: false,
+            error_message: None,
+        }
+    }
+
+    /// Update progress from event
+    pub fn update_from_event(&mut self, event: &ExecutionEvent) {
+        match event {
+            ExecutionEvent::Started { .. } => {
+                self.status_message = "Executing...".to_string();
+                self.progress = 0.1;
+            }
+            ExecutionEvent::Progress { message, .. } => {
+                self.status_message = message.clone();
+                self.progress = (self.progress + 0.1).min(0.9);
+            }
+            ExecutionEvent::Completed { result, .. } => {
+                self.completed = true;
+                self.success = result.success;
+                self.progress = 1.0;
+                if result.success {
+                    self.status_message = "Completed successfully".to_string();
+                    if let serde_json::Value::String(output) = &result.output {
+                        self.output_lines.extend(output.lines().map(String::from));
+                    }
+                } else {
+                    self.status_message = "Failed".to_string();
+                    self.error_message = result.error.clone();
+                }
+            }
+            ExecutionEvent::Failed { error, .. } => {
+                self.completed = true;
+                self.success = false;
+                self.progress = 1.0;
+                self.status_message = "Failed".to_string();
+                self.error_message = Some(error.clone());
+            }
+        }
+    }
+
+    /// Get elapsed time in milliseconds
+    pub fn elapsed_ms(&self) -> u128 {
+        self.started_at.elapsed().as_millis()
+    }
+
+    /// Get spinner character based on elapsed time
+    pub fn spinner_char(&self) -> &'static str {
+        const SPINNER: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let idx = (self.elapsed_ms() / 100) as usize % SPINNER.len();
+        SPINNER[idx]
     }
 }
 
@@ -380,6 +540,142 @@ pub fn render_agent_status(
         .style(Style::default());
 
     frame.render_widget(paragraph, area);
+}
+
+/// Render the tool execution panel with real-time progress
+pub fn render_execution_panel(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    execution: &ActiveExecution,
+    focused: bool,
+) {
+    // Split area into header, progress, output
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Header with tool name and status
+            Constraint::Length(3), // Progress bar
+            Constraint::Min(5),    // Output/details
+        ])
+        .split(area);
+
+    // Render header with spinner or status icon
+    let status_icon = if !execution.completed {
+        execution.spinner_char()
+    } else if execution.success {
+        "✓"
+    } else {
+        "✗"
+    };
+
+    let status_color = if !execution.completed {
+        Color::Yellow
+    } else if execution.success {
+        Color::Green
+    } else {
+        Color::Red
+    };
+
+    let header_text = vec![
+        Span::styled(
+            status_icon,
+            Style::default()
+                .fg(status_color)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" "),
+        Span::styled(
+            execution.tool_name.clone(),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" • "),
+        Span::styled(
+            format!("{}ms", execution.elapsed_ms()),
+            Style::default().fg(Color::DarkGray),
+        ),
+    ];
+
+    let header_block = Block::default()
+        .title("Tool Execution")
+        .borders(Borders::ALL)
+        .border_style(if focused {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default()
+        });
+
+    let header_para = Paragraph::new(Line::from(header_text)).block(header_block);
+    frame.render_widget(header_para, chunks[0]);
+
+    // Render progress bar
+    let progress_label = execution.status_message.clone();
+    let progress_gauge = Gauge::default()
+        .block(Block::default().borders(Borders::ALL))
+        .gauge_style(
+            Style::default()
+                .fg(if execution.success {
+                    Color::Green
+                } else if execution.completed {
+                    Color::Red
+                } else {
+                    Color::Yellow
+                })
+                .bg(Color::Black)
+                .add_modifier(Modifier::BOLD),
+        )
+        .label(progress_label)
+        .ratio(execution.progress);
+
+    frame.render_widget(progress_gauge, chunks[1]);
+
+    // Render output or error
+    let mut output_lines = Vec::new();
+
+    if let Some(error) = &execution.error_message {
+        output_lines.push(Line::from(Span::styled(
+            format!("Error: {}", error),
+            Style::default().fg(Color::Red),
+        )));
+    }
+
+    // Show arguments
+    output_lines.push(Line::from(Span::styled(
+        "Arguments:",
+        Style::default().fg(Color::Gray),
+    )));
+    if let Some(args_str) = serde_json::to_string_pretty(&execution.arguments).ok() {
+        for line in args_str.lines().take(5) {
+            output_lines.push(Line::from(Span::styled(
+                format!("  {}", line),
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
+    // Show output if available
+    if !execution.output_lines.is_empty() {
+        output_lines.push(Line::from(Span::raw("")));
+        output_lines.push(Line::from(Span::styled(
+            "Output:",
+            Style::default().fg(Color::Gray),
+        )));
+        for line in execution.output_lines.iter().take(10) {
+            output_lines.push(Line::from(Span::styled(
+                format!("  {}", line),
+                Style::default().fg(Color::White),
+            )));
+        }
+    }
+
+    let output_block = Block::default().title("Details").borders(Borders::ALL);
+
+    let output_para = Paragraph::new(output_lines)
+        .block(output_block)
+        .wrap(Wrap { trim: false });
+
+    frame.render_widget(output_para, chunks[2]);
 }
 
 /// Helper function to create sample tools for testing

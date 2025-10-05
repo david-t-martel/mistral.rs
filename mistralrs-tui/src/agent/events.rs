@@ -8,11 +8,10 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
-use super::toolkit::{ToolCall, ToolCallResult};
+use super::toolkit::ToolCallResult;
 
 /// Event emitted during tool execution lifecycle
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -78,11 +77,7 @@ impl ExecutionEvent {
     }
 
     /// Create a progress event
-    pub fn progress(
-        call_id: Uuid,
-        message: impl Into<String>,
-        percentage: Option<f32>,
-    ) -> Self {
+    pub fn progress(call_id: Uuid, message: impl Into<String>, percentage: Option<f32>) -> Self {
         Self::Progress {
             call_id,
             message: message.into(),
@@ -193,7 +188,11 @@ mod tests {
         assert!(matches!(event, ExecutionEvent::Started { .. }));
 
         // Progress
-        bus.emit(ExecutionEvent::progress(call_id, "Processing...", Some(50.0)));
+        bus.emit(ExecutionEvent::progress(
+            call_id,
+            "Processing...",
+            Some(50.0),
+        ));
         let event = rx.recv().await.unwrap();
         assert!(matches!(event, ExecutionEvent::Progress { .. }));
 

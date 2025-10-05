@@ -96,7 +96,9 @@ impl ToolCatalog {
     fn define_ls() -> ToolDefinition {
         ToolDefinition {
             name: "ls".to_string(),
-            description: "List directory contents. Shows files and directories in the specified path.".to_string(),
+            description:
+                "List directory contents. Shows files and directories in the specified path."
+                    .to_string(),
             parameters: json!({
                 "type": "object",
                 "properties": {

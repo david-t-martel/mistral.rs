@@ -14,7 +14,8 @@ use crate::{
 
 #[cfg(feature = "tui-agent")]
 use crate::agent::ui::{
-    render_agent_status, render_call_history, render_tool_browser, render_tool_panel,
+    render_agent_status, render_call_history, render_execution_panel, render_tool_browser,
+    render_tool_panel,
 };
 
 pub fn render(frame: &mut Frame<'_>, app: &App) {
@@ -212,7 +213,62 @@ fn format_size(size: u64) -> String {
 fn render_agent_layout(frame: &mut Frame<'_>, main_area: Rect, status_area: Rect, app: &App) {
     let agent_ui_state = app.agent_ui_state();
 
-    // Determine layout based on what's visible
+    // Check if execution panel should be shown
+    let show_execution_panel =
+        agent_ui_state.execution_panel_visible && agent_ui_state.active_execution.is_some();
+
+    // Handle execution panel layout specially
+    if show_execution_panel {
+        // Execution mode: Split vertically to show execution panel at bottom
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .split(main_area);
+
+        // Top section: Sessions | Chat | ToolPanel
+        let top_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(20),
+                Constraint::Min(30),
+                Constraint::Length(32),
+            ])
+            .split(vertical_chunks[0]);
+
+        // Render top section
+        render_sessions(frame, top_chunks[0], app);
+        render_chat(frame, top_chunks[1], app);
+
+        let tools = app.available_tools();
+        let tool_cursor = agent_ui_state.tool_cursor;
+        let tool_focused = matches!(app.focus(), FocusArea::AgentTools);
+        render_tool_panel(frame, top_chunks[2], tools, tool_cursor, tool_focused);
+
+        // Render execution panel at bottom
+        if let Some(execution) = &agent_ui_state.active_execution {
+            render_execution_panel(frame, vertical_chunks[1], execution, false);
+        }
+
+        // Render agent status bar
+        let toolkit = app.agent_toolkit();
+        let sandbox_path = toolkit
+            .map(|t| t.config().sandbox_root.display().to_string())
+            .unwrap_or_else(|| ".".to_string());
+        let tool_count = toolkit.map(|t| t.tool_count()).unwrap_or(0);
+        let active_calls = app.active_session().tool_calls.len();
+
+        render_agent_status(
+            frame,
+            status_area,
+            true,
+            &sandbox_path,
+            tool_count,
+            active_calls,
+        );
+        return;
+    }
+
+    // Determine layout based on browser visibility
     let main_chunks = if agent_ui_state.browser_visible {
         // Browser mode: Sessions | Chat | ToolBrowser
         Layout::default()

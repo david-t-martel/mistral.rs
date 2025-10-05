@@ -19,6 +19,7 @@ use crate::{
 use crate::agent::{
     toolkit::AgentToolkit,
     ui::{sample_tools, AgentUiState, ToolInfo},
+    EventBus, ExecutionEvent,
 };
 
 /// High-level focus targets inside the UI layout.
@@ -92,6 +93,10 @@ pub struct App {
     agent_ui_state: AgentUiState,
     #[cfg(feature = "tui-agent")]
     available_tools: Vec<ToolInfo>,
+    #[cfg(feature = "tui-agent")]
+    event_bus: Option<EventBus>,
+    #[cfg(feature = "tui-agent")]
+    event_receiver: Option<tokio::sync::broadcast::Receiver<ExecutionEvent>>,
 }
 
 impl App {
@@ -115,6 +120,13 @@ impl App {
             session
         };
 
+        #[cfg(feature = "tui-agent")]
+        let (event_bus, event_receiver) = {
+            let bus = EventBus::new(100);
+            let receiver = bus.subscribe();
+            (Some(bus), Some(receiver))
+        };
+
         Ok(Self {
             session_store,
             model_inventory,
@@ -132,6 +144,10 @@ impl App {
             agent_ui_state: AgentUiState::new(),
             #[cfg(feature = "tui-agent")]
             available_tools: sample_tools(),
+            #[cfg(feature = "tui-agent")]
+            event_bus,
+            #[cfg(feature = "tui-agent")]
+            event_receiver,
         })
     }
 
@@ -200,6 +216,8 @@ impl App {
         match event {
             InputEvent::Tick => {
                 self.update_metrics_display();
+                #[cfg(feature = "tui-agent")]
+                self.poll_execution_events();
             }
             InputEvent::Resize(_, _) => {
                 // Nothing to do yet, layout is responsive.
@@ -439,6 +457,23 @@ impl App {
             .map(|v| v.max(0) as u64)
             .sum();
         self.metrics.total_tokens = session_tokens;
+    }
+
+    /// Poll for execution events and update UI state
+    #[cfg(feature = "tui-agent")]
+    fn poll_execution_events(&mut self) {
+        if let Some(receiver) = self.event_receiver.as_mut() {
+            // Try to receive all pending events without blocking
+            while let Ok(event) = receiver.try_recv() {
+                self.agent_ui_state.update_from_event(&event);
+            }
+        }
+    }
+
+    /// Get the event bus (for tool execution)
+    #[cfg(feature = "tui-agent")]
+    pub fn event_bus(&self) -> Option<&EventBus> {
+        self.event_bus.as_ref()
     }
 }
 

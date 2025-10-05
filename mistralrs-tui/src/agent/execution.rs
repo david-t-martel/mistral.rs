@@ -609,7 +609,8 @@ mod tests {
 
         let result = executor.execute("ls", args, None).await.unwrap();
         assert!(result.success);
-        assert!(result.output.contains("test.txt"));
+        let output_str = result.output.as_str().unwrap();
+        assert!(output_str.contains("test.txt"));
     }
 
     #[tokio::test]
@@ -627,7 +628,8 @@ mod tests {
 
         let result = executor.execute("cat", args, None).await.unwrap();
         assert!(result.success);
-        assert!(result.output.contains("Hello, World!"));
+        let output_str = result.output.as_str().unwrap();
+        assert!(output_str.contains("Hello, World!"));
     }
 
     #[tokio::test]

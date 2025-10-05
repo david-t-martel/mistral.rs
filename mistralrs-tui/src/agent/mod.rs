@@ -23,6 +23,9 @@ pub mod events;
 pub mod discovery;
 
 #[cfg(feature = "tui-agent")]
+pub mod llm_integration;
+
+#[cfg(feature = "tui-agent")]
 pub use toolkit::AgentToolkit;
 
 #[cfg(feature = "tui-agent")]
@@ -30,3 +33,6 @@ pub use events::{EventBus, ExecutionEvent};
 
 #[cfg(feature = "tui-agent")]
 pub use discovery::{ToolCatalog, ToolDefinition};
+
+#[cfg(feature = "tui-agent")]
+pub use llm_integration::{LLMIntegration, LLMToolCall};
