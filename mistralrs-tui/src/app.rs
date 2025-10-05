@@ -237,12 +237,24 @@ impl App {
             return Ok(());
         }
 
+        // Handle palette input when visible
+        #[cfg(feature = "tui-agent")]
+        if self.is_agent_mode() && self.agent_ui_state.palette_visible {
+            return self.handle_palette_key(key);
+        }
+
         // Agent mode key bindings
         #[cfg(feature = "tui-agent")]
         if key.modifiers.control {
             match key.code {
                 KeyCode::Char('a') => {
                     self.toggle_agent_mode();
+                    return Ok(());
+                }
+                KeyCode::Char('p') => {
+                    if self.is_agent_mode() {
+                        self.agent_ui_state.toggle_palette();
+                    }
                     return Ok(());
                 }
                 KeyCode::Char('t') => {
@@ -272,6 +284,11 @@ impl App {
 
         match key.code {
             KeyCode::Esc => {
+                #[cfg(feature = "tui-agent")]
+                if self.is_agent_mode() && self.agent_ui_state.palette_visible {
+                    self.agent_ui_state.hide_palette();
+                    return Ok(());
+                }
                 self.focus = FocusArea::Chat;
             }
             KeyCode::Char('q') => {
@@ -457,6 +474,54 @@ impl App {
             .map(|v| v.max(0) as u64)
             .sum();
         self.metrics.total_tokens = session_tokens;
+    }
+
+    /// Handle keyboard input when palette is visible
+    #[cfg(feature = "tui-agent")]
+    fn handle_palette_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.agent_ui_state.hide_palette();
+            }
+            KeyCode::Enter => {
+                // Get the selected tool and execute it
+                // For now, just close the palette
+                // TODO: Implement tool execution from palette
+                self.agent_ui_state.hide_palette();
+            }
+            KeyCode::Up => {
+                if self.agent_ui_state.palette_cursor > 0 {
+                    self.agent_ui_state.palette_cursor -= 1;
+                }
+            }
+            KeyCode::Down => {
+                // Filter tools and check bounds
+                let filter = self.agent_ui_state.palette_filter.to_lowercase();
+                let filtered_count = self.available_tools.iter()
+                    .filter(|t| {
+                        filter.is_empty() ||
+                        t.name.to_lowercase().contains(&filter) ||
+                        t.description.to_lowercase().contains(&filter)
+                    })
+                    .count();
+                
+                if filtered_count > 0 && self.agent_ui_state.palette_cursor < filtered_count - 1 {
+                    self.agent_ui_state.palette_cursor += 1;
+                }
+            }
+            KeyCode::Backspace => {
+                self.agent_ui_state.palette_filter.pop();
+                // Reset cursor when filter changes
+                self.agent_ui_state.palette_cursor = 0;
+            }
+            KeyCode::Char(c) => {
+                self.agent_ui_state.palette_filter.push(c);
+                // Reset cursor when filter changes
+                self.agent_ui_state.palette_cursor = 0;
+            }
+            _ => {}
+        }
+        Ok(())
     }
 
     /// Poll for execution events and update UI state

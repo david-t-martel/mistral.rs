@@ -15,7 +15,7 @@ use crate::{
 #[cfg(feature = "tui-agent")]
 use crate::agent::ui::{
     render_agent_status, render_call_history, render_execution_panel, render_tool_browser,
-    render_tool_panel,
+    render_tool_panel, render_tool_palette,
 };
 
 pub fn render(frame: &mut Frame<'_>, app: &App) {
@@ -29,6 +29,14 @@ pub fn render(frame: &mut Frame<'_>, app: &App) {
     #[cfg(feature = "tui-agent")]
     if app.is_agent_mode() {
         render_agent_layout(frame, layout[0], layout[1], app);
+        
+        // Render palette overlay if visible
+        if app.agent_ui_state().palette_visible {
+            let tools = app.available_tools();
+            let palette_filter = &app.agent_ui_state().palette_filter;
+            let palette_cursor = app.agent_ui_state().palette_cursor;
+            render_tool_palette(frame, size, tools, palette_filter, palette_cursor);
+        }
         return;
     }
 

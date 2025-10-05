@@ -38,6 +38,12 @@ pub struct AgentUiState {
     pub active_execution: Option<ActiveExecution>,
     /// Whether execution panel is visible
     pub execution_panel_visible: bool,
+    /// Whether the tool palette is visible
+    pub palette_visible: bool,
+    /// Tool palette filter text
+    pub palette_filter: String,
+    /// Tool palette cursor position
+    pub palette_cursor: usize,
 }
 
 impl Default for AgentUiState {
@@ -51,6 +57,9 @@ impl Default for AgentUiState {
             filter_text: String::new(),
             active_execution: None,
             execution_panel_visible: false,
+            palette_visible: false,
+            palette_filter: String::new(),
+            palette_cursor: 0,
         }
     }
 }
@@ -110,6 +119,29 @@ impl AgentUiState {
     /// Toggle execution panel visibility
     pub fn toggle_execution_panel(&mut self) {
         self.execution_panel_visible = !self.execution_panel_visible;
+    }
+
+    /// Show the tool palette
+    pub fn show_palette(&mut self) {
+        self.palette_visible = true;
+        self.palette_filter.clear();
+        self.palette_cursor = 0;
+    }
+
+    /// Hide the tool palette
+    pub fn hide_palette(&mut self) {
+        self.palette_visible = false;
+        self.palette_filter.clear();
+        self.palette_cursor = 0;
+    }
+
+    /// Toggle palette visibility
+    pub fn toggle_palette(&mut self) {
+        if self.palette_visible {
+            self.hide_palette();
+        } else {
+            self.show_palette();
+        }
     }
 
     /// Update UI state from execution event
@@ -676,6 +708,142 @@ pub fn render_execution_panel(
         .wrap(Wrap { trim: false });
 
     frame.render_widget(output_para, chunks[2]);
+}
+
+/// Render the tool palette overlay (command palette style)
+pub fn render_tool_palette(
+    frame: &mut Frame<'_>,
+    area: Rect,
+    tools: &[ToolInfo],
+    filter_text: &str,
+    cursor: usize,
+) {
+    // Create a centered overlay (60% width, 60% height)
+    let popup_width = (area.width * 3) / 5;
+    let popup_height = (area.height * 3) / 5;
+    let popup_x = (area.width - popup_width) / 2;
+    let popup_y = (area.height - popup_height) / 2;
+
+    let popup_area = Rect {
+        x: area.x + popup_x,
+        y: area.y + popup_y,
+        width: popup_width,
+        height: popup_height,
+    };
+
+    // Clear the background with a semi-transparent effect
+    let background = Block::default()
+        .style(Style::default().bg(Color::Black))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .title("Tool Palette (Esc to close)");
+    frame.render_widget(background, popup_area);
+
+    // Split into search input and results
+    let inner_area = Rect {
+        x: popup_area.x + 1,
+        y: popup_area.y + 1,
+        width: popup_area.width.saturating_sub(2),
+        height: popup_area.height.saturating_sub(2),
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(1)])
+        .split(inner_area);
+
+    // Render search input
+    let search_text = format!("🔍 {}", filter_text);
+    let search_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow))
+        .title("Search");
+    let search_para = Paragraph::new(search_text).block(search_block);
+    frame.render_widget(search_para, chunks[0]);
+
+    // Filter and rank tools based on search text
+    let filtered_tools: Vec<&ToolInfo> = if filter_text.is_empty() {
+        tools.iter().collect()
+    } else {
+        let filter_lower = filter_text.to_lowercase();
+        let mut matches: Vec<(&ToolInfo, i32)> = tools
+            .iter()
+            .filter_map(|t| {
+                let name_lower = t.name.to_lowercase();
+                let desc_lower = t.description.to_lowercase();
+                
+                // Scoring: exact match > starts with > contains
+                let score = if name_lower == filter_lower {
+                    100
+                } else if name_lower.starts_with(&filter_lower) {
+                    50
+                } else if name_lower.contains(&filter_lower) {
+                    25
+                } else if desc_lower.contains(&filter_lower) {
+                    10
+                } else {
+                    return None;
+                };
+                Some((t, score))
+            })
+            .collect();
+        
+        matches.sort_by(|a, b| b.1.cmp(&a.1));
+        matches.into_iter().map(|(t, _)| t).collect()
+    };
+
+    // Render filtered tools
+    let items: Vec<ListItem> = filtered_tools
+        .iter()
+        .enumerate()
+        .map(|(idx, tool)| {
+            let is_selected = idx == cursor;
+            let style = if is_selected {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(vec![
+                Line::from(vec![
+                    Span::styled(
+                        format!(" {} ", tool.name),
+                        style.fg(tool.category.color()).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(" [{}]", tool.category.display_name()),
+                        style.fg(Color::DarkGray),
+                    ),
+                ]),
+                Line::from(Span::styled(
+                    format!("  {}", tool.description),
+                    style.fg(Color::Gray),
+                )),
+            ])
+        })
+        .collect();
+
+    let results_block = Block::default()
+        .borders(Borders::ALL)
+        .title(format!("Tools ({} found)", filtered_tools.len()));
+
+    let list = List::new(items)
+        .block(results_block)
+        .highlight_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
+
+    let mut state = ListState::default();
+    if !filtered_tools.is_empty() {
+        state.select(Some(cursor.min(filtered_tools.len() - 1)));
+    }
+    frame.render_stateful_widget(list, chunks[1], &mut state);
 }
 
 /// Helper function to create sample tools for testing
