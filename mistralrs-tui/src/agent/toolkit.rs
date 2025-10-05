@@ -171,11 +171,8 @@ mod tests {
     #[test]
     fn test_tool_call_creation() {
         let toolkit = AgentToolkit::with_defaults().unwrap();
-        let call = toolkit.create_tool_call(
-            "ls".to_string(),
-            serde_json::json!({"path": "."}),
-            None,
-        );
+        let call =
+            toolkit.create_tool_call("ls".to_string(), serde_json::json!({"path": "."}), None);
         assert_eq!(call.tool_name, "ls");
         assert!(call.result.is_none());
     }

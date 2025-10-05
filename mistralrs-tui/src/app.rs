@@ -15,12 +15,24 @@ use crate::{
     session::{SessionContext, SessionStore, SessionSummary},
 };
 
+#[cfg(feature = "tui-agent")]
+use crate::agent::{
+    toolkit::AgentToolkit,
+    ui::{sample_tools, AgentUiState, ToolInfo},
+};
+
 /// High-level focus targets inside the UI layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusArea {
     Sessions,
     Chat,
     Models,
+    #[cfg(feature = "tui-agent")]
+    AgentTools,
+    #[cfg(feature = "tui-agent")]
+    AgentBrowser,
+    #[cfg(feature = "tui-agent")]
+    AgentHistory,
 }
 
 /// Runtime telemetry surfaced to the status bar.
@@ -74,6 +86,12 @@ pub struct App {
     session_cursor: usize,
     active_session: SessionContext,
     model_cursor: usize,
+    #[cfg(feature = "tui-agent")]
+    agent_toolkit: Option<AgentToolkit>,
+    #[cfg(feature = "tui-agent")]
+    agent_ui_state: AgentUiState,
+    #[cfg(feature = "tui-agent")]
+    available_tools: Vec<ToolInfo>,
 }
 
 impl App {
@@ -108,6 +126,12 @@ impl App {
             session_cursor: 0,
             active_session,
             model_cursor: 0,
+            #[cfg(feature = "tui-agent")]
+            agent_toolkit: AgentToolkit::with_defaults().ok(),
+            #[cfg(feature = "tui-agent")]
+            agent_ui_state: AgentUiState::new(),
+            #[cfg(feature = "tui-agent")]
+            available_tools: sample_tools(),
         })
     }
 
@@ -147,6 +171,31 @@ impl App {
         &self.metrics
     }
 
+    #[cfg(feature = "tui-agent")]
+    pub fn agent_ui_state(&self) -> &AgentUiState {
+        &self.agent_ui_state
+    }
+
+    #[cfg(feature = "tui-agent")]
+    pub fn agent_ui_state_mut(&mut self) -> &mut AgentUiState {
+        &mut self.agent_ui_state
+    }
+
+    #[cfg(feature = "tui-agent")]
+    pub fn available_tools(&self) -> &[ToolInfo] {
+        &self.available_tools
+    }
+
+    #[cfg(feature = "tui-agent")]
+    pub fn agent_toolkit(&self) -> Option<&AgentToolkit> {
+        self.agent_toolkit.as_ref()
+    }
+
+    #[cfg(feature = "tui-agent")]
+    pub fn is_agent_mode(&self) -> bool {
+        self.active_session.agent_mode
+    }
+
     pub fn handle_event(&mut self, event: InputEvent, runtime: &Runtime) -> Result<()> {
         match event {
             InputEvent::Tick => {
@@ -168,6 +217,39 @@ impl App {
         if key.modifiers.control && matches!(key.code, KeyCode::Char('c')) {
             self.should_quit = true;
             return Ok(());
+        }
+
+        // Agent mode key bindings
+        #[cfg(feature = "tui-agent")]
+        if key.modifiers.control {
+            match key.code {
+                KeyCode::Char('a') => {
+                    self.toggle_agent_mode();
+                    return Ok(());
+                }
+                KeyCode::Char('t') => {
+                    self.agent_ui_state.toggle_panel();
+                    if self.agent_ui_state.panel_visible {
+                        self.focus = FocusArea::AgentTools;
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('b') => {
+                    self.agent_ui_state.toggle_browser();
+                    if self.agent_ui_state.browser_visible {
+                        self.focus = FocusArea::AgentBrowser;
+                    }
+                    return Ok(());
+                }
+                KeyCode::Char('h') => {
+                    self.agent_ui_state.toggle_history();
+                    if self.agent_ui_state.history_visible {
+                        self.focus = FocusArea::AgentHistory;
+                    }
+                    return Ok(());
+                }
+                _ => {}
+            }
         }
 
         match key.code {
@@ -206,10 +288,24 @@ impl App {
     }
 
     fn cycle_focus(&mut self) {
+        #[cfg(feature = "tui-agent")]
+        if self.is_agent_mode() {
+            self.focus = match self.focus {
+                FocusArea::Chat => FocusArea::Sessions,
+                FocusArea::Sessions => FocusArea::AgentTools,
+                FocusArea::AgentTools => FocusArea::AgentHistory,
+                FocusArea::AgentHistory => FocusArea::Chat,
+                _ => FocusArea::Chat,
+            };
+            return;
+        }
+
         self.focus = match self.focus {
             FocusArea::Chat => FocusArea::Sessions,
             FocusArea::Sessions => FocusArea::Models,
             FocusArea::Models => FocusArea::Chat,
+            #[cfg(feature = "tui-agent")]
+            _ => FocusArea::Chat,
         };
     }
 
@@ -232,7 +328,27 @@ impl App {
                 let new_index = (self.model_cursor as isize + delta).rem_euclid(len);
                 self.model_cursor = new_index as usize;
             }
-            FocusArea::Chat => {}
+            #[cfg(feature = "tui-agent")]
+            FocusArea::AgentTools => {
+                if self.available_tools.is_empty() {
+                    return Ok(());
+                }
+                let len = self.available_tools.len() as isize;
+                let new_index = (self.agent_ui_state.tool_cursor as isize + delta).rem_euclid(len);
+                self.agent_ui_state.tool_cursor = new_index as usize;
+            }
+            #[cfg(feature = "tui-agent")]
+            FocusArea::AgentHistory => {
+                let history = &self.active_session.tool_calls;
+                if history.is_empty() {
+                    return Ok(());
+                }
+                let len = history.len() as isize;
+                let new_index =
+                    (self.agent_ui_state.history_cursor as isize + delta).rem_euclid(len);
+                self.agent_ui_state.history_cursor = new_index as usize;
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -275,6 +391,23 @@ impl App {
         self.status
             .set(format!("Discovered {} models", self.model_inventory.len()));
         Ok(())
+    }
+
+    #[cfg(feature = "tui-agent")]
+    fn toggle_agent_mode(&mut self) {
+        self.active_session.agent_mode = !self.active_session.agent_mode;
+        let mode_str = if self.active_session.agent_mode {
+            "enabled"
+        } else {
+            "disabled"
+        };
+        self.status.set(format!("Agent mode {}", mode_str));
+        // Reset focus to chat when toggling
+        self.focus = FocusArea::Chat;
+        // Reset agent UI state when disabling
+        if !self.active_session.agent_mode {
+            self.agent_ui_state.reset();
+        }
     }
 
     fn attach_model_to_session(&mut self, runtime: &Runtime) -> Result<()> {

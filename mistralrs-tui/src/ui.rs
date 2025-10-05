@@ -12,6 +12,11 @@ use crate::{
     session::SessionMessage,
 };
 
+#[cfg(feature = "tui-agent")]
+use crate::agent::ui::{
+    render_agent_status, render_call_history, render_tool_browser, render_tool_panel,
+};
+
 pub fn render(frame: &mut Frame<'_>, app: &App) {
     let size = frame.area();
 
@@ -19,6 +24,12 @@ pub fn render(frame: &mut Frame<'_>, app: &App) {
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Length(1)])
         .split(size);
+
+    #[cfg(feature = "tui-agent")]
+    if app.is_agent_mode() {
+        render_agent_layout(frame, layout[0], layout[1], app);
+        return;
+    }
 
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -195,4 +206,86 @@ fn format_size(size: u64) -> String {
         idx += 1;
     }
     format!("{value:.1} {}", UNITS[idx])
+}
+
+#[cfg(feature = "tui-agent")]
+fn render_agent_layout(frame: &mut Frame<'_>, main_area: Rect, status_area: Rect, app: &App) {
+    let agent_ui_state = app.agent_ui_state();
+
+    // Determine layout based on what's visible
+    let main_chunks = if agent_ui_state.browser_visible {
+        // Browser mode: Sessions | Chat | ToolBrowser
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(20),
+                Constraint::Min(30),
+                Constraint::Length(56),
+            ])
+            .split(main_area)
+    } else {
+        // Normal agent mode: Sessions | Chat | ToolPanel | CallHistory
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(24),
+                Constraint::Min(35),
+                Constraint::Length(28),
+                Constraint::Length(28),
+            ])
+            .split(main_area)
+    };
+
+    // Always render sessions and chat
+    render_sessions(frame, main_chunks[0], app);
+    render_chat(frame, main_chunks[1], app);
+
+    // Render agent UI based on visibility
+    if agent_ui_state.browser_visible {
+        let tools = app.available_tools();
+        let cursor = agent_ui_state.tool_cursor;
+        let focused = matches!(app.focus(), FocusArea::AgentBrowser);
+        render_tool_browser(
+            frame,
+            main_chunks[2],
+            tools,
+            cursor,
+            &agent_ui_state.filter_text,
+            focused,
+        );
+    } else {
+        // Render tool panel and call history
+        let tools = app.available_tools();
+        let tool_cursor = agent_ui_state.tool_cursor;
+        let tool_focused = matches!(app.focus(), FocusArea::AgentTools);
+        render_tool_panel(frame, main_chunks[2], tools, tool_cursor, tool_focused);
+
+        let history = &app.active_session().tool_calls;
+        let history_cursor = agent_ui_state.history_cursor;
+        let history_focused = matches!(app.focus(), FocusArea::AgentHistory);
+        render_call_history(
+            frame,
+            main_chunks[3],
+            history,
+            history_cursor,
+            history_focused,
+        );
+    }
+
+    // Render agent status bar
+    let toolkit = app.agent_toolkit();
+    let sandbox_path = toolkit
+        .map(|t| t.config().sandbox_root.display().to_string())
+        .unwrap_or_else(|| ".".to_string());
+    let tool_count = toolkit.map(|t| t.tool_count()).unwrap_or(0);
+    let active_calls = app.active_session().tool_calls.len();
+
+    render_agent_status(
+        frame,
+        status_area,
+        true,
+        &sandbox_path,
+        tool_count,
+        active_calls,
+    );
 }
