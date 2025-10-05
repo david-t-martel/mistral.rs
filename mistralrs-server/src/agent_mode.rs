@@ -169,8 +169,12 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
 
     // Build tool definitions and callbacks from the toolkit
     // Tool callbacks are registered automatically by MistralRs when tools are passed in requests
-    let (tool_definitions, _tool_callbacks) = tool_registry::build_tool_definitions_and_callbacks(&toolkit);
-    info!("Built {} tool definitions for agent mode", tool_definitions.len());
+    let (tool_definitions, _tool_callbacks) =
+        tool_registry::build_tool_definitions_and_callbacks(&toolkit);
+    info!(
+        "Built {} tool definitions for agent mode",
+        tool_definitions.len()
+    );
 
     info!("Starting agent mode with sampling params: {sampling_params:?}");
     println!("{}{}{}", "=".repeat(20), AGENT_MODE_HELP, "=".repeat(20));
@@ -245,7 +249,7 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
             constraint: Constraint::None,
             suffix: None,
             tool_choice: None,
-            tools: Some(tool_definitions.clone()),  // Pass tool definitions to the request
+            tools: Some(tool_definitions.clone()), // Pass tool definitions to the request
             logits_processors: None,
             return_raw_logits: false,
             web_search_options: do_search.then(WebSearchOptions::default),

@@ -235,6 +235,12 @@ pub struct MistralRsForServerBuilder {
 
     /// PagedAttention KV cache type
     paged_cache_type: PagedCacheType,
+
+    /// Tool callbacks for tool execution
+    tool_callbacks: mistralrs_core::ToolCallbacks,
+
+    /// Tool callbacks with their associated Tool definitions
+    tool_callbacks_with_tools: HashMap<String, mistralrs_core::ToolCallbackWithTool>,
 }
 
 impl Default for MistralRsForServerBuilder {
@@ -268,6 +274,8 @@ impl Default for MistralRsForServerBuilder {
             search_callback: defaults::SEARCH_CALLBACK,
             mcp_client_config: None,
             paged_cache_type: defaults::PAGED_CACHE_TYPE,
+            tool_callbacks: HashMap::new(),
+            tool_callbacks_with_tools: HashMap::new(),
         }
     }
 }
@@ -573,6 +581,73 @@ impl MistralRsForServerBuilder {
         self
     }
 
+    /// Register a tool callback for the specified tool name.
+    ///
+    /// Tool callbacks are functions that are executed when the model generates tool calls.
+    /// This method allows you to register individual tool callbacks.
+    ///
+    /// ### Example
+    /// ```ignore
+    /// builder.with_tool_callback("my_tool", Arc::new(|args| {
+    ///     // Tool execution logic
+    ///     Ok("result".to_string())
+    /// }))
+    /// ```
+    pub fn with_tool_callback(
+        mut self,
+        name: impl Into<String>,
+        callback: std::sync::Arc<mistralrs_core::ToolCallback>,
+    ) -> Self {
+        self.tool_callbacks.insert(name.into(), callback);
+        self
+    }
+
+    /// Register a tool callback along with its Tool definition.
+    ///
+    /// This method registers both the callback and its associated Tool metadata,
+    /// which includes the parameter schema needed for automatic tool discovery.
+    ///
+    /// ### Example
+    /// ```ignore
+    /// builder.with_tool_callback_and_tool(
+    ///     "calculator",
+    ///     Arc::new(calculator_callback),
+    ///     calculator_tool_definition,
+    /// )
+    /// ```
+    pub fn with_tool_callback_and_tool(
+        mut self,
+        name: impl Into<String>,
+        callback: std::sync::Arc<mistralrs_core::ToolCallback>,
+        tool: mistralrs_core::Tool,
+    ) -> Self {
+        let name = name.into();
+        self.tool_callbacks_with_tools.insert(
+            name,
+            mistralrs_core::ToolCallbackWithTool { callback, tool },
+        );
+        self
+    }
+
+    /// Register multiple tool callbacks with their Tool definitions.
+    ///
+    /// This is a convenience method for registering multiple tools at once.
+    /// Useful when integrating with tool registries that provide a HashMap
+    /// of callbacks and definitions.
+    ///
+    /// ### Example
+    /// ```ignore
+    /// let (tool_defs, tool_callbacks) = build_tool_definitions_and_callbacks(&toolkit);
+    /// builder.with_tool_callbacks_map(tool_callbacks)
+    /// ```
+    pub fn with_tool_callbacks_map(
+        mut self,
+        callbacks: HashMap<String, mistralrs_core::ToolCallbackWithTool>,
+    ) -> Self {
+        self.tool_callbacks_with_tools.extend(callbacks);
+        self
+    }
+
     /// Builds the configured mistral.rs instance.
     ///
     /// ### Examples
@@ -671,6 +746,20 @@ impl MistralRsForServerBuilder {
         .with_truncate_sequence(self.truncate_sequence)
         .with_no_kv_cache(self.no_kv_cache)
         .with_prefix_cache_n(self.prefix_cache_n);
+
+        // Register tool callbacks
+        for (name, callback_with_tool) in self.tool_callbacks_with_tools {
+            builder = builder.with_tool_callback_and_tool(
+                name,
+                callback_with_tool.callback,
+                callback_with_tool.tool,
+            );
+        }
+
+        // Register standalone tool callbacks (if any)
+        for (name, callback) in self.tool_callbacks {
+            builder = builder.with_tool_callback(name, callback);
+        }
 
         // Add MCP client configuration if provided
         if let Some(mcp_config) = self.mcp_client_config {
@@ -785,6 +874,20 @@ impl MistralRsForServerBuilder {
         .with_truncate_sequence(self.truncate_sequence)
         .with_no_kv_cache(self.no_kv_cache)
         .with_prefix_cache_n(self.prefix_cache_n);
+
+        // Register tool callbacks
+        for (name, callback_with_tool) in self.tool_callbacks_with_tools.clone() {
+            builder = builder.with_tool_callback_and_tool(
+                name,
+                callback_with_tool.callback,
+                callback_with_tool.tool,
+            );
+        }
+
+        // Register standalone tool callbacks (if any)
+        for (name, callback) in self.tool_callbacks.clone() {
+            builder = builder.with_tool_callback(name, callback);
+        }
 
         // Add MCP client configuration if provided
         if let Some(mcp_config) = self.mcp_client_config.clone() {

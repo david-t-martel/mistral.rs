@@ -20,8 +20,10 @@ mod interactive_mode;
 use interactive_mode::interactive_mode;
 mod agent_mode;
 use agent_mode::agent_mode;
-mod tool_registry;
 mod mcp_server;
+mod tool_registry;
+
+use mistralrs_agent_tools::AgentToolkit;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -346,6 +348,16 @@ async fn main() -> Result<()> {
 
     let paged_attn = configure_paged_attn_from_flags(args.paged_attn, args.no_paged_attn)?;
 
+    // Initialize agent toolkit and build tool callbacks
+    // This provides access to 90+ Unix-like utilities with sandbox enforcement
+    let toolkit = AgentToolkit::with_defaults();
+    let (_tool_definitions, tool_callbacks) =
+        tool_registry::build_tool_definitions_and_callbacks(&toolkit);
+    info!(
+        "Registered {} agent tool callbacks with mistral.rs",
+        tool_callbacks.len()
+    );
+
     let mistralrs = match args.model {
         ModelSelected::MultiModel {
             config,
@@ -367,6 +379,7 @@ async fn main() -> Result<()> {
                 .with_seed_optional(args.seed)
                 .with_log_optional(args.log)
                 .with_mcp_config_optional(mcp_config)
+                .with_tool_callbacks_map(tool_callbacks.clone())
                 .with_paged_attn_cache_type(args.cache_type.unwrap_or_default());
 
             // Add models to builder
@@ -399,6 +412,7 @@ async fn main() -> Result<()> {
                 .with_chat_template_optional(args.chat_template)
                 .with_jinja_explicit_optional(args.jinja_explicit)
                 .with_num_device_layers_optional(args.num_device_layers)
+                .with_tool_callbacks_map(tool_callbacks)
                 .with_in_situ_quant_optional(args.in_situ_quant)
                 .with_paged_attn_gpu_mem_optional(args.paged_attn_gpu_mem)
                 .with_paged_attn_gpu_mem_usage_optional(args.paged_attn_gpu_mem_usage)

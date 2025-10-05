@@ -502,10 +502,7 @@ pub struct AgentTools {
 }
 
 impl AgentTools {
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit::new() instead"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit::new() instead")]
     pub fn new(config: LegacySandboxConfig) -> Self {
         info!(
             "Initializing agent filesystem tools with sandbox root: {}",
@@ -514,18 +511,12 @@ impl AgentTools {
         Self { config }
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit::with_defaults() instead"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit::with_defaults() instead")]
     pub fn with_defaults() -> Self {
         Self::new(LegacySandboxConfig::default())
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit::config() instead"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit::config() instead")]
     pub fn config(&self) -> &LegacySandboxConfig {
         &self.config
     }
@@ -574,10 +565,7 @@ impl AgentTools {
             .any(|ro| path.components().any(|comp| comp.as_str() == ro.as_str()))
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit::cat() instead"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit::cat() instead")]
     pub fn read(&self, path: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
         info!("Reading file: {}", validated_path);
@@ -635,10 +623,7 @@ impl AgentTools {
         ))
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit methods for file operations"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit methods for file operations")]
     pub fn append(&self, path: &str, content: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
 
@@ -663,10 +648,7 @@ impl AgentTools {
         ))
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit methods for file operations"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit methods for file operations")]
     pub fn delete(&self, path: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
 
@@ -679,10 +661,7 @@ impl AgentTools {
         Ok(FsResult::success(validated_path.as_str(), "Deleted"))
     }
 
-    #[deprecated(
-        since = "0.2.0",
-        note = "Use AgentToolkit methods for path checks"
-    )]
+    #[deprecated(since = "0.2.0", note = "Use AgentToolkit methods for path checks")]
     pub fn exists(&self, path: &str) -> Result<bool, FsError> {
         let validated_path = self.validate_path(path)?;
         Ok(validated_path.exists())
