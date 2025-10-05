@@ -616,19 +616,19 @@ mod tests {
 
     #[test]
     fn test_tool_name_prefix() {
-        let toolkit = Arc::new(AgentToolkit::default());
+        let toolkit = Arc::new(AgentToolkit::with_defaults());
         let server = McpServer::new(toolkit, Some("agent".to_string()));
 
         assert_eq!(server.get_tool_name("cat"), "agent_cat");
         assert_eq!(server.get_tool_name("ls"), "agent_ls");
 
-        let server_no_prefix = McpServer::new(Arc::new(AgentToolkit::default()), None);
+        let server_no_prefix = McpServer::new(Arc::new(AgentToolkit::with_defaults()), None);
         assert_eq!(server_no_prefix.get_tool_name("cat"), "cat");
     }
 
     #[test]
     fn test_list_tools() {
-        let toolkit = Arc::new(AgentToolkit::default());
+        let toolkit = Arc::new(AgentToolkit::with_defaults());
         let server = McpServer::new(toolkit, None);
 
         let tools = server.list_tools();
