@@ -1,18 +1,9 @@
-[files]
-extend-exclude = [
-    ".git/",
-    "calibration_data/",
-    "examples/server/phi3_duckduckgo_mistral.rs.ipynb",
-    "mistralrs-web-chat/static/"
-]
-ignore-hidden = false
-
 [default]
 extend-ignore-re = [
+    "target/.*",
     "cudaDevAttrMaxSharedMemoryPerBlockOptin",
     '"tese"',
     "setp\\.ne\\.b32",
-    # metal_kernels
     "out uneeded values",
     "copy_gg_dynamic_nd1",
     "copy_gg_dynamic_nd2",
@@ -27,6 +18,24 @@ extend-ignore-re = [
     "elem_to_loc_3_nd",
     "thr_reduce",
 ]
+
+[default.extend-words]
+ratatui = "ratatui"
+mistralrs = "mistralrs"
+gguf = "gguf"
+xlora = "xlora"
+quantization = "quantization"
+kvcache = "kvcache"
+[files]
+extend-exclude = [
+    ".git/",
+    "calibration_data/",
+    "examples/server/phi3_duckduckgo_mistral.rs.ipynb",
+    "mistralrs-web-chat/static/"
+]
+ignore-hidden = false
+
+## merged duplicate [default] above
 
 [type.rust.extend-identifiers]
 "arange" = "arange"

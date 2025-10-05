@@ -747,6 +747,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for Mixtral (accumulate selected experts + lora deltas)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

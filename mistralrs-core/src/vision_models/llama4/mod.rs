@@ -206,6 +206,7 @@ impl NormalModel for Llama4Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement forward for LLaMA4 multimodal fusion module
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

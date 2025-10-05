@@ -865,6 +865,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for Phi3.5 MoE (expert gating + adapter fusion ordering)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

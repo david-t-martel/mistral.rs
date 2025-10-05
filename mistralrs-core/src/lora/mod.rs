@@ -129,6 +129,7 @@ impl LinearLayerLike for Linear {
         self.bias()
     }
     fn quant_inner(&mut self) -> &mut Arc<dyn QuantMethod> {
+        // TODO: Provide QuantMethod shim for plain Linear (avoid panic in generic adapter logic)
         unimplemented!("Linear layer has no reasonable quant inner!")
     }
     fn weight(&self) -> &Tensor {

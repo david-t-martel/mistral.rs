@@ -707,6 +707,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement model-specific xlora_forward logic for Qwen3 (adapter routing & KV cache integration)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

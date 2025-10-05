@@ -674,6 +674,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for Starcoder2 (causal + code tokens)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

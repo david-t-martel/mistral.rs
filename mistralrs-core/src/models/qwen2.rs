@@ -631,6 +631,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for Qwen2 (reuse Qwen3 path once available)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

@@ -768,6 +768,7 @@ impl NormalModel for Model {
         _metadata: Option<(Vec<(Tensor, Tensor)>, &PagedAttentionInputMetadata)>,
         _flash_params: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement XLora forward path for Starcoder2 XLora wrapper
         unimplemented!()
     }
     fn xlora_forward(

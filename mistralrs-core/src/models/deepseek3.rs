@@ -1199,6 +1199,7 @@ impl NormalModel for DeepSeekV3 {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for DeepSeek3 (spec decoding aware)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

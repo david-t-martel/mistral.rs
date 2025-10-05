@@ -1,5 +1,6 @@
 use either::Either;
 use indexmap::IndexMap;
+use mistralrs_agent_tools::{AgentTools, SandboxConfig};
 use mistralrs_core::{
     ChunkChoice, Constraint, Delta, MessageContent, MistralRs, NormalRequest, Request,
     RequestMessage, Response, SamplingParams, WebSearchOptions, TERMINATE_ALL_NEXT_STEP,
@@ -149,11 +150,146 @@ fn handle_sampling_command(prompt: &str, sampling_params: &mut SamplingParams) -
     false
 }
 
+/// Execute tool calls using the agent tools
+fn execute_tool_calls(
+    agent_tools: &AgentTools,
+    tool_calls: &[mistralrs_core::tools::ToolCallResponse],
+) -> Vec<String> {
+    let mut results = Vec::new();
+
+    for tool_call in tool_calls {
+        let function_name = &tool_call.function.name;
+        let arguments = &tool_call.function.arguments;
+
+        info!("Executing tool: {} with args: {}", function_name, arguments);
+
+        // Parse arguments
+        let result = match serde_json::from_str::<serde_json::Value>(arguments) {
+            Ok(args) => {
+                // Route to appropriate agent tool based on function name
+                match function_name.as_str() {
+                    "read_file" | "read" => {
+                        if let Some(path) = args.get("path").and_then(|v| v.as_str()) {
+                            match agent_tools.read(path) {
+                                Ok(fs_result) => serde_json::to_string(&fs_result)
+                                    .unwrap_or_else(|_| "Error serializing result".to_string()),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'path' parameter".to_string()
+                        }
+                    }
+                    "write_file" | "write" => {
+                        let path = args.get("path").and_then(|v| v.as_str());
+                        let content = args.get("content").and_then(|v| v.as_str());
+                        let create = args.get("create").and_then(|v| v.as_bool()).unwrap_or(true);
+                        let overwrite = args
+                            .get("overwrite")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+
+                        if let (Some(path), Some(content)) = (path, content) {
+                            match agent_tools.write(path, content, create, overwrite) {
+                                Ok(fs_result) => serde_json::to_string(&fs_result)
+                                    .unwrap_or_else(|_| "Error serializing result".to_string()),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'path' or 'content' parameter".to_string()
+                        }
+                    }
+                    "append_file" | "append" => {
+                        let path = args.get("path").and_then(|v| v.as_str());
+                        let content = args.get("content").and_then(|v| v.as_str());
+
+                        if let (Some(path), Some(content)) = (path, content) {
+                            match agent_tools.append(path, content) {
+                                Ok(fs_result) => serde_json::to_string(&fs_result)
+                                    .unwrap_or_else(|_| "Error serializing result".to_string()),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'path' or 'content' parameter".to_string()
+                        }
+                    }
+                    "delete_file" | "delete" => {
+                        if let Some(path) = args.get("path").and_then(|v| v.as_str()) {
+                            match agent_tools.delete(path) {
+                                Ok(fs_result) => serde_json::to_string(&fs_result)
+                                    .unwrap_or_else(|_| "Error serializing result".to_string()),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'path' parameter".to_string()
+                        }
+                    }
+                    "find_files" | "find" => {
+                        let pattern = args.get("pattern").and_then(|v| v.as_str());
+                        let max_depth = args
+                            .get("max_depth")
+                            .and_then(|v| v.as_u64())
+                            .map(|d| d as usize);
+
+                        if let Some(pattern) = pattern {
+                            match agent_tools.find(pattern, max_depth) {
+                                Ok(files) => serde_json::to_string(&files)
+                                    .unwrap_or_else(|_| "Error serializing result".to_string()),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'pattern' parameter".to_string()
+                        }
+                    }
+                    "list_tree" | "tree" => {
+                        let root = args
+                            .get("root")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        let max_depth = args
+                            .get("max_depth")
+                            .and_then(|v| v.as_u64())
+                            .map(|d| d as usize);
+
+                        match agent_tools.tree(root, max_depth) {
+                            Ok(tree) => serde_json::to_string(&tree)
+                                .unwrap_or_else(|_| "Error serializing result".to_string()),
+                            Err(e) => format!("Error: {}", e),
+                        }
+                    }
+                    "exists" => {
+                        if let Some(path) = args.get("path").and_then(|v| v.as_str()) {
+                            match agent_tools.exists(path) {
+                                Ok(exists) => format!("{{\"exists\": {}}}", exists),
+                                Err(e) => format!("Error: {}", e),
+                            }
+                        } else {
+                            "Error: Missing 'path' parameter".to_string()
+                        }
+                    }
+                    _ => format!("Error: Unknown tool '{}'", function_name),
+                }
+            }
+            Err(e) => format!("Error parsing arguments: {}", e),
+        };
+
+        results.push(format!("Tool '{}' result: {}", function_name, result));
+    }
+
+    results
+}
+
 pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     let sender = mistralrs.get_sender(None).unwrap();
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
 
     let mut sampling_params = agent_sample_parameters();
+
+    // Initialize agent tools with default sandbox configuration
+    let agent_tools = AgentTools::with_defaults();
+    info!(
+        "Agent tools initialized with sandbox root: {}",
+        agent_tools.config().root
+    );
 
     info!("Starting agent mode with sampling params: {sampling_params:?}");
     println!("{}{}{}", "=".repeat(20), AGENT_MODE_HELP, "=".repeat(20));

@@ -45,6 +45,7 @@ either.workspace = true
 indexmap.workspace = true
 mistralrs-core.workspace = true
 mistralrs-server-core.workspace = true
+mistralrs-agent-tools = { path = "../mistralrs-agent-tools" }
 once_cell.workspace = true
 regex.workspace = true
 rust-mcp-sdk.workspace = true

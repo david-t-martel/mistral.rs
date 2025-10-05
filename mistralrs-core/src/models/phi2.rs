@@ -682,6 +682,7 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for Phi2 (legacy path; may share code with Phi3)
         unimplemented!()
     }
     fn cache(&self) -> &EitherCache {

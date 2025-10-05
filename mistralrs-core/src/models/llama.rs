@@ -635,6 +635,7 @@ impl NormalModel for Llama {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
+        // TODO: Implement xlora_forward for LLaMA (rotary embeddings + adapter scaling interplay)
         unimplemented!()
     }
     fn cache(&self) -> &crate::pipeline::EitherCache {

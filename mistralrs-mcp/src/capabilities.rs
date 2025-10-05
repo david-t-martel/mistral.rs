@@ -566,15 +566,14 @@ impl EnvVarSanitizer {
             }
 
             // If not in passthrough mode, only allow explicitly allowed variables
-            if !self.policy.allow_passthrough {
-                if !self
+            if !self.policy.allow_passthrough
+                && !self
                     .policy
                     .allowed_vars
                     .iter()
                     .any(|allowed| key == allowed)
-                {
-                    continue;
-                }
+            {
+                continue;
             }
 
             // Check for potentially dangerous variable names
@@ -832,16 +831,15 @@ impl SecurityValidator {
 
             // Check protocol
             let scheme = parsed.scheme();
-            if !self.policy.network.allowed_protocols.is_empty() {
-                if !self
+            if !self.policy.network.allowed_protocols.is_empty()
+                && !self
                     .policy
                     .network
                     .allowed_protocols
                     .iter()
                     .any(|p| p == scheme)
-                {
-                    bail!("Protocol '{}' not allowed", scheme);
-                }
+            {
+                bail!("Protocol '{}' not allowed", scheme);
             }
 
             // Check for private IPs

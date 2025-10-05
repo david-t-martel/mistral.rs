@@ -13,6 +13,7 @@ members = [
     "mistralrs-web-chat",
     "mistralrs-audio",
     "mistralrs-mcp",
+    "mistralrs-tui",
 ]
 resolver = "2"
 
@@ -39,6 +40,10 @@ rust-version = "1.86"
 #   flash-attn  - Flash Attention (requires CUDA)
 #   cudnn       - cuDNN support
 #   mkl         - Intel MKL support
+
+[workspace.features]
+default = []
+tui-agent = ["mistralrs-tui/tui-agent"]
 
 [workspace.dependencies]
 candle-core = { git = "https://github.com/EricLBuehler/candle.git", version = "0.9.1", rev = "5e6c385" }

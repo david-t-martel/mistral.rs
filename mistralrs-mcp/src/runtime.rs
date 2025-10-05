@@ -118,7 +118,7 @@ impl RuntimeConfig {
         Self {
             worker_threads: 2, // Minimum for reasonable async performance
             max_blocking_threads: 16,
-            thread_stack_size: 1 * 1024 * 1024, // 1MB
+            thread_stack_size: 1024 * 1024, // 1MB
             thread_keep_alive: Duration::from_secs(5),
             enable_io: true,
             enable_time: true,

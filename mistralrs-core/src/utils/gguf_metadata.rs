@@ -594,7 +594,10 @@ impl DeviceMappedModelLoader for GgufDeviceMapLoaderInner<'_, '_> {
 
                 attn_norm + ffn_norm + attn_q + attn_k + attn_v + attn_output + ffn_up + ffn_down
             }
-            _ => unimplemented!(),
+            _ => {
+                // TODO: Implement layer size accounting for remaining GGUF architectures
+                unimplemented!()
+            }
         };
         Ok(vec![size_in_bytes; self.num_layers(config)?])
     }

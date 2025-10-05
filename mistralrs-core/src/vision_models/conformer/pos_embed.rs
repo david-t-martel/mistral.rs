@@ -120,6 +120,7 @@ impl T5RelativeAttentionLogitBias {
         let bias_idx = if self.skip_bucketing {
             relative_position
         } else {
+            // TODO: Implement skip_bucketing positional embedding branch
             unimplemented!("require skip_bucketing");
         };
 
