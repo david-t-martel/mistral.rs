@@ -19,6 +19,10 @@ pub mod types;
 // Core integration with mistralrs-core
 pub mod core_integration;
 
+// MCP server for exposing tools via Model Context Protocol
+#[cfg(feature = "sandbox")]
+pub mod mcp_server;
+
 // Test utilities (only available in tests)
 #[cfg(test)]
 pub mod test_utils;
@@ -37,6 +41,10 @@ pub use types::{
 
 // Core integration exports
 pub use core_integration::AgentToolProvider;
+
+// MCP server exports
+#[cfg(feature = "sandbox")]
+pub use mcp_server::McpServer;
 
 /// Main agent toolkit providing high-level API for all operations
 #[derive(Debug, Clone)]
