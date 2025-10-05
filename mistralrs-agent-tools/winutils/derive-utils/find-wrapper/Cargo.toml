@@ -1,0 +1,68 @@
+[package]
+name = "find-wrapper"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Windows-optimized find replacement with fd performance and winpath integration"
+
+[[bin]]
+name = "find"
+path = "src/main.rs"
+
+[dependencies]
+# CRITICAL: winpath must be first for path normalization
+winpath = { workspace = true }
+winutils-core = { workspace = true }
+
+# Core dependencies
+anyhow.workspace = true
+clap = { workspace = true }
+thiserror.workspace = true
+
+# Windows-specific
+windows-sys = { workspace = true, optional = true }
+windows = { workspace = true, optional = true }
+
+# Path handling
+dunce.workspace = true
+path-slash.workspace = true
+
+# Performance optimizations
+rayon = { workspace = true, optional = true }
+crossbeam-channel.workspace = true
+dashmap.workspace = true
+memchr = { workspace = true, optional = true }
+ahash.workspace = true
+
+# File system operations
+walkdir.workspace = true
+glob.workspace = true
+regex.workspace = true
+
+# Utilities
+chrono = { workspace = true }
+humansize.workspace = true
+termcolor = { workspace = true, optional = true }
+unicode-width = { workspace = true, optional = true }
+atty.workspace = true
+
+# fd-like performance dependencies
+ignore.workspace = true
+same-file.workspace = true
+lazy_static.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+criterion.workspace = true
+
+[features]
+default = ["color", "unicode", "performance"]
+color = ["termcolor"]
+unicode = ["unicode-width"]
+performance = ["rayon", "memchr"]
+windows-attributes = ["windows", "windows-sys"]
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-pc-windows-msvc"]

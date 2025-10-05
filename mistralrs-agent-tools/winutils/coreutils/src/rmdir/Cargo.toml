@@ -1,0 +1,24 @@
+[package]
+name = "rmdir"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Remove empty directories - Windows optimized"
+
+[[bin]]
+name = "rmdir"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+windows.workspace = true
+rayon.workspace = true
+walkdir.workspace = true
+tempfile.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_rmdir = { path = "../../../../src/uu/rmdir" }

@@ -1,0 +1,181 @@
+# Default WinUtils Benchmark Configuration
+
+[performance_thresholds]
+regression_threshold_percent = 5.0
+min_speedup_vs_native = 1.5
+max_acceptable_slowdown = 0.9
+timeout_seconds = 300
+
+[memory_limits]
+max_heap_mb = 1024
+max_stack_mb = 8
+leak_threshold_kb = 100
+
+[test_environment]
+temp_dir_size_mb = 500
+test_file_sizes = [1024, 1048576, 104857600]  # 1KB, 1MB, 100MB
+directory_depth = 3
+files_per_directory = 10
+
+# Core utilities to benchmark
+[[utilities]]
+name = "ls"
+description = "List directory contents"
+expected_speedup = 4.0
+memory_limit_mb = 50
+
+  [[utilities.test_cases]]
+  name = "simple_list"
+  description = "List current directory"
+  args = []
+  expected_duration_ms = 50
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "detailed_list"
+  description = "List with detailed information"
+  args = ["-la"]
+  expected_duration_ms = 100
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "recursive_list"
+  description = "Recursive directory listing"
+  args = ["-R", "tree"]
+  expected_duration_ms = 500
+  category = "file-ops"
+
+[[utilities]]
+name = "cat"
+description = "Display file contents"
+expected_speedup = 3.0
+memory_limit_mb = 100
+
+  [[utilities.test_cases]]
+  name = "small_file"
+  description = "Display small file"
+  args = ["small.txt"]
+  expected_duration_ms = 10
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "medium_file"
+  description = "Display medium file"
+  args = ["medium.txt"]
+  expected_duration_ms = 100
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "large_file"
+  description = "Display large file"
+  args = ["large.txt"]
+  expected_duration_ms = 2000
+  category = "file-ops"
+
+[[utilities]]
+name = "wc"
+description = "Word, line, character, and byte count"
+expected_speedup = 12.0
+memory_limit_mb = 50
+
+  [[utilities.test_cases]]
+  name = "line_count"
+  description = "Count lines in file"
+  args = ["-l", "unix_lines.txt"]
+  expected_duration_ms = 50
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "word_count"
+  description = "Count words in file"
+  args = ["-w", "mixed_content.txt"]
+  expected_duration_ms = 100
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "full_count"
+  description = "Count lines, words, and characters"
+  args = ["large.txt"]
+  expected_duration_ms = 500
+  category = "text-processing"
+
+[[utilities]]
+name = "cp"
+description = "Copy files and directories"
+expected_speedup = 2.0
+memory_limit_mb = 100
+
+  [[utilities.test_cases]]
+  name = "copy_small_file"
+  description = "Copy small file"
+  args = ["small.txt", "small_copy.txt"]
+  expected_duration_ms = 20
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "copy_large_file"
+  description = "Copy large file"
+  args = ["large.txt", "large_copy.txt"]
+  expected_duration_ms = 3000
+  category = "file-ops"
+
+  [[utilities.test_cases]]
+  name = "copy_directory"
+  description = "Copy directory recursively"
+  args = ["-r", "tree", "tree_copy"]
+  expected_duration_ms = 1000
+  category = "file-ops"
+
+[[utilities]]
+name = "sort"
+description = "Sort lines of text"
+expected_speedup = 8.0
+memory_limit_mb = 200
+
+  [[utilities.test_cases]]
+  name = "simple_sort"
+  description = "Sort text file"
+  args = ["mixed_content.txt"]
+  expected_duration_ms = 200
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "numeric_sort"
+  description = "Sort numerically"
+  args = ["-n", "mixed_content.txt"]
+  expected_duration_ms = 250
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "reverse_sort"
+  description = "Sort in reverse order"
+  args = ["-r", "mixed_content.txt"]
+  expected_duration_ms = 220
+  category = "text-processing"
+
+[[utilities]]
+name = "grep"
+description = "Search text using patterns"
+expected_speedup = 6.0
+memory_limit_mb = 100
+
+  [[utilities.test_cases]]
+  name = "simple_search"
+  description = "Search for pattern in file"
+  args = ["Line", "unix_lines.txt"]
+  expected_duration_ms = 100
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "regex_search"
+  description = "Search using regular expression"
+  args = ["-E", "Line [0-9]+", "unix_lines.txt"]
+  expected_duration_ms = 150
+  category = "text-processing"
+
+  [[utilities.test_cases]]
+  name = "recursive_search"
+  description = "Search recursively in directory"
+  args = ["-r", "file", "tree"]
+  expected_duration_ms = 300
+  category = "text-processing"

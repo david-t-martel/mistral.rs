@@ -1,0 +1,117 @@
+# ============================ Code Coverage =================================
+# Test coverage targets for winutils
+# Included from main Makefile
+#
+# Usage:
+#   make coverage           - Run coverage analysis and generate all reports
+#   make coverage-check     - Check coverage threshold (warning-only)
+#   make coverage-html      - Generate and open HTML report
+#   make coverage-clean     - Clean coverage artifacts
+# ============================================================================
+
+# Run code coverage with llvm-cov (generates all reports)
+coverage:
+	@echo "$(BOLD)$(CYAN)Running Code Coverage Analysis$(RESET)"
+	@echo "This will run tests and generate coverage reports..."
+	@$(CARGO) llvm-cov --workspace --all-features \
+		--html \
+		--lcov --output-path target/coverage/lcov.info \
+		--json --output-path target/coverage/coverage.json
+	@echo "$(GREEN)✓ Coverage analysis complete$(RESET)"
+	@echo "$(CYAN)Reports generated:$(RESET)"
+	@echo "  - HTML: target/coverage/html/index.html"
+	@echo "  - LCOV: target/coverage/lcov.info"
+	@echo "  - JSON: target/coverage/coverage.json"
+
+# Check coverage threshold (warning-only, doesn't block)
+coverage-check:
+	@echo "$(BOLD)$(CYAN)Checking Code Coverage Threshold$(RESET)"
+	@$(CARGO) llvm-cov --workspace --all-features --summary-only 2>&1 | tee /tmp/coverage-summary.log || true
+	@if [ -f /tmp/coverage-summary.log ]; then \
+		COVERAGE=$$(grep -oP 'lines\.\.\.\.\.\. \K[0-9.]+(?=%)' /tmp/coverage-summary.log | head -1 || echo "0"); \
+		MIN_COVERAGE=70; \
+		TARGET_COVERAGE=85; \
+		if [ -z "$$COVERAGE" ]; then \
+			echo "$(YELLOW)⚠ Could not parse coverage percentage$(RESET)"; \
+		else \
+			echo "$(CYAN)Current coverage: $$COVERAGE%$(RESET)"; \
+			if (( $$(echo "$$COVERAGE < $$MIN_COVERAGE" | bc -l) )); then \
+				echo "$(YELLOW)⚠ Coverage ($$COVERAGE%) is below minimum threshold ($$MIN_COVERAGE%)$(RESET)"; \
+				echo "$(YELLOW)  Please add tests to improve coverage$(RESET)"; \
+			elif (( $$(echo "$$COVERAGE < $$TARGET_COVERAGE" | bc -l) )); then \
+				echo "$(GREEN)✓ Coverage ($$COVERAGE%) meets minimum ($$MIN_COVERAGE%)$(RESET)"; \
+				echo "$(CYAN)  Target is $$TARGET_COVERAGE% - consider adding more tests$(RESET)"; \
+			else \
+				echo "$(GREEN)✓ Coverage ($$COVERAGE%) meets target ($$TARGET_COVERAGE%)! 🎉$(RESET)"; \
+			fi; \
+		fi; \
+		rm -f /tmp/coverage-summary.log; \
+	fi
+
+# Generate HTML coverage report and open in browser
+coverage-html: coverage
+	@echo "$(BOLD)$(CYAN)Opening Coverage Report$(RESET)"
+	@if command -v powershell >/dev/null 2>&1; then \
+		powershell -Command "Start-Process 'target/coverage/html/index.html'"; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open target/coverage/html/index.html; \
+	elif command -v open >/dev/null 2>&1; then \
+		open target/coverage/html/index.html; \
+	else \
+		echo "$(YELLOW)⚠ Could not open browser automatically$(RESET)"; \
+		echo "$(CYAN)Open manually: target/coverage/html/index.html$(RESET)"; \
+	fi
+
+# Clean coverage artifacts
+coverage-clean:
+	@echo "$(BOLD)$(CYAN)Cleaning Coverage Artifacts$(RESET)"
+	@rm -rf target/coverage target/llvm-cov-target
+	@$(CARGO) llvm-cov clean --workspace
+	@echo "$(GREEN)✓ Coverage artifacts cleaned$(RESET)"
+
+# Format check (non-modifying)
+fmt-check:
+	@echo "$(BOLD)$(CYAN)Checking Code Formatting$(RESET)"
+	@$(CARGO) fmt --all --check
+	@echo "$(GREEN)✓ Code formatting check passed$(RESET)"
+
+# Test functional (subset for pre-commit)
+test-functional:
+	@echo "$(BOLD)$(CYAN)Running Functional Tests$(RESET)"
+	@$(CARGO) test --workspace --lib --bins --target $(TARGET)
+	@echo "$(GREEN)✓ Functional tests passed$(RESET)"
+
+# ============================ Pre-Commit Hooks ==============================
+
+# Install pre-commit hooks
+install-hooks:
+	@echo "$(BOLD)$(CYAN)Installing Pre-Commit Hooks$(RESET)"
+	@if [ ! -d ".git" ]; then \
+		echo "$(RED)✗ Not a git repository!$(RESET)"; \
+		exit 1; \
+	fi
+	@mkdir -p .git/hooks
+	@cp scripts/pre-commit-hook.sh .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "$(GREEN)✓ Pre-commit hook installed$(RESET)"
+	@echo "$(CYAN)Hook location: .git/hooks/pre-commit$(RESET)"
+	@echo "$(YELLOW)To bypass (emergency only): git commit --no-verify$(RESET)"
+
+# Uninstall pre-commit hooks
+uninstall-hooks:
+	@echo "$(BOLD)$(CYAN)Uninstalling Pre-Commit Hooks$(RESET)"
+	@rm -f .git/hooks/pre-commit
+	@echo "$(GREEN)✓ Pre-commit hook removed$(RESET)"
+
+# Test pre-commit hook without committing
+test-hooks:
+	@echo "$(BOLD)$(CYAN)Testing Pre-Commit Hook$(RESET)"
+	@if [ ! -f "scripts/pre-commit-hook.sh" ]; then \
+		echo "$(RED)✗ Pre-commit hook script not found!$(RESET)"; \
+		exit 1; \
+	fi
+	@bash scripts/pre-commit-hook.sh
+	@echo "$(GREEN)✓ Pre-commit hook test complete$(RESET)"
+
+.PHONY: coverage coverage-check coverage-html coverage-clean fmt-check test-functional \
+        install-hooks uninstall-hooks test-hooks

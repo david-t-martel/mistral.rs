@@ -1,0 +1,189 @@
+# WinUtils Security Configuration - cargo-deny
+# Enhanced security policy for Windows coreutils implementation
+# Last updated: 2025-01-30
+
+# ============================================================================
+# SECURITY ADVISORIES - Critical vulnerability detection
+# ============================================================================
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+version = 2
+yanked = "deny"  # DENY yanked versions (security risk)
+
+# Vulnerability severity thresholds
+vulnerability = "deny"
+unmaintained = "warn"
+unsound = "warn"
+notice = "warn"
+
+# Known issues requiring immediate attention
+ignore = [
+    # Add specific RUSTSEC IDs only after security review and mitigation
+    # Example: "RUSTSEC-2020-0001", # Mitigated by X approach
+]
+
+# ============================================================================
+# LICENSE COMPLIANCE - Supply chain legal requirements
+# ============================================================================
+[licenses]
+version = 2
+confidence-threshold = 0.9  # Higher confidence for security
+
+# Approved licenses for Windows utilities
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "Zlib",
+    "BSL-1.0",  # Boost Software License
+]
+
+# Explicitly deny problematic licenses
+deny = [
+    "GPL-2.0",
+    "GPL-3.0",
+    "LGPL-2.0",
+    "LGPL-2.1",
+    "LGPL-3.0",
+    "AGPL-3.0",
+    "Commercial",
+    "Proprietary",
+]
+
+# Handle copyleft licenses carefully
+copyleft = "warn"
+allow-osi-fsf-free = "neither"
+default = "deny"
+
+# Windows-specific clarifications
+[[licenses.clarify]]
+name = "windows"
+expression = "MIT OR Apache-2.0"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[[licenses.clarify]]
+name = "windows-sys"
+expression = "MIT OR Apache-2.0"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+# Ring crypto library special case
+[[licenses.clarify]]
+name = "ring"
+expression = "ISC AND MIT AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+# ============================================================================
+# DEPENDENCY BANS - Supply chain attack prevention
+# ============================================================================
+[bans]
+multiple-versions = "warn"  # Warn about duplicate dependencies
+wildcards = "deny"  # No wildcard dependencies (security risk)
+highlight = "all"
+allow-wildcard-paths = false
+
+# Deny dangerous or deprecated crates
+deny = [
+    # Known vulnerable crates
+    { name = "openssl", version = "<0.10.38" },  # Multiple CVEs
+    { name = "reqwest", version = "<0.11.9" },   # RUSTSEC-2022-0003
+
+    # Deprecated/unmaintained crates with replacements
+    { name = "atty" },       # Use is-terminal instead
+    { name = "time", version = "0.1" },  # Use time 0.3 or chrono
+    { name = "net2" },       # Use socket2 instead
+    { name = "winapi", version = "0.2" },  # Use windows-sys
+
+    # Crates with known issues
+    { name = "smallvec", version = "<1.6.1" },  # Buffer overflow CVE
+]
+
+# Skip known duplicate version issues
+skip = [
+    # Multiple windows-sys versions needed for compatibility
+    { name = "windows-sys", version = "0.52" },
+    { name = "windows-sys", version = "0.59" },
+    { name = "windows-targets", version = "0.52" },
+
+    # Temporary allowances (should be resolved)
+    { name = "thiserror", version = "1.0" },
+    { name = "thiserror", version = "2.0" },
+]
+
+# Feature restrictions for security
+[[bans.features]]
+name = "reqwest"
+deny = ["default-tls"]  # Prefer rustls over openssl
+
+[[bans.features]]
+name = "tokio"
+deny = ["test-util"]  # Don't include test utilities in production
+
+# ============================================================================
+# SOURCE CONTROL - Prevent dependency confusion attacks
+# ============================================================================
+[sources]
+unknown-registry = "deny"  # Only use known registries
+unknown-git = "warn"       # Warn about git dependencies
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+# No git dependencies in production (supply chain risk)
+allow-git = []
+
+# Explicitly allowed organizational repos (if needed)
+[sources.allow-org]
+github = []  # Add your org here if using private repos
+
+# ============================================================================
+# TRUSTED DEPENDENCIES - Additional security constraints
+# ============================================================================
+
+# Require specific versions for security-critical dependencies
+[[bans.dependencies]]
+name = "windows-sys"
+version = "=0.60"  # Pin to tested version
+
+[[bans.dependencies]]
+name = "windows"
+version = "=0.60"  # Match windows-sys version
+
+# Ensure crypto libraries are up-to-date
+[[bans.dependencies]]
+name = "ring"
+version = ">=0.17"  # Minimum version for security fixes
+
+[[bans.dependencies]]
+name = "rustls"
+version = ">=0.22"  # Latest TLS security
+
+# ============================================================================
+# DEPENDENCY GRAPH - Limit attack surface
+# ============================================================================
+
+# Maximum dependency depth to prevent deep supply chains
+[graph]
+targets = [
+    { triple = "x86_64-pc-windows-msvc" },
+    { triple = "x86_64-pc-windows-gnu" },
+    { triple = "i686-pc-windows-msvc" },
+    { triple = "aarch64-pc-windows-msvc" },
+]
+
+# Exclude dev-dependencies from production analysis
+no-dev-dependencies = true
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+[output]
+feature-depth = 3  # Show feature tree depth for analysis
+
+# Security report format
+[output.format]
+vulnerability = "table"
+unmaintained = "table"

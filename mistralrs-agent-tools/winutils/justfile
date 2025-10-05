@@ -1,0 +1,193 @@
+# WinUtils Justfile - Modern Task Runner
+# Usage: just <recipe>
+
+# Default recipe - show help
+default:
+    @just --list
+
+# Apply compilation fixes
+fix:
+    @echo "Applying compilation fixes..."
+    pwsh -File fix-compilation-errors.ps1
+
+# Dry run of fixes
+fix-dry:
+    @echo "Dry run of compilation fixes..."
+    pwsh -File fix-compilation-errors.ps1 -DryRun
+
+# Build everything with release profile
+build: fix
+    @echo "Building all utilities (release)..."
+    cargo build --release --all-features
+
+# Build with maximum optimization
+build-fast: fix
+    @echo "Building with release-fast profile..."
+    cargo build --profile release-fast --all-features
+
+# Build debug version
+build-debug:
+    @echo "Building debug version..."
+    cargo build --all-features
+
+# Build specific utility
+build-util UTIL: fix
+    @echo "Building {{UTIL}}..."
+    cargo build --package {{UTIL}} --release --all-features
+
+# Clean build artifacts
+clean:
+    @echo "Cleaning build artifacts..."
+    cargo clean
+
+# Run all tests
+test:
+    @echo "Running tests..."
+    cargo test --workspace --all-features
+
+# Run tests for specific package
+test-package PKG:
+    @echo "Testing {{PKG}}..."
+    cargo test --package {{PKG}} --all-features
+
+# Check code without building
+check:
+    @echo "Checking code..."
+    cargo check --workspace --all-features
+
+# Run clippy linter
+lint:
+    @echo "Running clippy..."
+    cargo clippy --workspace --all-features -- -D warnings
+
+# Format code
+fmt:
+    @echo "Formatting code..."
+    cargo fmt --all
+
+# Format check (CI mode)
+fmt-check:
+    @echo "Checking formatting..."
+    cargo fmt --all -- --check
+
+# Full quality check
+qa: fmt lint test
+    @echo "✓ Quality checks passed!"
+
+# Build documentation
+docs:
+    @echo "Building documentation..."
+    cargo doc --workspace --all-features --no-deps
+
+# Open documentation in browser
+docs-open:
+    @echo "Opening documentation..."
+    cargo doc --workspace --all-features --no-deps --open
+
+# Install utilities to cargo bin
+install: build
+    @echo "Installing utilities..."
+    cargo install --path .
+
+# Benchmark performance
+bench:
+    @echo "Running benchmarks..."
+    cargo bench --workspace
+
+# Update dependencies
+update:
+    @echo "Updating dependencies..."
+    cargo update
+
+# Check for outdated dependencies
+outdated:
+    @echo "Checking for outdated dependencies..."
+    cargo outdated
+
+# Security audit
+audit:
+    @echo "Running security audit..."
+    cargo audit
+
+# Build with specific features
+build-features FEATURES: fix
+    @echo "Building with features: {{FEATURES}}..."
+    cargo build --release --features {{FEATURES}}
+
+# Profile build size
+bloat:
+    @echo "Analyzing binary sizes..."
+    cargo bloat --release --crates
+
+# Generate assembly output for utility
+asm UTIL:
+    @echo "Generating assembly for {{UTIL}}..."
+    cargo asm --package {{UTIL}} --release
+
+# Expand macros for debugging
+expand UTIL:
+    @echo "Expanding macros for {{UTIL}}..."
+    cargo expand --package {{UTIL}}
+
+# Watch and rebuild on changes
+watch:
+    @echo "Watching for changes..."
+    cargo watch -x "build --all-features"
+
+# Watch and run tests
+watch-test:
+    @echo "Watching and testing..."
+    cargo watch -x "test --workspace --all-features"
+
+# Complete rebuild (clean + build + test)
+rebuild: clean build test
+    @echo "✓ Complete rebuild successful!"
+
+# Prepare for release
+release-prep: clean qa build docs
+    @echo "✓ Release preparation complete!"
+    @echo ""
+    @echo "Built binaries:"
+    @ls -lh target/release/*.exe | Select-String -Pattern ".exe"
+
+# Build for CI/CD
+ci: fix-dry check fmt-check lint test
+    @echo "✓ CI checks passed!"
+
+# Quick build for development (no tests)
+dev: fix build-debug
+    @echo "✓ Development build complete!"
+
+# Show build statistics
+stats:
+    @echo "Build statistics:"
+    @echo ""
+    @echo "Target directory size:"
+    @du -sh target 2>NUL || echo "No target directory"
+    @echo ""
+    @echo "Binary count:"
+    @ls target/release/*.exe 2>NUL | Measure-Object | Select-Object -ExpandProperty Count
+    @echo ""
+    @echo "Total binary size:"
+    @ls target/release/*.exe 2>NUL | Measure-Object -Property Length -Sum | ForEach-Object { "$([math]::Round($_.Sum/1MB, 2)) MB" }
+
+# Run everything (comprehensive check)
+all: clean fix build test docs
+    @echo "✓ Complete build and test cycle successful!"
+
+# Help message
+help:
+    @echo "WinUtils Build System"
+    @echo ""
+    @echo "Common recipes:"
+    @echo "  just build         - Build all utilities (release)"
+    @echo "  just build-fast    - Build with maximum optimization"
+    @echo "  just test          - Run all tests"
+    @echo "  just lint          - Run clippy linter"
+    @echo "  just qa            - Full quality check (fmt + lint + test)"
+    @echo "  just fix           - Apply compilation fixes"
+    @echo "  just clean         - Clean build artifacts"
+    @echo "  just docs          - Build documentation"
+    @echo "  just install       - Install utilities to cargo bin"
+    @echo ""
+    @echo "For all recipes: just --list"

@@ -1,0 +1,664 @@
+# cargo-make configuration for optimized winutils build
+# Maintains critical winpath-first build order while maximizing parallelization
+
+[config]
+default_to_workspace = false
+reduce_output = false
+min_version = "0.37.0"
+
+[env]
+# Build optimization environment
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+RUSTC_WRAPPER = "sccache"
+SCCACHE_DIR = "T:/projects/.sccache"
+SCCACHE_CACHE_SIZE = "20GB"
+SCCACHE_IDLE_TIMEOUT = "0"
+
+# Parallel build configuration
+CARGO_BUILD_JOBS = "18"  # Increased from 12 (using 18 of 22 cores for optimal performance)
+# CARGO_TARGET_DIR removed - using local target/ directory (see .cargo/config.toml)
+# CRITICAL: Disable incremental compilation when using sccache (incompatible)
+CARGO_INCREMENTAL = "0"
+
+# Windows-specific optimizations
+TARGET = "x86_64-pc-windows-msvc"
+BUILD_DIR = "target"
+
+# Color output
+CARGO_TERM_COLOR = "always"
+
+[tasks.default]
+alias = "build-optimized"
+
+# ============================================================================
+# Core Build Tasks (Maintaining winpath-first order)
+# ============================================================================
+
+[tasks.build-winpath]
+description = "🔥 Build critical winpath dependency FIRST (required by all utilities)"
+category = "Build"
+command = "cargo"
+args = [
+    "build",
+    "--release",
+    "--package", "winpath",
+    "--target", "${TARGET}",
+    "--target-dir", "${BUILD_DIR}",
+    "--jobs", "4"
+]
+script_runner = "@shell"
+script = '''
+echo "🔥 Building winpath (critical dependency)..."
+echo "📊 This must complete before any utility builds"
+'''
+
+[tasks.verify-winpath]
+description = "✅ Verify winpath build completed successfully"
+category = "Validation"
+dependencies = ["build-winpath"]
+script_runner = "@shell"
+script = '''
+if [ ! -f "${BUILD_DIR}/${TARGET}/release/winpath.exe" ] && [ ! -f "${BUILD_DIR}/${TARGET}/release/libwinpath.rlib" ]; then
+    echo "❌ ERROR: winpath build failed - cannot proceed with utility builds"
+    exit 1
+fi
+echo "✅ winpath verification passed"
+'''
+
+[tasks.build-derive-parallel]
+description = "🚀 Build derive utilities in parallel (after winpath)"
+category = "Build"
+dependencies = ["verify-winpath"]
+command = "cargo"
+args = [
+    "build",
+    "--release",
+    "--jobs", "4",
+    "--package", "uu_where",
+    "--package", "winutils-which",
+    "--package", "uu_tree",
+    "--target", "${TARGET}",
+    "--target-dir", "${BUILD_DIR}"
+]
+script_runner = "@shell"
+script = '''
+echo "🚀 Building derive utilities in parallel..."
+echo "📦 Packages: where, which, tree"
+'''
+
+[tasks.build-core-utilities]
+description = "⚡ Build core utilities in parallel (after winpath)"
+category = "Build"
+dependencies = ["verify-winpath"]
+command = "cargo"
+args = [
+    "build",
+    "--release",
+    "--jobs", "8",
+    "--workspace",
+    "--exclude", "winpath",
+    "--exclude", "uu_where",
+    "--exclude", "winutils-which",
+    "--exclude", "uu_tree",
+    "--target", "${TARGET}",
+    "--target-dir", "${BUILD_DIR}"
+]
+script_runner = "@shell"
+script = '''
+echo "⚡ Building core utilities in parallel..."
+echo "🔧 Using 8 parallel jobs for maximum efficiency"
+'''
+
+[tasks.build-coreutils-workspace]
+description = "🏗️ Build coreutils workspace in parallel"
+category = "Build"
+dependencies = ["verify-winpath"]
+cwd = "coreutils"
+command = "cargo"
+args = [
+    "build",
+    "--release",
+    "--jobs", "8",
+    "--workspace",
+    "--target", "${TARGET}",
+    "--target-dir", "../${BUILD_DIR}"
+]
+script_runner = "@shell"
+script = '''
+echo "🏗️ Building coreutils workspace..."
+echo "📍 Working directory: coreutils/"
+'''
+
+# ============================================================================
+# Optimized Build Profiles
+# ============================================================================
+
+[tasks.build-optimized]
+description = "🎯 Optimized parallel build (maintains winpath-first order)"
+category = "Build"
+dependencies = [
+    "build-winpath",
+    "verify-winpath",
+    "build-derive-parallel",
+    "build-core-utilities",
+    "build-coreutils-workspace"
+]
+script_runner = "@shell"
+script = '''
+echo "🎯 Optimized build completed successfully!"
+echo "📊 Build order: winpath → derive → core → coreutils"
+'''
+
+[tasks.build-dev-fast]
+description = "⚡ Fast development build"
+category = "Build"
+dependencies = ["build-winpath"]
+run_task = { name = ["build-derive-dev", "build-core-dev"], parallel = true }
+
+[tasks.build-derive-dev]
+description = "🔧 Build derive utilities (dev profile)"
+private = true
+command = "cargo"
+args = [
+    "build",
+    "--profile", "dev-fast",
+    "--jobs", "4",
+    "--package", "uu_where",
+    "--package", "winutils-which",
+    "--package", "uu_tree",
+    "--target", "${TARGET}",
+    "--target-dir", "${BUILD_DIR}"
+]
+
+[tasks.build-core-dev]
+description = "🔧 Build core utilities (dev profile)"
+private = true
+command = "cargo"
+args = [
+    "build",
+    "--profile", "dev-fast",
+    "--jobs", "8",
+    "--workspace",
+    "--exclude", "winpath",
+    "--exclude", "uu_where",
+    "--exclude", "winutils-which",
+    "--exclude", "uu_tree",
+    "--target", "${TARGET}",
+    "--target-dir", "${BUILD_DIR}"
+]
+
+# ============================================================================
+# Profile-Guided Optimization (PGO)
+# ============================================================================
+
+[tasks.build-pgo-stage1]
+description = "🎯 PGO Stage 1: Build with instrumentation"
+category = "PGO"
+dependencies = ["clean"]
+env = { "RUSTFLAGS" = "-C target-cpu=native -C profile-generate=T:/projects/coreutils/pgo-data" }
+run_task = "build-optimized"
+
+[tasks.run-pgo-training]
+description = "🏃 PGO Stage 2: Run training workloads"
+category = "PGO"
+dependencies = ["build-pgo-stage1"]
+script_runner = "@shell"
+script = '''
+echo "🏃 Running PGO training workloads..."
+mkdir -p T:/projects/coreutils/pgo-data
+
+# Create test directory structure
+mkdir -p pgo-test/{dir1,dir2,dir3}
+echo "Sample content for PGO training" > pgo-test/sample.txt
+echo "More sample content" > pgo-test/dir1/file1.txt
+
+echo "📊 Training ls utility..."
+./${BUILD_DIR}/${TARGET}/release/uu_ls.exe -la pgo-test/ > /dev/null 2>&1 || true
+
+echo "📊 Training cat utility..."
+./${BUILD_DIR}/${TARGET}/release/uu_cat.exe pgo-test/sample.txt > /dev/null 2>&1 || true
+
+echo "📊 Training wc utility..."
+./${BUILD_DIR}/${TARGET}/release/uu_wc.exe pgo-test/sample.txt > /dev/null 2>&1 || true
+
+echo "📊 Training sort utility..."
+echo -e "c\nb\na" | ./${BUILD_DIR}/${TARGET}/release/uu_sort.exe > /dev/null 2>&1 || true
+
+echo "📊 Training grep utility..."
+echo "search content" | ./${BUILD_DIR}/${TARGET}/release/uu_grep.exe "search" > /dev/null 2>&1 || true
+
+echo "✅ PGO training completed"
+rm -rf pgo-test/
+'''
+
+[tasks.build-pgo-stage2]
+description = "🚀 PGO Stage 3: Build with optimization data"
+category = "PGO"
+dependencies = ["run-pgo-training", "clean-build"]
+env = { "RUSTFLAGS" = "-C target-cpu=native -C profile-use=T:/projects/coreutils/pgo-data" }
+run_task = "build-optimized"
+
+[tasks.build-pgo]
+description = "🎯 Complete PGO build pipeline"
+category = "PGO"
+dependencies = ["build-pgo-stage1", "run-pgo-training", "build-pgo-stage2"]
+script_runner = "@shell"
+script = '''
+echo "🎯 PGO build pipeline completed!"
+echo "📈 Expected 10-15% runtime performance improvement"
+'''
+
+# ============================================================================
+# Testing and Validation
+# ============================================================================
+
+[tasks.test-all]
+description = "🧪 Run comprehensive test suite"
+category = "Test"
+dependencies = ["build-optimized"]
+run_task = { name = ["test-unit", "test-integration"], parallel = true }
+
+[tasks.test-unit]
+description = "🔬 Run unit tests"
+private = true
+command = "cargo"
+args = ["test", "--workspace", "--target", "${TARGET}", "--", "--nocapture"]
+
+[tasks.test-integration]
+description = "🔗 Run integration tests"
+private = true
+script_runner = "@shell"
+script = '''
+echo "🔗 Running integration tests..."
+if [ -f "scripts/validate.ps1" ]; then
+    powershell -ExecutionPolicy Bypass -File scripts/validate.ps1
+else
+    echo "⚠️ PowerShell validation script not found"
+fi
+'''
+
+[tasks.validate-all-77]
+description = "✅ Validate all 77 utilities are built and functional"
+category = "Validation"
+dependencies = ["build-optimized"]
+script_runner = "@shell"
+script = '''
+echo "✅ Validating all 77 utilities..."
+
+# Core utilities list
+COREUTILS="arch b2sum b3sum base32 base64 basename basenc cat chgrp chmod chown chroot cksum comm cp csplit cut date dd df dir dircolors dirname du echo env expand expr factor false fmt fold groups hashsum head hostid hostname id install join kill link ln logname ls md5sum mkdir mkfifo mknod mktemp more mv nice nl nohup nproc numfmt od paste pathchk pinky pr printenv printf ptx pwd readlink realpath relpath rm rmdir runcon seq sha1sum sha224sum sha256sum sha384sum sha3-224sum sha3-256sum sha3-384sum sha3-512sum sha3sum sha512sum shake128sum shake256sum shred shuf sleep sort split stat stdbuf stty sum sync tac tail tee test timeout touch tr true truncate tsort tty uname unexpand uniq unlink uptime users vdir wc who whoami yes"
+
+# Derive utilities
+DERIVE_UTILS="where which tree"
+
+missing_count=0
+core_count=0
+derive_count=0
+
+echo "🔍 Checking core utilities..."
+for util in $COREUTILS; do
+    if [ -f "${BUILD_DIR}/${TARGET}/release/uu_${util}.exe" ]; then
+        core_count=$((core_count + 1))
+    else
+        echo "❌ Missing: uu_${util}.exe"
+        missing_count=$((missing_count + 1))
+    fi
+done
+
+echo "🔍 Checking derive utilities..."
+for util in $DERIVE_UTILS; do
+    if [ -f "${BUILD_DIR}/${TARGET}/release/${util}.exe" ]; then
+        derive_count=$((derive_count + 1))
+        echo "✅ Found: ${util}.exe"
+    else
+        echo "❌ Missing: ${util}.exe"
+        missing_count=$((missing_count + 1))
+    fi
+done
+
+total_found=$((core_count + derive_count))
+echo ""
+echo "📊 Validation Summary:"
+echo "   Core utilities: ${core_count}/74"
+echo "   Derive utilities: ${derive_count}/3"
+echo "   Total found: ${total_found}/77"
+echo "   Missing: ${missing_count}"
+
+if [ $missing_count -eq 0 ]; then
+    echo "🎉 All 77 utilities successfully built!"
+else
+    echo "❌ ${missing_count} utilities missing!"
+    exit 1
+fi
+'''
+
+# ============================================================================
+# Performance and Benchmarking
+# ============================================================================
+
+[tasks.bench-build]
+description = "📊 Benchmark build performance"
+category = "Benchmark"
+script_runner = "@shell"
+script = '''
+echo "📊 Benchmarking build performance..."
+
+echo "🧹 Cleaning for accurate measurement..."
+cargo clean
+
+echo "⏱️ Timing optimized build..."
+start_time=$(date +%s)
+cargo make build-optimized
+end_time=$(date +%s)
+duration=$((end_time - start_time))
+
+echo ""
+echo "📈 Build Performance Results:"
+echo "   Total time: ${duration} seconds"
+echo "   Average per utility: $((duration / 77)) seconds"
+
+# Cache statistics
+echo ""
+echo "💾 Cache Statistics:"
+sccache --show-stats || echo "sccache not available"
+
+echo "${duration}" >> build-times.log
+echo "$(date): ${duration}s" >> build-metrics.log
+'''
+
+[tasks.bench-runtime]
+description = "🏃 Benchmark runtime performance"
+category = "Benchmark"
+dependencies = ["build-optimized"]
+script_runner = "@shell"
+script = '''
+echo "🏃 Benchmarking runtime performance..."
+
+# Create test data
+echo "Creating test data..."
+mkdir -p bench-data
+seq 1 10000 > bench-data/numbers.txt
+head -c 1048576 /dev/zero > bench-data/large.bin 2>/dev/null || fsutil file createnew bench-data/large.bin 1048576
+
+echo "📊 Running benchmarks..."
+
+# ls benchmark
+echo "Testing ls performance..."
+hyperfine --warmup 3 --runs 10 \
+    "./${BUILD_DIR}/${TARGET}/release/uu_ls.exe -la bench-data/" \
+    --export-json bench-results-ls.json 2>/dev/null || \
+    echo "ls benchmark: $( (time ./${BUILD_DIR}/${TARGET}/release/uu_ls.exe -la bench-data/) 2>&1 | grep real || echo "completed")"
+
+# cat benchmark
+echo "Testing cat performance..."
+hyperfine --warmup 3 --runs 10 \
+    "./${BUILD_DIR}/${TARGET}/release/uu_cat.exe bench-data/large.bin" \
+    --export-json bench-results-cat.json 2>/dev/null || \
+    echo "cat benchmark: $( (time ./${BUILD_DIR}/${TARGET}/release/uu_cat.exe bench-data/large.bin > /dev/null) 2>&1 | grep real || echo "completed")"
+
+# sort benchmark
+echo "Testing sort performance..."
+hyperfine --warmup 3 --runs 10 \
+    "./${BUILD_DIR}/${TARGET}/release/uu_sort.exe bench-data/numbers.txt" \
+    --export-json bench-results-sort.json 2>/dev/null || \
+    echo "sort benchmark: $( (time ./${BUILD_DIR}/${TARGET}/release/uu_sort.exe bench-data/numbers.txt > /dev/null) 2>&1 | grep real || echo "completed")"
+
+echo "✅ Runtime benchmarks completed"
+rm -rf bench-data/
+'''
+
+# ============================================================================
+# Utility Tasks
+# ============================================================================
+
+[tasks.clean]
+description = "🧹 Clean all build artifacts"
+category = "Cleanup"
+command = "cargo"
+args = ["clean"]
+script_runner = "@shell"
+script = '''
+echo "🧹 Cleaning build artifacts..."
+rm -rf pgo-data/ bench-data/
+echo "✅ Clean completed"
+'''
+
+[tasks.clean-build]
+description = "🧹 Clean build artifacts only (keep cache)"
+private = true
+script_runner = "@shell"
+script = '''
+echo "🧹 Cleaning build artifacts (preserving cache)..."
+rm -rf ${BUILD_DIR}
+echo "✅ Build clean completed"
+'''
+
+[tasks.setup-cache]
+description = "⚙️ Setup and configure sccache"
+category = "Setup"
+script_runner = "@shell"
+script = '''
+echo "⚙️ Setting up sccache..."
+
+# Create cache directory
+mkdir -p "${SCCACHE_DIR}"
+
+# Configure sccache
+export RUSTC_WRAPPER=sccache
+export SCCACHE_CACHE_SIZE=20GB
+export SCCACHE_IDLE_TIMEOUT=0
+
+# Start sccache server
+sccache --start-server 2>/dev/null || echo "sccache server already running"
+
+echo "💾 Cache configuration:"
+echo "   Cache dir: ${SCCACHE_DIR}"
+echo "   Cache size: ${SCCACHE_CACHE_SIZE}"
+echo ""
+
+# Show current stats
+sccache --show-stats
+echo "✅ sccache setup completed"
+'''
+
+[tasks.doctor]
+description = "🩺 Diagnose build environment"
+category = "Diagnostics"
+script_runner = "@shell"
+script = '''
+echo "🩺 Build Environment Diagnostics"
+echo "================================="
+echo ""
+
+echo "🦀 Rust Installation:"
+rustc --version || echo "❌ Rust not found"
+cargo --version || echo "❌ Cargo not found"
+echo ""
+
+echo "🎯 Target Configuration:"
+echo "Target: ${TARGET}"
+rustup target list --installed | grep ${TARGET} || echo "❌ Target not installed"
+echo ""
+
+echo "🏗️ Build Configuration:"
+echo "Jobs: ${CARGO_BUILD_JOBS}"
+echo "Target dir: ${CARGO_TARGET_DIR}"
+echo "Cache dir: ${SCCACHE_DIR}"
+echo ""
+
+echo "💾 Cache Status:"
+sccache --show-stats 2>/dev/null || echo "⚠️ sccache not available"
+echo ""
+
+echo "📦 Workspace Structure:"
+cargo metadata --format-version 1 --no-deps | grep '"name"' | wc -l | xargs echo "Packages:"
+echo ""
+
+echo "🏁 Build Output:"
+if [ -d "${BUILD_DIR}/${TARGET}/release" ]; then
+    ls "${BUILD_DIR}/${TARGET}/release"/*.exe 2>/dev/null | wc -l | xargs echo "Built utilities:"
+else
+    echo "No build output found"
+fi
+
+echo ""
+echo "✅ Diagnostics completed"
+'''
+
+[tasks.stats]
+description = "📊 Show build statistics"
+category = "Info"
+script_runner = "@shell"
+script = '''
+echo "📊 Build Statistics"
+echo "=================="
+echo ""
+
+echo "🎯 Project Info:"
+echo "Version: $(grep "^version" Cargo.toml | head -1 | cut -d'"' -f2)"
+echo "Git Hash: $(git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+echo "Build Date: $(date +%Y%m%d)"
+echo ""
+
+echo "📦 Utilities:"
+echo "Core utilities: 74"
+echo "Derive utilities: 3"
+echo "Total expected: 77"
+echo ""
+
+echo "🏗️ Build Output:"
+if [ -d "${BUILD_DIR}/${TARGET}/release" ]; then
+    built_count=$(ls "${BUILD_DIR}/${TARGET}/release"/*.exe 2>/dev/null | wc -l)
+    echo "Built binaries: ${built_count}"
+
+    if [ -d "${BUILD_DIR}/${TARGET}/release" ]; then
+        total_size=$(du -sh "${BUILD_DIR}/${TARGET}/release" 2>/dev/null | cut -f1)
+        echo "Total size: ${total_size}"
+    fi
+else
+    echo "No build output found"
+fi
+echo ""
+
+echo "⏱️ Recent Build Times:"
+if [ -f "build-times.log" ]; then
+    tail -5 build-times.log | while read time; do
+        echo "  ${time} seconds"
+    done
+else
+    echo "No build time history available"
+fi
+
+echo ""
+echo "📈 Performance:"
+if [ -f "bench-results-ls.json" ]; then
+    echo "Recent benchmark results available"
+else
+    echo "No benchmark results available (run 'cargo make bench-runtime')"
+fi
+'''
+
+# ============================================================================
+# Development Workflow
+# ============================================================================
+
+[tasks.dev]
+description = "🔧 Quick development workflow"
+category = "Development"
+run_task = { name = ["build-dev-fast", "test-unit"], parallel = false }
+
+[tasks.dev-watch]
+description = "👀 Watch for changes and rebuild"
+category = "Development"
+install_crate = { crate_name = "cargo-watch", binary = "cargo", test_arg = "watch --help" }
+command = "cargo"
+args = ["watch", "-x", "make build-dev-fast"]
+
+[tasks.release]
+description = "🚀 Full release workflow"
+category = "Release"
+dependencies = ["clean", "build-optimized", "test-all", "validate-all-77"]
+script_runner = "@shell"
+script = '''
+echo "🚀 Release workflow completed successfully!"
+echo "✅ All 77 utilities built and validated"
+'''
+
+# ============================================================================
+# Integration with existing Makefile
+# ============================================================================
+
+[tasks.makefile-release]
+description = "🔄 Delegate to existing Makefile release target"
+category = "Integration"
+command = "make"
+args = ["release"]
+
+[tasks.makefile-test]
+description = "🔄 Delegate to existing Makefile test target"
+category = "Integration"
+command = "make"
+args = ["test"]
+
+[tasks.makefile-install]
+description = "🔄 Delegate to existing Makefile install target"
+category = "Integration"
+command = "make"
+args = ["install"]
+
+# ============================================================================
+# Rust Binary Symlink Management
+# ============================================================================
+
+[tasks.rust-links-install]
+description = "🔗 Install Rust binary symlink framework"
+category = "Setup"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Install
+'''
+
+[tasks.rust-links-sync]
+description = "🔗 Sync Rust binary links after cargo install"
+category = "Maintenance"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Sync
+'''
+
+[tasks.rust-links-status]
+description = "📊 Check status of Rust binary links"
+category = "Maintenance"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Status
+'''
+
+[tasks.rust-links-verify]
+description = "✅ Verify Rust binary links integrity"
+category = "Validation"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Verify
+'''
+
+[tasks.rust-links-health]
+description = "🏥 Health check for Rust binary links"
+category = "Maintenance"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Health
+'''
+
+[tasks.rust-links-clean]
+description = "🧹 Remove all Rust binary links"
+category = "Cleanup"
+script_runner = "@shell"
+script = '''
+powershell -ExecutionPolicy Bypass -File ../scripts/Manage-RustBinaries.ps1 -Action Clean
+'''
+
+[tasks.post-install]
+description = "🔗 Post-installation: sync Rust binary links"
+category = "Integration"
+dependencies = ["rust-links-sync"]

@@ -1,0 +1,25 @@
+[package]
+name = "mv"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Move/rename files - Windows optimized"
+
+[[bin]]
+name = "mv"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+windows.workspace = true
+rayon.workspace = true
+memmap2.workspace = true
+walkdir.workspace = true
+tempfile.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_mv = { path = "../../../../src/uu/mv" }

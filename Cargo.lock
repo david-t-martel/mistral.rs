@@ -3960,17 +3960,11 @@ version = "0.6.0"
 dependencies = [
  "anyhow",
  "camino",
- "chrono",
- "encoding_rs",
- "filetime",
  "ignore",
- "regex",
  "serde",
  "serde_json",
- "sysinfo",
  "tempfile",
  "thiserror 2.0.12",
- "tokio",
  "tracing",
  "walkdir",
 ]

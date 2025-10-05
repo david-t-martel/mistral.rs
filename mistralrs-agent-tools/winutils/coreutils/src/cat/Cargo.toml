@@ -1,0 +1,37 @@
+[package]
+name = "cat"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Concatenate and display files - Windows optimized"
+
+[[bin]]
+name = "cat"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+memmap2.workspace = true
+memchr.workspace = true
+regex.workspace = true
+encoding_rs = "0.8"
+encoding_rs_io = "0.1"
+
+# Windows-specific dependencies
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+] }
+
+# Link to original uutils implementation for fallback
+uu_cat = { path = "../../../../src/uu/cat" }
+
+[dev-dependencies]
+tempfile = "3.8"

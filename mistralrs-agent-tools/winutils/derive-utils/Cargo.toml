@@ -1,0 +1,74 @@
+[workspace]
+members = [
+    "fd-wrapper",
+    "rg-wrapper",
+    "cmd-wrapper",
+    "pwsh-wrapper",
+    "bash-wrapper",
+]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["David Martel <david.martel@auricleinc.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/david-t-martel/uutils-windows"
+homepage = "https://github.com/david-t-martel/uutils-windows"
+documentation = "https://docs.rs/winutils-derive-utils"
+description = "Windows-optimized derive utilities with path normalization"
+keywords = ["windows", "utilities", "path", "coreutils", "derive"]
+categories = ["command-line-utilities", "filesystem", "os::windows-apis"]
+rust-version = "1.70.0"
+
+[workspace.dependencies]
+# Core dependencies
+anyhow = "1.0"
+clap = { version = "4.4", features = ["derive", "wrap_help", "color", "suggestions"] }
+crossbeam-utils = "0.8"
+env_logger = "0.10"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+
+# Path and file operations
+glob = "0.3"
+path-clean = "1.0"
+walkdir = "2.4"
+ignore = "0.4"
+regex = "1.10"
+num_cpus = "1.16"
+time = { version = "0.3", features = ["formatting", "macros"] }
+
+# Text processing dependencies
+grep = "0.2"
+grep-matcher = "0.1"
+grep-regex = "0.1"
+grep-searcher = "0.1"
+termcolor = "1.4"
+memmap2 = "0.9"
+encoding_rs = "0.8"
+which = "6.0"
+
+# Windows-specific (added to workspace.dependencies - crates can enable as needed)
+windows = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Environment",
+    "Win32_System_Console",
+    "Win32_Security",
+    "Win32_System_Threading",
+] }
+widestring = "1.0"
+
+# Unix compatibility
+nix = "0.27"
+
+# NOTE: Build profiles are defined in the workspace root Cargo.toml at T:\projects\coreutils\winutils\Cargo.toml
+# to eliminate duplication and ensure consistent build settings across all crates.
+#
+# NOTE: build-dependencies cannot be specified at the workspace level for virtual manifests.
+# They must be specified in each individual crate's Cargo.toml if needed.

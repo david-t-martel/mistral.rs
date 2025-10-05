@@ -1,0 +1,20 @@
+[package]
+name = "echo"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Display text - Windows optimized"
+
+[[bin]]
+name = "echo"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_echo = { path = "../../../../src/uu/echo" }

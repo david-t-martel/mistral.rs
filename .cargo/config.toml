@@ -2,10 +2,15 @@
 # Optimized for CUDA builds on Windows with sccache and fast linking
 
 [build]
-# Use local target directory (overrides CARGO_TARGET_DIR env var)
+# Use local target directory (overrides CARGO_TARGET_DIR env var if set in config.toml)
+# Note: Environment variable CARGO_TARGET_DIR takes precedence over this setting
+# For local builds, ensure CARGO_TARGET_DIR is NOT set in environment
 target-dir = "target"
+
 # Use sccache for compilation caching (30-80% faster rebuilds)
+# Note: sccache is disabled during coverage builds via --no-cfg-coverage
 rustc-wrapper = "sccache"
+
 # Parallel compilation jobs
 jobs = 8
 
@@ -16,7 +21,10 @@ SCCACHE_DIR = "T:\\projects\\rust-mistral\\sccache-cache"
 SCCACHE_CACHE_SIZE = "20G"
 SCCACHE_IDLE_TIMEOUT = "3600"
 SCCACHE_DIRECT = "true"
-CARGO_INCREMENTAL = "0"  # Required for sccache compatibility
+
+# IMPORTANT: Incremental compilation is disabled for sccache compatibility
+# cargo-llvm-cov will override this to "1" automatically
+CARGO_INCREMENTAL = "0"
 
 # CUDA/cuDNN/MKL runtime paths
 CUDA_PATH = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9"
@@ -46,44 +54,27 @@ rustflags = [
   "-C", "target-feature=-avx,-avx2",
 ]
 
-[target.wasm32-unknown-unknown]
-rustflags = ["-C", "target-feature=+simd128"]
-
-# Build profiles optimized for development speed
+# Profile configurations
+[profile.dev]
+# Development profile with debug info
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+incremental = true  # Enable incremental for dev builds
 
 [profile.release]
-# Maximum optimization for production
+# Release profile with optimizations
 opt-level = 3
-lto = "fat"
-codegen-units = 1
-debug = false
-strip = true
-panic = "abort"
-
-[profile.release-dev]
-# Fast release builds for development (2-3x faster compile than release)
-inherits = "release"
-opt-level = 2
 lto = "thin"
-codegen-units = 4
 debug = false
-strip = true
+incremental = false
 
-[profile.dev]
-# Fast development builds
+[profile.test]
+# Test profile inherits from dev but can be customized
+inherits = "dev"
 opt-level = 0
-debug = 1
-incremental = false  # Required for sccache
-lto = false
-codegen-units = 256
 
-[profile.dev.package."*"]
-# Optimize dependencies in dev mode
-opt-level = 1
-
-[alias]
-# Convenient build aliases
-br = "build --release"
-brd = "build --profile release-dev"
-stats = "!sccache --show-stats"
-zero-stats = "!sccache --zero-stats"
+[profile.bench]
+# Benchmark profile inherits from release
+inherits = "release"

@@ -1,0 +1,21 @@
+[package]
+name = "realpath"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Display absolute path - Windows optimized"
+
+[[bin]]
+name = "realpath"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+windows.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_realpath = { path = "../../../../src/uu/realpath" }

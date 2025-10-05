@@ -1,0 +1,20 @@
+[package]
+name = "yes"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Repeatedly output text - Windows optimized"
+
+[[bin]]
+name = "yes"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_yes = { path = "../../../../src/uu/yes" }

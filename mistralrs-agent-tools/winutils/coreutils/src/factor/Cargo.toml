@@ -1,0 +1,21 @@
+[package]
+name = "factor"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Factorize numbers - Windows optimized"
+
+[[bin]]
+name = "factor"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_factor = { path = "../../../../src/uu/factor" }

@@ -1,0 +1,240 @@
+[workspace]
+resolver = "2"
+# IMPORTANT: Build order matters - winpath must be built first as it's a core dependency
+# The workspace member order implicitly defines build priority
+members = [
+    # Core shared libraries (build first)
+    "shared/winpath",      # CRITICAL: Path normalization library - ALL utilities depend on this
+    "shared/winutils-core", # Enhanced features framework - Help, version, testing, Windows enhancements
+
+    # Derive utilities (build second)
+    "derive-utils/where",
+    "derive-utils/which",
+    "derive-utils/tree",
+    "derive-utils/find-wrapper",   # Enhanced find.exe with fd performance and winpath integration
+    "derive-utils/grep-wrapper",   # Enhanced grep.exe with ripgrep performance and winpath integration
+    # Shell wrappers with winpath integration
+    "derive-utils/cmd-wrapper",
+    "derive-utils/pwsh-wrapper",
+    "derive-utils/bash-wrapper",
+    # Include all coreutils
+    "coreutils/src/tac",
+    "coreutils/src/cksum",
+    "coreutils/src/numfmt",
+    "coreutils/src/date",
+    "coreutils/src/cut",
+    "coreutils/src/true",
+    "coreutils/src/unlink",
+    "coreutils/src/dircolors",
+    "coreutils/src/tr",
+    "coreutils/src/seq",
+    "coreutils/src/sync",
+    "coreutils/src/rmdir",
+    "coreutils/src/du",
+    "coreutils/src/vdir",
+    "coreutils/src/dd",
+    "coreutils/src/uniq",
+    "coreutils/src/yes",
+    "coreutils/src/sort",
+    "coreutils/src/cat",
+    "coreutils/src/ptx",
+    "coreutils/src/base64",
+    "coreutils/src/realpath",
+    "coreutils/src/rm",
+    "coreutils/src/nl",
+    "coreutils/src/shuf",
+    "coreutils/src/mkdir",
+    "coreutils/src/split",
+    "coreutils/src/more",
+    "coreutils/src/echo",
+    "coreutils/src/shred",
+    "coreutils/src/readlink",
+    "coreutils/src/ln",
+    "coreutils/src/env",
+    "coreutils/src/fold",
+    "coreutils/src/hashsum",
+    "coreutils/src/truncate",
+    "coreutils/src/printf",
+    "coreutils/src/base32",
+    "coreutils/src/head",
+    "coreutils/src/fmt",
+    "coreutils/src/od",
+    "coreutils/src/test",
+    "coreutils/src/hostname",
+    "coreutils/src/link",
+    "coreutils/src/df",
+    "coreutils/src/false",
+    "coreutils/src/csplit",
+    "coreutils/src/whoami",
+    "coreutils/src/pwd",
+    "coreutils/src/comm",
+    "coreutils/src/dir",
+    "coreutils/src/basename",
+    "coreutils/src/mv",
+    "coreutils/src/factor",
+    "coreutils/src/nproc",
+    "coreutils/src/printenv",
+    "coreutils/src/tsort",
+    "coreutils/src/unexpand",
+    "coreutils/src/sleep",
+    "coreutils/src/tail",
+    "coreutils/src/basenc",
+    "coreutils/src/join",
+    "coreutils/src/arch",
+    "coreutils/src/mktemp",
+    "coreutils/src/wc",
+    "coreutils/src/dirname",
+    "coreutils/src/expr",
+    "coreutils/src/paste",
+    "coreutils/src/sum",
+    "coreutils/src/cp",
+    "coreutils/src/expand",
+    "coreutils/src/tee",
+    "coreutils/src/touch",
+    "coreutils/src/pr",
+    "coreutils/src/ls",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["David Martel <david.martel@auricleinc.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# System dependencies
+winapi-util = "0.1"
+
+# CRITICAL PATH DEPENDENCIES
+# These ensure consistent behavior across the entire project
+winpath = { path = "shared/winpath", features = ["cache", "unicode"] }
+winutils-core = { path = "shared/winutils-core", features = ["help", "version", "testing", "windows-enhanced", "diagnostics"] }
+
+# Core dependencies
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive", "env", "wrap_help"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+
+# Windows-specific
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_Memory",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Threading",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem"
+]}
+windows = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+    "Win32_System_Com",
+    "Win32_System_Ole",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem"
+]}
+
+# Path handling
+dunce = "1.0"  # Canonical paths on Windows
+path-slash = "0.2"  # Cross-platform path handling
+normalize-path = "0.2"
+
+# Performance
+rayon = "1.8"
+crossbeam-channel = "0.5"
+dashmap = "5.5"
+lru = "0.12"
+memchr = "2.7"
+ahash = "0.8"  # Fast hashing
+
+# Utilities
+regex = "1.10"
+glob = "0.3"
+walkdir = "2.4"
+dirs = "5.0"
+which = "6.0"
+shell-words = "1.1"
+termcolor = "1.4"
+indicatif = "0.17"
+humansize = "2.1"
+once_cell = "1.19"
+parking_lot = "0.12"
+atty = "0.2"
+unicode-width = "0.1"
+num_cpus = "1.16"
+
+# Additional workspace dependencies
+memmap2 = "0.9"
+# Find and grep wrapper specific dependencies
+ignore = "0.4"                                  # gitignore-style filtering
+same-file = "1.0"                              # Handle symlinks correctly
+lazy_static = "1.4"                           # Static initialization
+encoding_rs = "0.8"                           # Text encoding detection
+bstr = "1.0"                                   # Binary string utilities
+aho-corasick = "1.1"                          # Multi-pattern search
+grep-searcher = "0.1"                         # ripgrep search engine
+grep-matcher = "0.1"                          # ripgrep pattern matching
+grep-regex = "0.1"                            # ripgrep regex integration
+grep-printer = "0.1"                          # ripgrep output formatting
+bytecount = "0.6"                             # Fast byte counting
+proptest = "1.4"                              # Property-based testing
+tempfile = "3.15"
+byteorder = "1.5"
+chrono = { version = "0.4", features = ["clock"] }
+
+# Enhanced features dependencies
+git2 = "0.18"                                    # For version system git integration
+criterion = { version = "0.5", features = ["html_reports"] }  # For testing framework
+sysinfo = "0.30"                               # For system diagnostics
+roff = "0.2"                                   # For man page generation
+
+# NOTE: winpath is defined above in workspace.dependencies section with required features
+
+# Coreutils core library
+uucore = { path = "../src/uucore" }
+
+[profile.release]
+lto = true           # Link-time optimization for better performance
+codegen-units = 1    # Single codegen unit for maximum optimization
+opt-level = 3        # Maximum optimization level
+strip = true         # Strip symbols for smaller binaries
+panic = "abort"      # Better performance, smaller binaries (5-10% improvement)
+debug = false        # No debug info in release
+
+[profile.release-fast]
+inherits = "release"
+panic = "abort"      # Faster but no stack traces on panic
+lto = "fat"          # Aggressive link-time optimization
+opt-level = 3        # Maximum optimization
+codegen-units = 1    # Single compilation unit
+
+[profile.dev]
+# Faster compilation for development
+opt-level = 0        # No optimization for fast compilation
+debug = true         # Full debug information
+overflow-checks = true  # Catch integer overflows in dev
+incremental = true   # Incremental compilation
+
+[profile.test]
+inherits = "dev"
+opt-level = 1        # Some optimization for faster tests
+
+[profile.bench]
+inherits = "release"
+lto = true           # LTO for accurate benchmarks

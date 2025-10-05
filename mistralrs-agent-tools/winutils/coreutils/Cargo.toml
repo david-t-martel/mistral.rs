@@ -1,0 +1,144 @@
+[workspace]
+resolver = "3"
+members = [
+    "winpath",
+    "src/arch",
+    "src/base32",
+    "src/base64",
+    "src/basename",
+    "src/basenc",
+    "src/cat",
+    "src/cksum",
+    "src/comm",
+    "src/cp",
+    "src/csplit",
+    "src/cut",
+    "src/date",
+    "src/dd",
+    "src/df",
+    "src/dir",
+    "src/dircolors",
+    "src/dirname",
+    "src/du",
+    "src/echo",
+    "src/env",
+    "src/expand",
+    "src/expr",
+    "src/factor",
+    "src/false",
+    "src/fmt",
+    "src/fold",
+    "src/hashsum",
+    "src/head",
+    "src/hostname",
+    "src/join",
+    "src/link",
+    "src/ln",
+    "src/ls",
+    "src/mkdir",
+    "src/mktemp",
+    "src/more",
+    "src/mv",
+    "src/nl",
+    "src/nproc",
+    "src/numfmt",
+    "src/od",
+    "src/paste",
+    "src/pr",
+    "src/printenv",
+    "src/printf",
+    "src/ptx",
+    "src/pwd",
+    "src/readlink",
+    "src/realpath",
+    "src/rm",
+    "src/rmdir",
+    "src/seq",
+    "src/shred",
+    "src/shuf",
+    "src/sleep",
+    "src/sort",
+    "src/split",
+    "src/sum",
+    "src/sync",
+    "src/tac",
+    "src/tail",
+    "src/tee",
+    "src/test",
+    "src/touch",
+    "src/tr",
+    "src/true",
+    "src/truncate",
+    "src/tsort",
+    "src/unexpand",
+    "src/uniq",
+    "src/unlink",
+    "src/vdir",
+    "src/wc",
+    "src/whoami",
+    "src/yes",
+]
+
+
+[workspace.package]
+authors = ["Windows Coreutils Team"]
+categories = ["command-line-utilities"]
+edition = "2021"
+homepage = "https://github.com/uutils/coreutils"
+keywords = ["coreutils", "windows", "winutils", "cli", "utility"]
+license = "MIT"
+version = "0.1.0"
+
+[workspace.dependencies]
+# Core dependencies
+clap = { version = "4.5", features = ["wrap_help", "cargo"] }
+uucore = { path = "../../src/uucore" }
+winpath = { path = "winpath" }
+winutils-core = { path = "../shared/winutils-core", features = ["help", "version", "testing", "windows-enhanced", "diagnostics"] }
+
+# Windows-specific dependencies
+windows = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+    "Win32_System_Memory",
+    "Win32_System_Com",
+    "Win32_System_Ole",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+] }
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+    "Win32_System_Memory",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+] }
+
+# Performance dependencies
+memmap2 = "0.9"
+rayon = "1.10"
+crossbeam = "0.8"
+
+# Utility dependencies
+thiserror = "2.0"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+byteorder = "1.5"
+memchr = "2.7"
+
+# Optional dependencies
+regex = "1.10"
+chrono = { version = "0.4", features = ["clock"] }
+walkdir = "2.5"
+tempfile = "3.15"
+
+# NOTE: Release profiles defined in parent workspace Cargo.toml
+# Child workspace profiles are ignored - removed duplicate definition

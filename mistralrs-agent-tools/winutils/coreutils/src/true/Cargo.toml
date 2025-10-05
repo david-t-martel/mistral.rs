@@ -1,0 +1,20 @@
+[package]
+name = "true"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Return true exit code - Windows optimized"
+
+[[bin]]
+name = "true"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_true = { path = "../../../../src/uu/true" }

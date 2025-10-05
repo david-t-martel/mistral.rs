@@ -1,0 +1,36 @@
+[package]
+name = "winutils-which"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cross-platform which command implementation with Windows enhancements"
+keywords = ["which", "path", "executable", "windows", "cross-platform"]
+categories = ["command-line-utilities", "filesystem"]
+
+[[bin]]
+name = "which"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+which.workspace = true
+winpath.workspace = true
+
+# Windows-specific dependencies
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
+winapi-util.workspace = true
+
+# Path handling
+dunce.workspace = true
+path-slash.workspace = true
+
+# Utilities
+dirs.workspace = true
+shell-words.workspace = true
+
+[features]
+default = []
+debug = []

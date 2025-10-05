@@ -1,0 +1,20 @@
+[package]
+name = "base32"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Base32 encode/decode - Windows optimized"
+
+[[bin]]
+name = "base32"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_base32 = { path = "../../../../src/uu/base32" }

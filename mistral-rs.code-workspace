@@ -1,0 +1,34 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"rust-analyzer.check.command": "clippy",
+		"rust-analyzer.check.allTargets": true,
+		"rust-analyzer.cargo.features": [
+			"mkl"
+		],
+		"rust-analyzer.cargo.noDefaultFeatures": false,
+		"rust-analyzer.cargo.buildScripts.enable": true,
+		"rust-analyzer.procMacro.enable": true,
+		"rust-analyzer.diagnostics.enable": true,
+		"rust-analyzer.inlayHints.parameterHints.enable": true,
+		"rust-analyzer.inlayHints.typeHints.enable": true,
+		"rust-analyzer.inlayHints.chainingHints.enable": false,
+		"terminal.integrated.env.windows": {
+			"MISTRALRS_EDITOR_SESSION": "1"
+		},
+		"testing.automaticallyOpenPeekView": "never",
+		"breadcrumbs.enabled": true,
+		"explorer.compactFolders": false,
+		"workbench.editor.limit.enabled": true,
+		"workbench.editor.limit.value": 20,
+		"git.confirmSync": false,
+		"ruff.enable": true,
+		"rust-analyzer.diagnostics.disabled": [
+			"inactive-code"
+		]
+	}
+}

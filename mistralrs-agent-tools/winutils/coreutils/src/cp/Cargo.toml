@@ -1,0 +1,39 @@
+[package]
+name = "cp"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Copy files and directories - Windows optimized"
+
+[[bin]]
+name = "cp"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+memmap2.workspace = true
+walkdir.workspace = true
+tempfile.workspace = true
+indicatif = "0.17"
+filetime = "0.2"
+num_cpus = "1.16"
+anyhow.workspace = true
+
+# Windows-specific APIs
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_Security",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_NetworkManagement_WNet",
+]}
+
+# Link to original uutils implementation for fallback
+uu_cp = { path = "../../../../src/uu/cp" }

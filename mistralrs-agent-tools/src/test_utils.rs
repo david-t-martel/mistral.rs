@@ -69,18 +69,18 @@ pub fn create_temp_file(filename: &str, content: &str) -> (TempDir, PathBuf) {
 /// ```
 pub fn create_temp_file_structure(files: &[(&str, &str)]) -> TempDir {
     let temp = create_temp_dir();
-    
+
     for (relative_path, content) in files {
         let path = temp.path().join(relative_path);
-        
+
         // Create parent directories if they don't exist
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).expect("Failed to create parent directories");
         }
-        
+
         fs::write(&path, content).expect("Failed to write file");
     }
-    
+
     temp
 }
 
@@ -129,9 +129,8 @@ pub fn load_fixture(name: &str) -> String {
         .join("tests")
         .join("fixtures")
         .join(name);
-    
-    fs::read_to_string(&fixture_path)
-        .unwrap_or_else(|_| panic!("Failed to read fixture: {}", name))
+
+    fs::read_to_string(&fixture_path).unwrap_or_else(|_| panic!("Failed to read fixture: {}", name))
 }
 
 /// Load a fixture as bytes.
@@ -150,9 +149,8 @@ pub fn load_fixture_bytes(name: &str) -> Vec<u8> {
         .join("tests")
         .join("fixtures")
         .join(name);
-    
-    fs::read(&fixture_path)
-        .unwrap_or_else(|_| panic!("Failed to read fixture: {}", name))
+
+    fs::read(&fixture_path).unwrap_or_else(|_| panic!("Failed to read fixture: {}", name))
 }
 
 /// Create a sample configuration for testing.
@@ -231,11 +229,7 @@ pub fn assert_not_contains(haystack: &str, needle: &str) {
 /// Panics if the path does not exist.
 pub fn assert_path_exists<P: AsRef<Path>>(path: P) {
     let path = path.as_ref();
-    assert!(
-        path.exists(),
-        "Path does not exist: {}",
-        path.display()
-    );
+    assert!(path.exists(), "Path does not exist: {}", path.display());
 }
 
 /// Assert that a path does not exist.

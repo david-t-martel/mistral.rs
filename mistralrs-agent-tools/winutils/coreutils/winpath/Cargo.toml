@@ -1,0 +1,11 @@
+[package]
+name = "winpath"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Windows path normalization and manipulation utilities"
+
+[dependencies]
+windows.workspace = true
+thiserror.workspace = true

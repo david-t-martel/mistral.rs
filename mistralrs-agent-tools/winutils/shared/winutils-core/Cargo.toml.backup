@@ -1,0 +1,74 @@
+[package]
+name = "winutils-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Enhanced core features for Windows utilities - help system, testing, version management, and Windows-specific functionality"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/uutils/coreutils"
+keywords = ["windows", "utilities", "coreutils", "help", "testing"]
+categories = ["command-line-utilities", "os::windows-apis", "development-tools::testing"]
+
+[features]
+default = ["help", "version", "testing", "windows-enhanced"]
+help = ["clap", "termcolor"]
+version = ["git2", "chrono"]
+testing = ["criterion", "tempfile"]
+windows-enhanced = ["windows-sys", "windows"]
+diagnostics = ["sysinfo", "tokio"]
+man-pages = ["roff"]
+
+[dependencies]
+# Core dependencies
+anyhow.workspace = true
+thiserror.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+once_cell.workspace = true
+
+# CLI and help system
+clap = { workspace = true, features = ["derive", "env", "wrap_help", "color", "suggestions"] }
+termcolor.workspace = true
+unicode-width.workspace = true
+
+# Version and source management
+git2 = { version = "0.18", optional = true }
+chrono = { workspace = true, features = ["serde"] }
+
+# Testing framework
+criterion = { version = "0.5", features = ["html_reports"], optional = true }
+tempfile = { workspace = true, optional = true }
+
+# Windows-specific
+windows-sys = { workspace = true, optional = true }
+windows = { workspace = true, optional = true }
+winapi-util = { workspace = true, optional = true }
+
+# Diagnostics and system info
+sysinfo = { version = "0.30", optional = true }
+tokio = { workspace = true, features = ["process", "fs"], optional = true }
+
+# Man page generation
+roff = { version = "0.2", optional = true }
+
+# Utilities
+regex.workspace = true
+walkdir.workspace = true
+dirs.workspace = true
+which.workspace = true
+humansize.workspace = true
+indicatif.workspace = true
+
+# Path handling
+winpath.workspace = true
+
+[build-dependencies]
+chrono.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]

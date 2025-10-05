@@ -1,0 +1,48 @@
+[package]
+name = "pwsh-wrapper"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "PowerShell (pwsh.exe/powershell.exe) wrapper with winpath integration for universal path normalization"
+license = "MIT"
+repository = "https://github.com/uutils/coreutils"
+keywords = ["windows", "powershell", "pwsh", "wrapper", "path"]
+categories = ["command-line-utilities", "os::windows-apis"]
+
+[[bin]]
+name = "pwsh"
+path = "src/main.rs"
+
+[dependencies]
+winpath = { path = "../../shared/winpath", features = ["std", "cache"] }
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_System_Console",
+    "Win32_System_Environment",
+    "Win32_System_Threading",
+    "Win32_Security",
+] }
+windows = { workspace = true }
+clap = { version = "4.4", features = ["derive", "env"] }
+env_logger = "0.11"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.10"
+which = "6.0"
+anyhow = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.15"
+assert_cmd = "2.0"
+predicates = "3.1"
+
+# NOTE: Build profiles are defined in the workspace root Cargo.toml at
+# T:\projects\coreutils\winutils\derive-utils\Cargo.toml to eliminate duplication
+# and ensure consistent build settings across all wrapper crates.
+
+[package.metadata.winutils]
+category = "derive"
+description = "Enhanced PowerShell wrapper with path normalization"
+priority = "high"

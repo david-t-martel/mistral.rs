@@ -1,0 +1,222 @@
+# Docker Compose configuration for WinUtils development and deployment
+
+version: '3.8'
+
+services:
+  # Development environment
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    environment:
+      - RUST_LOG=debug
+      - CARGO_INCREMENTAL=0  # Required for sccache compatibility
+    working_dir: /workspace
+    command: ["cargo", "watch", "-x", "build"]
+    networks:
+      - winutils-net
+
+  # Build service for CI/CD
+  build:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - ./dist:/app/dist
+    environment:
+      - CARGO_TERM_COLOR=always
+      - RUST_BACKTRACE=1
+    command: ["sh", "-c", "cargo build --release --target x86_64-unknown-linux-musl && cp target/x86_64-unknown-linux-musl/release/* /app/dist/"]
+    networks:
+      - winutils-net
+
+  # Runtime environment
+  runtime:
+    build:
+      context: .
+      target: linux-runtime
+    volumes:
+      - ./test-data:/data:ro
+    environment:
+      - PATH=/usr/local/bin:$PATH
+    working_dir: /data
+    command: ["sh"]
+    networks:
+      - winutils-net
+
+  # Benchmark runner
+  benchmark:
+    build:
+      context: .
+      target: benchmark
+    volumes:
+      - ./benchmark-results:/benchmarks/results
+      - ./test-data:/data:ro
+    environment:
+      - RUST_LOG=info
+      - BENCHMARK_MODE=docker
+      - BENCHMARK_ITERATIONS=3
+    command: >
+      sh -c "
+        echo 'Setting up benchmark environment...' &&
+        cd benchmarks &&
+        cargo run --release -- validate &&
+        echo 'Running benchmarks...' &&
+        cargo run --release -- run --output /benchmarks/results --memory-profile &&
+        echo 'Generating reports...' &&
+        cargo run --release -- report --input /benchmarks/results --format html &&
+        cargo run --release -- report --input /benchmarks/results --format markdown &&
+        echo 'Benchmarks completed!'
+      "
+    networks:
+      - winutils-net
+
+  # Binary distribution builder
+  dist:
+    build:
+      context: .
+      target: dist
+    volumes:
+      - ./dist:/output
+    command: >
+      sh -c "
+        /create-archives.sh &&
+        cp /dist/*.tar.gz /dist/*.zip /output/ 2>/dev/null || true &&
+        echo 'Distribution packages created in ./dist/'
+      "
+    networks:
+      - winutils-net
+
+  # Performance monitoring with Prometheus metrics
+  metrics:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - winutils-net
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./monitoring/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=winutils123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - winutils-net
+
+  # Nginx for serving reports
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./benchmark-results:/usr/share/nginx/html/benchmarks:ro
+      - ./docs:/usr/share/nginx/html/docs:ro
+      - ./monitoring/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - benchmark
+    networks:
+      - winutils-net
+
+  # Test runner for continuous testing
+  test:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    environment:
+      - RUST_LOG=debug
+      - CARGO_TERM_COLOR=always
+    working_dir: /workspace
+    command: >
+      sh -c "
+        echo 'Running comprehensive test suite...' &&
+        cargo test --workspace --all-features &&
+        echo 'Running integration tests...' &&
+        cargo test --test '*' &&
+        echo 'Running benchmark tests...' &&
+        cd benchmarks && cargo test &&
+        echo 'All tests completed!'
+      "
+    networks:
+      - winutils-net
+
+  # Security scanner
+  security:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+    working_dir: /workspace
+    command: >
+      sh -c "
+        echo 'Running security audit...' &&
+        cargo audit &&
+        echo 'Checking dependencies...' &&
+        cargo deny check &&
+        echo 'Security scan completed!'
+      "
+    networks:
+      - winutils-net
+
+  # Documentation generator
+  docs:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/workspace
+      - ./docs-output:/workspace/target/doc
+      - cargo-cache:/usr/local/cargo/registry
+    working_dir: /workspace
+    command: >
+      sh -c "
+        echo 'Generating documentation...' &&
+        cargo doc --no-deps --all-features --workspace &&
+        echo 'Documentation generated in ./docs-output/'
+      "
+    networks:
+      - winutils-net
+
+volumes:
+  cargo-cache:
+    driver: local
+  target-cache:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  winutils-net:
+    driver: bridge
+
+# Override configurations for different environments
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up

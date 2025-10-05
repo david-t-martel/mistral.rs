@@ -1,0 +1,160 @@
+# Code Coverage Configuration for Makefile
+# Included by main Makefile for coverage targets
+
+# Coverage tools
+TARPAULIN := cargo tarpaulin
+COVERAGE_DIR := coverage
+COVERAGE_THRESHOLD := 80
+
+.PHONY: coverage coverage-html coverage-xml coverage-lcov coverage-report coverage-clean
+
+# ============================================================================
+# Coverage Targets
+# ============================================================================
+
+# Generate all coverage formats
+coverage: coverage-clean coverage-html coverage-xml
+	@echo "$(BOLD)$(CYAN)Code Coverage Complete$(RESET)"
+	@echo "$(YELLOW)View report: $(COVERAGE_DIR)/index.html$(RESET)"
+
+# Generate HTML coverage report
+coverage-html:
+	@echo "$(BOLD)$(CYAN)Generating HTML Coverage Report$(RESET)"
+	@test -d $(COVERAGE_DIR) || mkdir -p $(COVERAGE_DIR)
+	@$(TARPAULIN) --workspace \
+		--target $(TARGET) \
+		--timeout 600 \
+		--out Html \
+		--output-dir $(COVERAGE_DIR) \
+		--exclude-files "target/*" "*/tests/*" "*/benches/*" \
+		-- --test-threads 1
+	@echo "$(GREEN)✓ HTML report: $(COVERAGE_DIR)/index.html$(RESET)"
+
+# Generate XML coverage report (for CI)
+coverage-xml:
+	@echo "$(BOLD)$(CYAN)Generating XML Coverage Report$(RESET)"
+	@test -d $(COVERAGE_DIR) || mkdir -p $(COVERAGE_DIR)
+	@$(TARPAULIN) --workspace \
+		--target $(TARGET) \
+		--timeout 600 \
+		--out Xml \
+		--output-dir $(COVERAGE_DIR) \
+		--exclude-files "target/*" "*/tests/*" "*/benches/*" \
+		-- --test-threads 1
+	@echo "$(GREEN)✓ XML report: $(COVERAGE_DIR)/cobertura.xml$(RESET)"
+
+# Generate LCOV coverage report
+coverage-lcov:
+	@echo "$(BOLD)$(CYAN)Generating LCOV Coverage Report$(RESET)"
+	@test -d $(COVERAGE_DIR) || mkdir -p $(COVERAGE_DIR)
+	@$(TARPAULIN) --workspace \
+		--target $(TARGET) \
+		--timeout 600 \
+		--out Lcov \
+		--output-dir $(COVERAGE_DIR) \
+		--exclude-files "target/*" "*/tests/*" "*/benches/*" \
+		-- --test-threads 1
+	@echo "$(GREEN)✓ LCOV report: $(COVERAGE_DIR)/lcov.info$(RESET)"
+
+# Generate coverage report with threshold check
+coverage-report: coverage-xml
+	@echo "$(BOLD)$(CYAN)Coverage Threshold Check$(RESET)"
+	@if [ -f "$(COVERAGE_DIR)/cobertura.xml" ]; then \
+		coverage=$$(grep -oP 'line-rate="\K[0-9.]+' $(COVERAGE_DIR)/cobertura.xml | head -1); \
+		coverage_pct=$$(echo "$$coverage * 100" | bc); \
+		echo "Coverage: $${coverage_pct}%"; \
+		echo "Threshold: $(COVERAGE_THRESHOLD)%"; \
+		if (( $$(echo "$$coverage < 0.$(COVERAGE_THRESHOLD)" | bc -l) )); then \
+			echo "$(RED)✗ Coverage $${coverage_pct}% is below $(COVERAGE_THRESHOLD)% threshold$(RESET)"; \
+			exit 1; \
+		else \
+			echo "$(GREEN)✓ Coverage threshold met$(RESET)"; \
+		fi; \
+	else \
+		echo "$(RED)Error: Coverage report not found$(RESET)"; \
+		exit 1; \
+	fi
+
+# Clean coverage artifacts
+coverage-clean:
+	@echo "$(BOLD)$(CYAN)Cleaning Coverage Artifacts$(RESET)"
+	@rm -rf $(COVERAGE_DIR)
+	@echo "$(GREEN)✓ Coverage artifacts cleaned$(RESET)"
+
+# Install coverage tools
+coverage-install:
+	@echo "$(BOLD)$(CYAN)Installing Coverage Tools$(RESET)"
+	@cargo install cargo-tarpaulin --locked || echo "$(YELLOW)cargo-tarpaulin already installed$(RESET)"
+	@echo "$(GREEN)✓ Coverage tools ready$(RESET)"
+
+# ============================================================================
+# Per-Package Coverage
+# ============================================================================
+
+# Coverage for winpath only
+coverage-winpath:
+	@echo "$(BOLD)$(CYAN)Coverage: winpath$(RESET)"
+	@$(TARPAULIN) --package winpath \
+		--target $(TARGET) \
+		--out Html \
+		--output-dir $(COVERAGE_DIR)/winpath
+
+# Coverage for derive utilities
+coverage-derive:
+	@echo "$(BOLD)$(CYAN)Coverage: derive utilities$(RESET)"
+	@$(TARPAULIN) \
+		--package uu_where \
+		--package winutils-which \
+		--package uu_tree \
+		--target $(TARGET) \
+		--out Html \
+		--output-dir $(COVERAGE_DIR)/derive
+
+# Coverage for core utilities
+coverage-core:
+	@echo "$(BOLD)$(CYAN)Coverage: core utilities$(RESET)"
+	@cd coreutils && $(TARPAULIN) --workspace \
+		--target $(TARGET) \
+		--out Html \
+		--output-dir ../$(COVERAGE_DIR)/core
+
+# ============================================================================
+# Coverage Reports
+# ============================================================================
+
+# Show coverage summary
+coverage-summary:
+	@echo "$(BOLD)$(CYAN)Coverage Summary$(RESET)"
+	@if [ -f "$(COVERAGE_DIR)/cobertura.xml" ]; then \
+		echo "Overall Coverage:"; \
+		grep -oP 'line-rate="\K[0-9.]+' $(COVERAGE_DIR)/cobertura.xml | head -1 | \
+			awk '{printf "  Lines: %.2f%%\n", $$1 * 100}'; \
+		echo ""; \
+		echo "Per-Package Coverage:"; \
+		grep '<package' $(COVERAGE_DIR)/cobertura.xml | \
+			grep -oP 'name="[^"]+" line-rate="[0-9.]+"' | \
+			sed 's/name="//; s/" line-rate="/ /; s/"//; s/^/  /' | \
+			awk '{printf "%-30s %.2f%%\n", $$1, $$2 * 100}' | \
+			sort -k2 -n -r; \
+	else \
+		echo "$(RED)No coverage data available$(RESET)"; \
+		echo "$(YELLOW)Run: make coverage$(RESET)"; \
+	fi
+
+# Open coverage report in browser
+coverage-view:
+	@if [ -f "$(COVERAGE_DIR)/index.html" ]; then \
+		echo "$(BLUE)Opening coverage report...$(RESET)"; \
+		if command -v wslview &> /dev/null; then \
+			wslview $(COVERAGE_DIR)/index.html; \
+		elif command -v start &> /dev/null; then \
+			start $(COVERAGE_DIR)/index.html; \
+		elif command -v xdg-open &> /dev/null; then \
+			xdg-open $(COVERAGE_DIR)/index.html; \
+		else \
+			echo "$(YELLOW)Open manually: $(COVERAGE_DIR)/index.html$(RESET)"; \
+		fi; \
+	else \
+		echo "$(RED)Coverage report not found$(RESET)"; \
+		echo "$(YELLOW)Run: make coverage-html$(RESET)"; \
+	fi

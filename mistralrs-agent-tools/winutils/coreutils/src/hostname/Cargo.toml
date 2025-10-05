@@ -1,0 +1,22 @@
+[package]
+name = "hostname"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Display or set hostname - Windows optimized"
+
+[[bin]]
+name = "hostname"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+windows.workspace = true
+chrono.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_hostname = { path = "../../../../src/uu/hostname" }

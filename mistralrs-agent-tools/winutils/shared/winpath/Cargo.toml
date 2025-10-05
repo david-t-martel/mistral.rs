@@ -1,0 +1,53 @@
+[package]
+name = "winpath"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Comprehensive Windows path normalization library supporting DOS, WSL, Cygwin, UNC, and mixed formats"
+license = "MIT"
+repository = "https://github.com/uutils/coreutils"
+keywords = ["windows", "path", "normalization", "filesystem", "cross-platform"]
+categories = ["filesystem", "os::windows-apis"]
+
+# Note: This package is part of the winutils workspace
+
+[features]
+default = ["std", "cache"]
+std = []
+cache = ["std", "once_cell", "dashmap"]
+unicode = ["unicode-normalization"]
+serde = ["dep:serde"]
+
+[dependencies]
+# Core dependencies
+memchr = "2.7"
+once_cell = { version = "1.19", optional = true }
+dashmap = { version = "6.0", optional = true }
+
+# Unicode support
+unicode-normalization = { version = "0.1", optional = true }
+
+# Serialization support
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+# Windows-specific dependencies
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_SystemServices",
+    "Win32_System_Registry",
+]}
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+tempfile = "3.15"
+
+[[bench]]
+name = "path_normalization"
+harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]

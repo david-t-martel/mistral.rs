@@ -1,0 +1,87 @@
+[package]
+name = "grep-wrapper"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Windows-optimized grep replacement with ripgrep performance and winpath integration"
+
+[[bin]]
+name = "grep"
+path = "src/main.rs"
+
+[dependencies]
+# CRITICAL: winpath must be first for path normalization
+winpath = { workspace = true }
+winutils-core = { workspace = true }
+
+# Core dependencies
+anyhow.workspace = true
+clap = { workspace = true }
+thiserror.workspace = true
+serde = { workspace = true }
+serde_json.workspace = true
+
+# Windows-specific
+windows-sys = { workspace = true, optional = true }
+windows = { workspace = true, optional = true }
+
+# Path handling
+dunce.workspace = true
+path-slash.workspace = true
+
+# Performance optimizations (ripgrep-like)
+rayon = { workspace = true, optional = true }
+crossbeam-channel.workspace = true
+memchr = { workspace = true, optional = true }
+ahash.workspace = true
+parking_lot = { workspace = true, optional = true }
+
+# File handling and I/O
+memmap2.workspace = true
+walkdir.workspace = true
+ignore.workspace = true
+same-file.workspace = true
+encoding_rs = { workspace = true, optional = true }
+bstr = { workspace = true, optional = true }
+
+# Pattern matching and regex
+regex.workspace = true
+aho-corasick.workspace = true
+grep-searcher.workspace = true
+grep-matcher.workspace = true
+grep-regex.workspace = true
+grep-printer.workspace = true
+
+# Output and formatting
+termcolor = { workspace = true, optional = true }
+unicode-width = { workspace = true, optional = true }
+atty.workspace = true
+bytecount.workspace = true
+
+# Utilities
+chrono = { workspace = true }
+humansize.workspace = true
+dirs.workspace = true
+shell-words.workspace = true
+glob.workspace = true
+once_cell.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+criterion.workspace = true
+proptest.workspace = true
+
+[features]
+default = ["simd", "color", "unicode", "performance", "binary-detection"]
+simd = []
+color = ["termcolor"]
+unicode = ["unicode-width"]
+performance = ["rayon", "memchr", "parking_lot"]
+binary-detection = ["encoding_rs", "bstr"]
+pcre2 = []  # Optional PCRE2 support
+hypergrep = []  # Ultra-fast mode with memory trade-offs
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-pc-windows-msvc"]

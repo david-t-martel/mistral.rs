@@ -1,0 +1,16 @@
+apiVersion: v2
+name: winutils
+description: A Helm chart for winutils deployment
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/david-t-martel/uutils-windows
+sources:
+  - https://github.com/david-t-martel/uutils-windows
+maintainers:
+  - name: winutils
+    email: contact@example.com
+keywords:
+  - coreutils
+  - utilities
+  - rust

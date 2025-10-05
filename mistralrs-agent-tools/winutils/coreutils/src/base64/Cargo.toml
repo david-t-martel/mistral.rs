@@ -1,0 +1,20 @@
+[package]
+name = "base64"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Base64 encode/decode - Windows optimized"
+
+[[bin]]
+name = "base64"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_base64 = { path = "../../../../src/uu/base64" }

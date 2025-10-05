@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="winutils"
+           Language="1033"
+           Version="1.0.0"
+           Manufacturer="winutils"
+           UpgradeCode="12345678-1234-1234-1234-123456789012">
+
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Comments="Windows GNU coreutils implementation"
+             Description="Fast, safe Rust implementation of GNU coreutils for Windows" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="winutils" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="winutils" />
+      </Directory>
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <!-- Core utilities -->
+      <Component Id="CoreUtils" Guid="*">
+        <File Id="ls.exe" Source="target\release\wu-ls.exe" KeyPath="yes" />
+        <File Id="cat.exe" Source="target\release\wu-cat.exe" />
+        <File Id="echo.exe" Source="target\release\wu-echo.exe" />
+        <File Id="wc.exe" Source="target\release\wu-wc.exe" />
+        <File Id="sort.exe" Source="target\release\wu-sort.exe" />
+        <!-- Add more utilities as needed -->
+      </Component>
+
+      <!-- Critical winpath utility -->
+      <Component Id="WinPath" Guid="*">
+        <File Id="winpath.exe" Source="target\release\winpath.exe" KeyPath="yes" />
+      </Component>
+
+      <!-- Environment PATH update -->
+      <Component Id="PathComponent" Guid="*">
+        <Environment Id="PATH"
+                     Name="PATH"
+                     Value="[INSTALLFOLDER]"
+                     Permanent="no"
+                     Part="last"
+                     Action="set"
+                     System="yes" />
+        <CreateFolder />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

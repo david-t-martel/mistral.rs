@@ -1,0 +1,21 @@
+[package]
+name = "expr"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Evaluate expressions - Windows optimized"
+
+[[bin]]
+name = "expr"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+uucore.workspace = true
+winpath.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+
+# Link to original uutils implementation for fallback
+uu_expr = { path = "../../../../src/uu/expr" }

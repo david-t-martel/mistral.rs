@@ -1,0 +1,13 @@
+[package]
+name = "winutils-generator"
+version = "0.1.0"
+authors = ["David Martel <david.martel@auricleinc.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Generator for Windows-optimized coreutils"
+
+[workspace]
+# Empty workspace to make this package standalone
+
+[dependencies]
+# No external dependencies needed for basic generator

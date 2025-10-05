@@ -1,0 +1,88 @@
+# cargo-nextest configuration for winutils project
+# High-performance test runner with parallel execution
+
+[profile.default]
+# Number of retries for flaky tests
+retries = 2
+
+# Test execution configuration
+test-threads = "num-cpus"  # Use all available CPU cores
+slow-timeout = { period = "30s", terminate-after = 3 }
+leak-timeout = "5s"
+
+# Output configuration
+status-level = "pass"
+final-status-level = "flaky"
+failure-output = "immediate-final"
+success-output = "never"
+
+[profile.default.junit]
+path = "target/nextest/junit.xml"
+report-name = "winutils-nextest-report"
+store-success-output = false
+store-failure-output = true
+
+[profile.ci]
+# CI-specific configuration for GitHub Actions
+retries = { backoff = "exponential", count = 3, delay = "1s", jitter = true, max-delay = "10s" }
+slow-timeout = { period = "90s", terminate-after = 5 }
+
+status-level = "all"
+final-status-level = "slow"
+failure-output = "immediate"
+success-output = "final"
+
+# Archive all test results in CI
+archive.include = ["junit.xml", "**/*.log"]
+
+[profile.fast]
+# Fast profile for pre-commit hooks
+retries = 0
+test-threads = 4
+slow-timeout = { period = "10s", terminate-after = 1 }
+
+status-level = "fail"
+final-status-level = "fail"
+
+[profile.coverage]
+# Configuration for code coverage runs
+retries = 0
+test-threads = 1  # Single-threaded for accurate coverage
+slow-timeout = { period = "120s" }
+
+[script.test-winpath]
+# Custom test script for winpath validation
+command = "cargo test --package winpath"
+slow-timeout = "15s"
+
+[script.test-derive-utils]
+# Test derive utilities with path handling
+command = "cargo test --package uu_where --package winutils-which --package uu_tree"
+slow-timeout = "20s"
+
+[script.test-coreutils]
+# Test core utilities workspace
+command = "cd coreutils && cargo test --workspace"
+slow-timeout = "60s"
+
+# Test filtering
+[[profile.default.overrides]]
+filter = 'test(/^integration/) | test(/git_bash/)'
+retries = 3  # Integration tests may be flaky
+
+[[profile.default.overrides]]
+filter = 'test(/benchmark/)'
+test-threads = 1  # Run benchmarks single-threaded
+
+[[profile.default.overrides]]
+filter = 'package(winpath)'
+retries = 0  # Critical path should not be flaky
+slow-timeout = { period = "5s" }
+
+# Platform-specific overrides
+[target.'cfg(windows)']
+retries = { backoff = "fixed", count = 2, delay = "500ms" }
+
+# Ignored tests (if any)
+[profile.default.ignored]
+# Example: ignore = ["expensive_test", "manual_only"]

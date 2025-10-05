@@ -1,0 +1,43 @@
+[package]
+name = "winpath"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Windows path normalization library for cross-platform compatibility"
+keywords = ["windows", "path", "normalization", "wsl", "git-bash"]
+categories = ["filesystem", "os::windows-apis", "command-line-utilities"]
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
+path-clean.workspace = true
+regex = "1.10"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+widestring.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true
+tempfile = "3.8"
+
+[[bin]]
+name = "winpath"
+path = "src/main.rs"
+
+[lib]
+name = "winpath"
+path = "src/lib.rs"
