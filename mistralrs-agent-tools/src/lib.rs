@@ -466,11 +466,46 @@ impl FsResult {
 }
 
 /// Legacy AgentTools (deprecated, use AgentToolkit instead)
+///
+/// # Deprecation Notice
+///
+/// This type is deprecated and will be removed in a future version.
+/// Use `AgentToolkit` instead, which provides:
+/// - 90+ Unix-like utilities (vs. 7 in AgentTools)
+/// - Type-safe API with rich types
+/// - Better sandbox enforcement
+/// - Path normalization for Windows/WSL/Cygwin/Git Bash
+/// - Integration with mistralrs-core tool callbacks
+///
+/// # Migration Guide
+///
+/// Old code:
+/// ```no_run
+/// use mistralrs_agent_tools::AgentTools;
+/// let tools = AgentTools::with_defaults();
+/// let result = tools.read("file.txt");
+/// ```
+///
+/// New code:
+/// ```no_run
+/// use mistralrs_agent_tools::{AgentToolkit, CatOptions};
+/// use std::path::Path;
+/// let toolkit = AgentToolkit::with_defaults();
+/// let content = toolkit.cat(&[Path::new("file.txt")], &CatOptions::default()).unwrap();
+/// ```
+#[deprecated(
+    since = "0.2.0",
+    note = "Use AgentToolkit instead. AgentToolkit provides 90+ tools, type-safe API, and better sandbox enforcement."
+)]
 pub struct AgentTools {
     config: LegacySandboxConfig,
 }
 
 impl AgentTools {
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit::new() instead"
+    )]
     pub fn new(config: LegacySandboxConfig) -> Self {
         info!(
             "Initializing agent filesystem tools with sandbox root: {}",
@@ -479,10 +514,18 @@ impl AgentTools {
         Self { config }
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit::with_defaults() instead"
+    )]
     pub fn with_defaults() -> Self {
         Self::new(LegacySandboxConfig::default())
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit::config() instead"
+    )]
     pub fn config(&self) -> &LegacySandboxConfig {
         &self.config
     }
@@ -531,6 +574,10 @@ impl AgentTools {
             .any(|ro| path.components().any(|comp| comp.as_str() == ro.as_str()))
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit::cat() instead"
+    )]
     pub fn read(&self, path: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
         info!("Reading file: {}", validated_path);
@@ -548,6 +595,10 @@ impl AgentTools {
         ))
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for file writing operations"
+    )]
     pub fn write(
         &self,
         path: &str,
@@ -584,6 +635,10 @@ impl AgentTools {
         ))
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for file operations"
+    )]
     pub fn append(&self, path: &str, content: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
 
@@ -608,6 +663,10 @@ impl AgentTools {
         ))
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for file operations"
+    )]
     pub fn delete(&self, path: &str) -> Result<FsResult, FsError> {
         let validated_path = self.validate_path(path)?;
 
@@ -620,11 +679,19 @@ impl AgentTools {
         Ok(FsResult::success(validated_path.as_str(), "Deleted"))
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for path checks"
+    )]
     pub fn exists(&self, path: &str) -> Result<bool, FsError> {
         let validated_path = self.validate_path(path)?;
         Ok(validated_path.exists())
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for file search operations"
+    )]
     pub fn find(&self, pattern: &str, max_depth: Option<usize>) -> Result<Vec<String>, FsError> {
         info!("Finding files with pattern: {}", pattern);
 
@@ -651,6 +718,10 @@ impl AgentTools {
         Ok(results)
     }
 
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use AgentToolkit methods for directory traversal"
+    )]
     pub fn tree(
         &self,
         root: Option<String>,

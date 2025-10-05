@@ -20,6 +20,7 @@ mod interactive_mode;
 use interactive_mode::interactive_mode;
 mod agent_mode;
 use agent_mode::agent_mode;
+mod tool_registry;
 mod mcp_server;
 
 #[derive(Parser)]
