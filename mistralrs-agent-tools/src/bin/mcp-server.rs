@@ -16,10 +16,10 @@ use std::sync::Arc;
 fn main() -> Result<()> {
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
-    
+
     let mut tool_prefix: Option<String> = None;
     let mut root_dir: Option<PathBuf> = None;
-    
+
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -52,24 +52,24 @@ fn main() -> Result<()> {
             }
         }
     }
-    
+
     // Create sandbox configuration
     let config = match root_dir {
         Some(root) => SandboxConfig::new(root),
         None => SandboxConfig::default(),
     };
-    
+
     // Create toolkit
     let toolkit = Arc::new(AgentToolkit::new(config));
-    
+
     // Create and run MCP server
     let server = McpServer::new(toolkit, tool_prefix);
-    
+
     eprintln!("Starting MCP server for agent-tools...");
     eprintln!("Listening on stdin/stdout for JSON-RPC messages");
-    
+
     server.run_stdio()?;
-    
+
     Ok(())
 }
 
@@ -102,7 +102,7 @@ EXAMPLES:
 
 PROTOCOL:
     The server communicates via stdin/stdout using JSON-RPC 2.0.
-    
+
     Supported methods:
     - initialize: Handshake and capability negotiation
     - tools/list: List all available tools with schemas

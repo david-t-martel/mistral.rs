@@ -5,7 +5,7 @@
 //
 // The server supports:
 // - Tool discovery via tools/list endpoint
-// - Tool execution via tools/call endpoint  
+// - Tool execution via tools/call endpoint
 // - JSON-RPC 2.0 protocol
 // - Stdio transport for local communication
 // - HTTP/WebSocket transports (optional)
@@ -289,8 +289,8 @@ impl McpServer {
         };
 
         // Convert arguments to HashMap for tool execution
-        let args: HashMap<String, Value> = serde_json::from_value(arguments)
-            .context("Failed to parse tool arguments")?;
+        let args: HashMap<String, Value> =
+            serde_json::from_value(arguments).context("Failed to parse tool arguments")?;
 
         // Execute the tool
         let result = match base_name {
@@ -314,7 +314,8 @@ impl McpServer {
                     ..Default::default()
                 };
 
-                self.toolkit.cat(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                self.toolkit.cat(&[&path_obj], &opts)?
             }
             "ls" => {
                 let path = args
@@ -335,7 +336,22 @@ impl McpServer {
                     ..Default::default()
                 };
 
-                self.toolkit.ls(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                let result = self.toolkit.ls(path_obj, &opts)?;
+
+                // Format LsResult as a string
+                result
+                    .entries
+                    .iter()
+                    .map(|e| {
+                        if long {
+                            format!("{} {} {}", if e.is_dir { "d" } else { "-" }, e.size, e.name)
+                        } else {
+                            e.name.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
             "grep" => {
                 let pattern = args
@@ -366,38 +382,51 @@ impl McpServer {
                     ..Default::default()
                 };
 
-                self.toolkit.grep(pattern, path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                let matches = self.toolkit.grep(pattern, &[&path_obj], &opts)?;
+
+                // Format grep matches as text
+                matches
+                    .iter()
+                    .map(|m| {
+                        if m.line_number > 0 {
+                            format!("{}:{}: {}", m.path, m.line_number, m.line)
+                        } else {
+                            format!("{}: {}", m.path, m.line)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
             "head" => {
                 let path = args
                     .get("path")
                     .and_then(|v| v.as_str())
                     .context("Missing 'path' argument")?;
-                let lines = args
-                    .get("lines")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(10) as usize;
+                let lines = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
-                let opts = crate::HeadOptions { lines };
+                let opts = crate::HeadOptions {
+                    lines,
+                    ..Default::default()
+                };
 
-                self.toolkit.head(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                self.toolkit.head(&[&path_obj], &opts)?
             }
             "tail" => {
                 let path = args
                     .get("path")
                     .and_then(|v| v.as_str())
                     .context("Missing 'path' argument")?;
-                let lines = args
-                    .get("lines")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(10) as usize;
+                let lines = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
                 let opts = crate::TailOptions {
                     lines,
                     ..Default::default()
                 };
 
-                self.toolkit.tail(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                self.toolkit.tail(&[&path_obj], &opts)?
             }
             "wc" => {
                 let paths: Vec<String> = args
@@ -420,11 +449,27 @@ impl McpServer {
                     lines,
                     words,
                     chars,
+                    ..Default::default()
                 };
 
-                // wc returns Vec<String> - format as single string
-                let results = self.toolkit.wc(&paths, &opts)?;
-                results.join("\n")
+                // Convert String paths to Path references
+                let path_objs: Vec<std::path::PathBuf> =
+                    paths.iter().map(std::path::PathBuf::from).collect();
+                let path_refs: Vec<&std::path::Path> =
+                    path_objs.iter().map(|p| p.as_path()).collect();
+
+                // wc returns Vec<(String, WcResult)> - format as single string
+                let results = self.toolkit.wc(&path_refs, &opts)?;
+                results
+                    .iter()
+                    .map(|(path, res)| {
+                        format!(
+                            "{}: {} lines, {} words, {} bytes, {} chars",
+                            path, res.lines, res.words, res.bytes, res.chars
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
             "sort" => {
                 let path = args
@@ -448,27 +493,31 @@ impl McpServer {
                     reverse,
                     numeric,
                     unique,
+                    ..Default::default()
                 };
 
-                self.toolkit.sort(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                self.toolkit.sort(&[&path_obj], &opts)?
             }
             "uniq" => {
                 let path = args
                     .get("path")
                     .and_then(|v| v.as_str())
                     .context("Missing 'path' argument")?;
-                let count = args
-                    .get("count")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
+                let count = args.get("count").and_then(|v| v.as_bool()).unwrap_or(false);
                 let repeated = args
                     .get("repeated")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
 
-                let opts = crate::UniqOptions { count, repeated };
+                let opts = crate::UniqOptions {
+                    count,
+                    repeated,
+                    ..Default::default()
+                };
 
-                self.toolkit.uniq(path, &opts)?
+                let path_obj = std::path::Path::new(path);
+                self.toolkit.uniq(&[&path_obj], &opts)?
             }
             _ => anyhow::bail!("Unknown tool: {}", base_name),
         };
@@ -483,7 +532,7 @@ impl McpServer {
 
     /// Handle an MCP request
     fn handle_request(&self, request: JsonRpcRequest) -> JsonRpcResponse {
-        let result = match request.method.as_str() {
+        let result: Result<serde_json::Value> = match request.method.as_str() {
             "initialize" => {
                 // MCP initialization handshake
                 Ok(json!({
@@ -503,13 +552,15 @@ impl McpServer {
             }
             "tools/call" => {
                 // Execute a tool
-                let params = request.params.unwrap_or(json!({}));
-                let tool_name = params["name"]
-                    .as_str()
-                    .ok_or_else(|| anyhow::anyhow!("Missing tool name"))?;
-                let arguments = params["arguments"].clone();
-
-                self.call_tool(tool_name, arguments)
+                let empty_params = json!({});
+                let params = request.params.as_ref().unwrap_or(&empty_params);
+                match params["name"].as_str() {
+                    Some(tool_name) => {
+                        let arguments = params["arguments"].clone();
+                        self.call_tool(tool_name, arguments)
+                    }
+                    None => Err(anyhow::anyhow!("Missing tool name")),
+                }
             }
             _ => Err(anyhow::anyhow!("Unknown method: {}", request.method)),
         };
