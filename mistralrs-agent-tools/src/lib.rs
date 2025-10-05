@@ -35,8 +35,8 @@ pub use tools::shell::execute;
 pub use tools::text::{grep, head, sort, tail, uniq, wc};
 pub use types::{
     AgentError, AgentResult, Bom, CatOptions, CommandOptions, CommandResult, FileEntry, GrepMatch,
-    GrepOptions, HeadOptions, LineEnding, LsOptions, LsResult, SandboxConfig, ShellType,
-    SortOptions, TailOptions, UniqOptions, WcOptions, WcResult,
+    GrepOptions, HeadOptions, LineEnding, LsOptions, LsResult, SandboxConfig, SecurityLevel,
+    SecurityPolicy, ShellType, SortOptions, TailOptions, UniqOptions, WcOptions, WcResult,
 };
 
 // Core integration exports
