@@ -20,7 +20,13 @@ pub mod execution;
 pub mod events;
 
 #[cfg(feature = "tui-agent")]
+pub mod discovery;
+
+#[cfg(feature = "tui-agent")]
 pub use toolkit::AgentToolkit;
 
 #[cfg(feature = "tui-agent")]
 pub use events::{EventBus, ExecutionEvent};
+
+#[cfg(feature = "tui-agent")]
+pub use discovery::{ToolCatalog, ToolDefinition};

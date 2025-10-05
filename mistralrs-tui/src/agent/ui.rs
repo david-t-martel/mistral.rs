@@ -289,7 +289,7 @@ pub fn render_call_history(
 
             let status_text = if let Some(result) = &call.result {
                 if result.success {
-                    format!("✓ {}ms", result.duration_ms)
+                    format!("✓ {}ms", result.duration.as_millis())
                 } else {
                     format!("✗ {}", result.error.as_deref().unwrap_or("failed"))
                 }

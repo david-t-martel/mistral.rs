@@ -285,6 +285,7 @@ impl SessionStore {
                 arguments,
                 result,
                 timestamp,
+                session_id: Some(session_id),
             });
         }
 

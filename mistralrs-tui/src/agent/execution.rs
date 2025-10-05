@@ -17,6 +17,7 @@ use std::time::{Duration, Instant};
 use tokio::time::timeout;
 use uuid::Uuid;
 
+use super::events::{EventBus, ExecutionEvent};
 use super::toolkit::{ToolCall, ToolCallResult};
 
 /// Tool execution engine
@@ -32,6 +33,8 @@ pub struct ToolExecutor {
     toolkit: AgentToolkit,
     /// Default timeout for tool execution (in seconds)
     default_timeout: u64,
+    /// Event bus for broadcasting execution events
+    event_bus: Option<EventBus>,
 }
 
 impl ToolExecutor {
