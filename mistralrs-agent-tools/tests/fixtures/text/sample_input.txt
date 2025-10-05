@@ -1,0 +1,9 @@
+This is a sample text file for testing.
+It contains multiple lines.
+Each line has different content.
+Some lines are longer than others, providing variety for testing.
+Short line.
+Another line with punctuation: hello, world!
+Line with numbers: 12345 and 67890.
+Line with special characters: !@#$%^&*().
+Final line of the sample file.
