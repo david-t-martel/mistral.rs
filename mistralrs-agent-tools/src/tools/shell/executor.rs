@@ -194,12 +194,13 @@ mod tests {
         let sandbox = Sandbox::new(config);
 
         #[cfg(windows)]
-        let command = "echo %TEST_VAR%";
+        let command = "powershell -Command \"Write-Host $env:TEST_VAR\"";
         #[cfg(not(windows))]
         let command = "echo $TEST_VAR";
 
         let options = CommandOptions {
             env: vec![("TEST_VAR".to_string(), "test_value".to_string())],
+            shell: ShellType::PowerShell,
             ..Default::default()
         };
 

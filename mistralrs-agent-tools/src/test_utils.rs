@@ -99,7 +99,7 @@ pub fn create_temp_file_structure(files: &[(&str, &str)]) -> TempDir {
 /// Panics if the values are not within epsilon of each other.
 pub fn assert_approx_eq(a: f64, b: f64, epsilon: f64) {
     assert!(
-        (a - b).abs() < epsilon,
+        (a - b).abs() <= epsilon,
         "Values not approximately equal: {} vs {} (epsilon: {})",
         a,
         b,

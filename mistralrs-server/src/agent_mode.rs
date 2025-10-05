@@ -1,6 +1,6 @@
 use either::Either;
 use indexmap::IndexMap;
-use mistralrs_agent_tools::{AgentTools, SandboxConfig};
+use mistralrs_agent_tools::AgentTools;
 use mistralrs_core::{
     ChunkChoice, Constraint, Delta, MessageContent, MistralRs, NormalRequest, Request,
     RequestMessage, Response, SamplingParams, WebSearchOptions, TERMINATE_ALL_NEXT_STEP,
@@ -153,7 +153,7 @@ fn handle_sampling_command(prompt: &str, sampling_params: &mut SamplingParams) -
 /// Execute tool calls using the agent tools
 fn execute_tool_calls(
     agent_tools: &AgentTools,
-    tool_calls: &[mistralrs_core::tools::ToolCallResponse],
+    tool_calls: &[mistralrs_core::ToolCallResponse],
 ) -> Vec<String> {
     let mut results = Vec::new();
 
