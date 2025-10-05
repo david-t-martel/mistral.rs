@@ -4,7 +4,9 @@ pub mod security;
 
 use std::path::PathBuf;
 
-pub use security::{SecurityPolicy, SecurityLevel, ResourceLimits, SandboxPolicy, CommandPolicy, NetworkPolicy};
+pub use security::{
+    CommandPolicy, NetworkPolicy, ResourceLimits, SandboxPolicy, SecurityLevel, SecurityPolicy,
+};
 
 /// Result type for agent operations
 pub type AgentResult<T> = Result<T, AgentError>;

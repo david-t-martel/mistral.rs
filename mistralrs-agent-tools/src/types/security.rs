@@ -52,28 +52,28 @@ impl SecurityLevel {
     pub fn default_resource_limits(&self) -> ResourceLimits {
         match self {
             Self::Strict => ResourceLimits {
-                max_file_size: 10 * 1024 * 1024,      // 10MB
+                max_file_size: 10 * 1024 * 1024, // 10MB
                 max_batch_size: 100,
                 max_memory_mb: 256,
                 max_execution_time: Duration::from_secs(10),
                 max_concurrent_operations: 5,
-                max_output_size: 1 * 1024 * 1024,     // 1MB
+                max_output_size: 1 * 1024 * 1024, // 1MB
             },
             Self::Moderate => ResourceLimits {
-                max_file_size: 100 * 1024 * 1024,     // 100MB
+                max_file_size: 100 * 1024 * 1024, // 100MB
                 max_batch_size: 1000,
                 max_memory_mb: 1024,
                 max_execution_time: Duration::from_secs(60),
                 max_concurrent_operations: 20,
-                max_output_size: 10 * 1024 * 1024,    // 10MB
+                max_output_size: 10 * 1024 * 1024, // 10MB
             },
             Self::Permissive => ResourceLimits {
-                max_file_size: 1024 * 1024 * 1024,    // 1GB
+                max_file_size: 1024 * 1024 * 1024, // 1GB
                 max_batch_size: 10000,
                 max_memory_mb: 4096,
                 max_execution_time: Duration::from_secs(300),
                 max_concurrent_operations: 100,
-                max_output_size: 100 * 1024 * 1024,   // 100MB
+                max_output_size: 100 * 1024 * 1024, // 100MB
             },
             Self::Disabled => ResourceLimits {
                 max_file_size: usize::MAX,
@@ -187,10 +187,7 @@ impl SecurityLevel {
                 enabled: true,
                 allow_arbitrary_commands: true,
                 allowed_commands: HashSet::new(), // Empty means all allowed
-                blocked_commands: HashSet::from([
-                    "format".to_string(),
-                    "dd".to_string(),
-                ]),
+                blocked_commands: HashSet::from(["format".to_string(), "dd".to_string()]),
                 allow_shell_execution: true,
                 max_command_length: 16384,
             },
@@ -221,10 +218,7 @@ impl SecurityLevel {
                 enabled: true,
                 allow_outbound: false,
                 allow_inbound: false,
-                allowed_hosts: HashSet::from([
-                    "localhost".to_string(),
-                    "127.0.0.1".to_string(),
-                ]),
+                allowed_hosts: HashSet::from(["localhost".to_string(), "127.0.0.1".to_string()]),
                 blocked_hosts: HashSet::new(),
                 allowed_ports: HashSet::from([80, 443]),
                 max_connections: 10,
@@ -571,9 +565,7 @@ mod tests {
     fn test_file_size_validation() {
         let policy = SecurityPolicy::strict();
         assert!(policy.validate_file_size(1024).is_ok());
-        assert!(policy
-            .validate_file_size(100 * 1024 * 1024)
-            .is_err());
+        assert!(policy.validate_file_size(100 * 1024 * 1024).is_err());
     }
 
     #[test]
@@ -590,7 +582,7 @@ mod tests {
     fn test_network_access() {
         let strict = SecurityPolicy::strict();
         assert!(!strict.is_host_allowed("example.com"));
-        assert!(!strict.is_host_allowed("localhost"));  // Strict blocks all
+        assert!(!strict.is_host_allowed("localhost")); // Strict blocks all
 
         let moderate = SecurityPolicy::moderate();
         // Moderate has allow_outbound=false, so even localhost is blocked
