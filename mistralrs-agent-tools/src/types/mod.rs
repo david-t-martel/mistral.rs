@@ -1,6 +1,10 @@
 //! Core types and error handling for agent tools.
 
+pub mod security;
+
 use std::path::PathBuf;
+
+pub use security::{SecurityPolicy, SecurityLevel, ResourceLimits, SandboxPolicy, CommandPolicy, NetworkPolicy};
 
 /// Result type for agent operations
 pub type AgentResult<T> = Result<T, AgentError>;
@@ -65,11 +69,16 @@ pub struct SandboxConfig {
     /// Root directory that operations are restricted to
     pub root: PathBuf,
     /// Whether to allow reading outside sandbox (but not writing)
+    /// DEPRECATED: Use security_policy.sandbox_policy.allow_read_outside instead
     pub allow_read_outside: bool,
     /// Maximum file size to read (in bytes)
+    /// DEPRECATED: Use security_policy.resource_limits.max_file_size instead
     pub max_read_size: usize,
     /// Maximum number of files to process in batch operations
+    /// DEPRECATED: Use security_policy.resource_limits.max_batch_size instead
     pub max_batch_size: usize,
+    /// Security policy (optional, for enhanced security controls)
+    pub security_policy: Option<SecurityPolicy>,
 }
 
 impl Default for SandboxConfig {
@@ -79,6 +88,7 @@ impl Default for SandboxConfig {
             allow_read_outside: false,
             max_read_size: 100 * 1024 * 1024, // 100MB
             max_batch_size: 1000,
+            security_policy: None, // Legacy mode by default
         }
     }
 }
@@ -92,22 +102,74 @@ impl SandboxConfig {
         }
     }
 
+    /// Creates a new sandbox config with a security policy
+    pub fn with_security_policy(root: PathBuf, policy: SecurityPolicy) -> Self {
+        Self {
+            root,
+            allow_read_outside: false,
+            max_read_size: 100 * 1024 * 1024,
+            max_batch_size: 1000,
+            security_policy: Some(policy),
+        }
+    }
+
     /// Sets whether reading outside sandbox is allowed
+    /// Note: If security_policy is set, this will be ignored
     pub fn allow_read_outside(mut self, allow: bool) -> Self {
         self.allow_read_outside = allow;
         self
     }
 
     /// Sets maximum read size
+    /// Note: If security_policy is set, this will be ignored
     pub fn max_read_size(mut self, size: usize) -> Self {
         self.max_read_size = size;
         self
     }
 
     /// Sets maximum batch size
+    /// Note: If security_policy is set, this will be ignored
     pub fn max_batch_size(mut self, size: usize) -> Self {
         self.max_batch_size = size;
         self
+    }
+
+    /// Sets the security policy
+    pub fn with_policy(mut self, policy: SecurityPolicy) -> Self {
+        self.security_policy = Some(policy);
+        self
+    }
+
+    /// Gets the effective resource limits (from policy or legacy config)
+    pub fn effective_max_file_size(&self) -> usize {
+        self.security_policy
+            .as_ref()
+            .map(|p| p.resource_limits.max_file_size)
+            .unwrap_or(self.max_read_size)
+    }
+
+    /// Gets the effective max batch size
+    pub fn effective_max_batch_size(&self) -> usize {
+        self.security_policy
+            .as_ref()
+            .map(|p| p.resource_limits.max_batch_size)
+            .unwrap_or(self.max_batch_size)
+    }
+
+    /// Gets the effective allow_read_outside setting
+    pub fn effective_allow_read_outside(&self) -> bool {
+        self.security_policy
+            .as_ref()
+            .map(|p| p.sandbox_policy.allow_read_outside)
+            .unwrap_or(self.allow_read_outside)
+    }
+
+    /// Gets the effective allow_write_outside setting
+    pub fn effective_allow_write_outside(&self) -> bool {
+        self.security_policy
+            .as_ref()
+            .map(|p| p.sandbox_policy.allow_write_outside)
+            .unwrap_or(false) // Legacy mode: never allow write outside
     }
 }
 

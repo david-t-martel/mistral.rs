@@ -11,6 +11,8 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct Sandbox {
     config: SandboxConfig,
+    /// Whether to override all security policies (dangerous)
+    override_enabled: bool,
 }
 
 impl Sandbox {
@@ -20,16 +22,54 @@ impl Sandbox {
         if let Ok(canonical) = config.root.canonicalize() {
             config.root = canonical;
         }
-        Self { config }
+        Self { 
+            config,
+            override_enabled: false,
+        }
+    }
+
+    /// Enables security policy override (dangerous - bypasses all checks)
+    /// This will only work if the security policy allows overrides
+    pub fn with_override(mut self, enabled: bool) -> Self {
+        if let Some(policy) = &self.config.security_policy {
+            if policy.allow_override {
+                self.override_enabled = enabled;
+            }
+        }
+        self
+    }
+
+    /// Checks if override is enabled
+    pub fn is_override_enabled(&self) -> bool {
+        self.override_enabled
     }
 
     /// Validates a path for read operations
     pub fn validate_read(&self, path: &Path) -> AgentResult<PathBuf> {
+        // Override bypasses all checks
+        if self.override_enabled {
+            return Ok(path.to_path_buf());
+        }
+
         let normalized = self.normalize_and_canonicalize(path)?;
+
+        // Validate against security policy if present
+        if let Some(policy) = &self.config.security_policy {
+            policy.validate_path(&normalized)
+                .map_err(|e| AgentError::SandboxViolation(e))?;
+            
+            // Check file extension if policy requires it
+            if let Some(ext) = normalized.extension() {
+                if let Some(ext_str) = ext.to_str() {
+                    policy.validate_file_extension(ext_str)
+                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                }
+            }
+        }
 
         // Check if path is within sandbox
         if !self.is_within_sandbox(&normalized) {
-            if self.config.allow_read_outside {
+            if self.config.effective_allow_read_outside() {
                 // Allowed to read outside, but still validate the path exists
                 if !normalized.exists() {
                     return Err(AgentError::NotFound(format!(
@@ -51,14 +91,35 @@ impl Sandbox {
 
     /// Validates a path for write operations (stricter than read)
     pub fn validate_write(&self, path: &Path) -> AgentResult<PathBuf> {
+        // Override bypasses all checks
+        if self.override_enabled {
+            return Ok(path.to_path_buf());
+        }
+
         let normalized = self.normalize_and_canonicalize(path)?;
 
-        // Write operations MUST be within sandbox
+        // Validate against security policy if present
+        if let Some(policy) = &self.config.security_policy {
+            policy.validate_path(&normalized)
+                .map_err(|e| AgentError::SandboxViolation(e))?;
+            
+            // Check file extension if policy requires it
+            if let Some(ext) = normalized.extension() {
+                if let Some(ext_str) = ext.to_str() {
+                    policy.validate_file_extension(ext_str)
+                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                }
+            }
+        }
+
+        // Write operations MUST be within sandbox unless policy allows
         if !self.is_within_sandbox(&normalized) {
-            return Err(AgentError::SandboxViolation(format!(
-                "Write operation outside sandbox: {}",
-                normalized.display()
-            )));
+            if !self.config.effective_allow_write_outside() {
+                return Err(AgentError::SandboxViolation(format!(
+                    "Write operation outside sandbox: {}",
+                    normalized.display()
+                )));
+            }
         }
 
         Ok(normalized)
@@ -66,12 +127,24 @@ impl Sandbox {
 
     /// Validates multiple paths for read operations
     pub fn validate_reads(&self, paths: &[PathBuf]) -> AgentResult<Vec<PathBuf>> {
-        if paths.len() > self.config.max_batch_size {
+        // Override bypasses all checks
+        if self.override_enabled {
+            return Ok(paths.to_vec());
+        }
+
+        let max_batch = self.config.effective_max_batch_size();
+        if paths.len() > max_batch {
             return Err(AgentError::InvalidInput(format!(
                 "Batch size {} exceeds maximum {}",
                 paths.len(),
-                self.config.max_batch_size
+                max_batch
             )));
+        }
+
+        // Validate batch size against security policy
+        if let Some(policy) = &self.config.security_policy {
+            policy.validate_batch_size(paths.len())
+                .map_err(|e| AgentError::InvalidInput(e))?;
         }
 
         paths.iter().map(|p| self.validate_read(p)).collect()
@@ -79,14 +152,27 @@ impl Sandbox {
 
     /// Validates a file size for read operations
     pub fn validate_file_size(&self, path: &Path) -> AgentResult<u64> {
+        // Override bypasses all checks
+        if self.override_enabled {
+            let metadata = std::fs::metadata(path)?;
+            return Ok(metadata.len());
+        }
+
         let metadata = std::fs::metadata(path)?;
         let size = metadata.len();
 
-        if size > self.config.max_read_size as u64 {
+        let max_size = self.config.effective_max_file_size();
+        if size > max_size as u64 {
             return Err(AgentError::InvalidInput(format!(
                 "File size {} exceeds maximum {}",
-                size, self.config.max_read_size
+                size, max_size
             )));
+        }
+
+        // Validate against security policy
+        if let Some(policy) = &self.config.security_policy {
+            policy.validate_file_size(size)
+                .map_err(|e| AgentError::InvalidInput(e))?;
         }
 
         Ok(size)
@@ -255,6 +341,11 @@ mod tests {
     #[test]
     fn test_relative_path_handling() {
         let sandbox = create_test_sandbox();
+        
+        // Create a subdirectory for the test
+        let subdir = sandbox.root().join("relative");
+        std::fs::create_dir_all(&subdir).unwrap();
+        
         let relative_path = Path::new("relative/file.txt");
 
         // Relative paths should be resolved relative to sandbox root
@@ -264,5 +355,8 @@ mod tests {
         if let Ok(path) = resolved {
             assert!(path.starts_with(sandbox.root()));
         }
+        
+        // Clean up
+        std::fs::remove_dir_all(&subdir).ok();
     }
 }

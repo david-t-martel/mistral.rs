@@ -3961,6 +3961,7 @@ dependencies = [
  "anyhow",
  "camino",
  "ignore",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",
