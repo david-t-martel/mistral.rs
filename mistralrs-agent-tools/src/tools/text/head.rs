@@ -23,7 +23,7 @@ pub fn head(sandbox: &Sandbox, paths: &[&Path], options: &HeadOptions) -> AgentR
         // Add header if needed
         if show_headers {
             if idx > 0 {
-                output.push_str("\n");
+                output.push('\n');
             }
             output.push_str(&format!("==> {} <==\n", path.display()));
         }
@@ -49,16 +49,14 @@ fn read_lines(path: &Path, n: usize) -> AgentResult<String> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
     let mut result = String::new();
-    let mut count = 0;
 
-    for line in reader.lines() {
+    for (count, line) in reader.lines().enumerate() {
         if count >= n {
             break;
         }
         let line = line?;
         result.push_str(&line);
         result.push('\n');
-        count += 1;
     }
 
     Ok(result)

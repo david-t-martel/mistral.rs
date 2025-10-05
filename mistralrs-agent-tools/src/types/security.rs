@@ -57,7 +57,7 @@ impl SecurityLevel {
                 max_memory_mb: 256,
                 max_execution_time: Duration::from_secs(10),
                 max_concurrent_operations: 5,
-                max_output_size: 1 * 1024 * 1024, // 1MB
+                max_output_size: 1024 * 1024, // 1MB
             },
             Self::Moderate => ResourceLimits {
                 max_file_size: 100 * 1024 * 1024, // 100MB
@@ -458,12 +458,11 @@ impl SecurityPolicy {
         }
 
         // If arbitrary commands not allowed, check allowed list
-        if !self.command_policy.allow_arbitrary_commands {
-            if !self.command_policy.allowed_commands.is_empty()
-                && !self.command_policy.allowed_commands.contains(cmd_name)
-            {
-                return Err(format!("Command '{}' is not in allowed list", cmd_name));
-            }
+        if !self.command_policy.allow_arbitrary_commands
+            && !self.command_policy.allowed_commands.is_empty()
+            && !self.command_policy.allowed_commands.contains(cmd_name)
+        {
+            return Err(format!("Command '{}' is not in allowed list", cmd_name));
         }
 
         Ok(())

@@ -278,7 +278,7 @@ pub struct WcResult {
 }
 
 /// Options for grep operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GrepOptions {
     /// Case-insensitive search
     pub ignore_case: bool,
@@ -302,24 +302,6 @@ pub struct GrepOptions {
     pub fixed_strings: bool,
     /// Recursive search in directories
     pub recursive: bool,
-}
-
-impl Default for GrepOptions {
-    fn default() -> Self {
-        Self {
-            ignore_case: false,
-            invert_match: false,
-            line_number: false,
-            count: false,
-            files_with_matches: false,
-            files_without_match: false,
-            before_context: 0,
-            after_context: 0,
-            extended_regexp: false,
-            fixed_strings: false,
-            recursive: false,
-        }
-    }
 }
 
 /// Match information from grep

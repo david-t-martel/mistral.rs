@@ -317,7 +317,7 @@ fn normalize_relative(path: &str) -> Result<String> {
 /// Validates and uppercases drive letter
 fn validate_drive_letter(c: char) -> Result<char> {
     let upper = c.to_ascii_uppercase();
-    if upper.is_ascii_alphabetic() && (b'A'..=b'Z').contains(&(upper as u8)) {
+    if upper.is_ascii_alphabetic() && (upper as u8).is_ascii_uppercase() {
         Ok(upper)
     } else {
         Err(PathError::InvalidDriveLetter(c))

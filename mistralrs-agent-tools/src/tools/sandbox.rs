@@ -57,14 +57,14 @@ impl Sandbox {
         if let Some(policy) = &self.config.security_policy {
             policy
                 .validate_path(&normalized)
-                .map_err(|e| AgentError::SandboxViolation(e))?;
+                .map_err(AgentError::SandboxViolation)?;
 
             // Check file extension if policy requires it
             if let Some(ext) = normalized.extension() {
                 if let Some(ext_str) = ext.to_str() {
                     policy
                         .validate_file_extension(ext_str)
-                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                        .map_err(AgentError::SandboxViolation)?;
                 }
             }
         }
@@ -104,26 +104,24 @@ impl Sandbox {
         if let Some(policy) = &self.config.security_policy {
             policy
                 .validate_path(&normalized)
-                .map_err(|e| AgentError::SandboxViolation(e))?;
+                .map_err(AgentError::SandboxViolation)?;
 
             // Check file extension if policy requires it
             if let Some(ext) = normalized.extension() {
                 if let Some(ext_str) = ext.to_str() {
                     policy
                         .validate_file_extension(ext_str)
-                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                        .map_err(AgentError::SandboxViolation)?;
                 }
             }
         }
 
         // Write operations MUST be within sandbox unless policy allows
-        if !self.is_within_sandbox(&normalized) {
-            if !self.config.effective_allow_write_outside() {
-                return Err(AgentError::SandboxViolation(format!(
-                    "Write operation outside sandbox: {}",
-                    normalized.display()
-                )));
-            }
+        if !self.is_within_sandbox(&normalized) && !self.config.effective_allow_write_outside() {
+            return Err(AgentError::SandboxViolation(format!(
+                "Write operation outside sandbox: {}",
+                normalized.display()
+            )));
         }
 
         Ok(normalized)
@@ -149,7 +147,7 @@ impl Sandbox {
         if let Some(policy) = &self.config.security_policy {
             policy
                 .validate_batch_size(paths.len())
-                .map_err(|e| AgentError::InvalidInput(e))?;
+                .map_err(AgentError::InvalidInput)?;
         }
 
         paths.iter().map(|p| self.validate_read(p)).collect()
@@ -178,7 +176,7 @@ impl Sandbox {
         if let Some(policy) = &self.config.security_policy {
             policy
                 .validate_file_size(size)
-                .map_err(|e| AgentError::InvalidInput(e))?;
+                .map_err(AgentError::InvalidInput)?;
         }
 
         Ok(size)
