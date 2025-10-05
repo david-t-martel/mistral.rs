@@ -23,7 +23,7 @@ use agent_mode::agent_mode;
 mod mcp_server;
 mod tool_registry;
 
-use mistralrs_agent_tools::{AgentToolkit, SandboxConfig, SecurityPolicy, SecurityLevel};
+use mistralrs_agent_tools::{AgentToolkit, SandboxConfig, SecurityLevel, SecurityPolicy};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -396,7 +396,7 @@ fn build_toolkit_from_args(args: &Args) -> Result<Option<AgentToolkit>> {
 
     // Create sandbox config
     let mut config = SandboxConfig::with_security_policy(root.clone(), security_policy);
-    
+
     // Set max file size (convert MB to bytes)
     config = config.max_read_size(args.agent_max_file_size * 1024 * 1024);
 
