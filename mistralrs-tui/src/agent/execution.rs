@@ -40,6 +40,16 @@ impl ToolExecutor {
         Self {
             toolkit,
             default_timeout: 30, // 30 seconds default
+            event_bus: None,
+        }
+    }
+
+    /// Create a new tool executor with event bus support
+    pub fn with_events(toolkit: AgentToolkit, event_bus: EventBus) -> Self {
+        Self {
+            toolkit,
+            default_timeout: 30,
+            event_bus: Some(event_bus),
         }
     }
 
@@ -62,7 +72,13 @@ impl ToolExecutor {
         arguments: serde_json::Value,
         timeout_override: Option<u64>,
     ) -> Result<ToolCallResult> {
+        let call_id = Uuid::new_v4();
         let start = Instant::now();
+
+        // Emit started event
+        if let Some(ref bus) = self.event_bus {
+            bus.emit(ExecutionEvent::started(call_id, tool_name));
+        }
 
         // Determine timeout
         let timeout_secs = timeout_override.unwrap_or(self.default_timeout);
@@ -73,23 +89,47 @@ impl ToolExecutor {
             .await
             .context("Tool execution timeout")?;
 
-        let duration_ms = start.elapsed().as_millis() as u64;
+        let duration = start.elapsed();
 
-        // Convert result to ToolCallResult
-        match result {
-            Ok(output) => Ok(ToolCallResult {
-                success: true,
-                output,
-                error: None,
-                duration_ms,
-            }),
-            Err(e) => Ok(ToolCallResult {
-                success: false,
-                output: String::new(),
-                error: Some(e.to_string()),
-                duration_ms,
-            }),
-        }
+        // Convert result to ToolCallResult and emit appropriate event
+        let tool_result = match result {
+            Ok(output) => {
+                let tool_result = ToolCallResult {
+                    success: true,
+                    output: serde_json::Value::String(output.clone()),
+                    error: None,
+                    duration,
+                };
+
+                // Emit completed event
+                if let Some(ref bus) = self.event_bus {
+                    bus.emit(ExecutionEvent::completed(
+                        call_id,
+                        tool_name,
+                        tool_result.clone(),
+                    ));
+                }
+
+                tool_result
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+
+                // Emit failed event
+                if let Some(ref bus) = self.event_bus {
+                    bus.emit(ExecutionEvent::failed(call_id, tool_name, &error_msg));
+                }
+
+                ToolCallResult {
+                    success: false,
+                    output: serde_json::Value::Null,
+                    error: Some(error_msg),
+                    duration,
+                }
+            }
+        };
+
+        Ok(tool_result)
     }
 
     /// Execute a specific tool (internal implementation)

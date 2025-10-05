@@ -17,4 +17,10 @@ pub mod ui;
 pub mod execution;
 
 #[cfg(feature = "tui-agent")]
+pub mod events;
+
+#[cfg(feature = "tui-agent")]
 pub use toolkit::AgentToolkit;
+
+#[cfg(feature = "tui-agent")]
+pub use events::{EventBus, ExecutionEvent};

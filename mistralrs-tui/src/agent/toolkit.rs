@@ -69,11 +69,32 @@ pub struct ToolCallResult {
     /// Whether the tool call succeeded
     pub success: bool,
     /// Output from the tool
-    pub output: String,
+    pub output: serde_json::Value,
     /// Error message (if failed)
     pub error: Option<String>,
-    /// Execution duration in milliseconds
-    pub duration_ms: u64,
+    /// Execution duration
+    #[serde(with = "duration_serde")]
+    pub duration: std::time::Duration,
+}
+
+mod duration_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+
+    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        duration.as_millis().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let millis = u64::deserialize(deserializer)?;
+        Ok(Duration::from_millis(millis))
+    }
 }
 
 impl AgentToolkit {
