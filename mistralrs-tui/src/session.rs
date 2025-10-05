@@ -39,6 +39,12 @@ pub struct SessionMessage {
 pub struct SessionContext {
     pub summary: SessionSummary,
     pub messages: Vec<SessionMessage>,
+    /// Agent mode enabled for this session
+    #[cfg(feature = "tui-agent")]
+    pub agent_mode: bool,
+    /// Tool calls made during this session
+    #[cfg(feature = "tui-agent")]
+    pub tool_calls: Vec<crate::agent::toolkit::ToolCall>,
 }
 
 impl SessionStore {
@@ -101,6 +107,10 @@ impl SessionStore {
         Ok(SessionContext {
             summary,
             messages: Vec::new(),
+            #[cfg(feature = "tui-agent")]
+            agent_mode: false,
+            #[cfg(feature = "tui-agent")]
+            tool_calls: Vec::new(),
         })
     }
 
@@ -148,7 +158,14 @@ impl SessionStore {
             messages.push(self.row_to_message(row)?);
         }
 
-        Ok(SessionContext { summary, messages })
+        Ok(SessionContext {
+            summary,
+            messages,
+            #[cfg(feature = "tui-agent")]
+            agent_mode: false,
+            #[cfg(feature = "tui-agent")]
+            tool_calls: Vec::new(),
+        })
     }
 
     pub async fn update_session_model(&self, session_id: Uuid, model_id: &str) -> Result<()> {

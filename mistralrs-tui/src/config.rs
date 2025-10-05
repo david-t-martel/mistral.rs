@@ -16,6 +16,33 @@ pub struct TuiConfig {
     pub prefer_gpu: bool,
     pub inventory_file: Option<PathBuf>,
     pub default_model: Option<String>,
+    /// Agent configuration (feature-gated)
+    #[cfg(feature = "tui-agent")]
+    #[serde(default)]
+    pub agent: AgentConfig,
+}
+
+/// Configuration for agent mode
+#[cfg(feature = "tui-agent")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentConfig {
+    /// Enable agent mode by default for new sessions
+    pub enabled_by_default: bool,
+    /// Sandbox root directory for agent tools
+    pub sandbox_root: Option<PathBuf>,
+    /// Maximum number of tool calls to keep in history
+    pub max_history: usize,
+}
+
+#[cfg(feature = "tui-agent")]
+impl Default for AgentConfig {
+    fn default() -> Self {
+        Self {
+            enabled_by_default: false,
+            sandbox_root: None,
+            max_history: 1000,
+        }
+    }
 }
 
 impl Default for TuiConfig {
@@ -32,6 +59,8 @@ impl Default for TuiConfig {
             prefer_gpu: true,
             inventory_file: find_local_inventory_file(),
             default_model: None,
+            #[cfg(feature = "tui-agent")]
+            agent: AgentConfig::default(),
         }
     }
 }

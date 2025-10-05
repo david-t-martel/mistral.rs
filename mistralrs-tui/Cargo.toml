@@ -14,17 +14,18 @@ gpu = [
     "dep:pollster",
     "dep:raw-window-handle",
 ]
-tui-agent = []
+tui-agent = ["dep:mistralrs-agent-tools"]
 
 [dependencies]
 anyhow = { workspace = true }
 async-trait = "0.1"
-chrono = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive"] }
 crossterm = { version = "0.28", optional = true }
 directories = "5.0"
 futures = { workspace = true }
 indexmap = { workspace = true }
+mistralrs-agent-tools = { path = "../mistralrs-agent-tools", optional = true }
 notify = "6.1"
 once_cell = { workspace = true }
 parking_lot = "0.12"

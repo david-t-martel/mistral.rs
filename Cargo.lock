@@ -4266,6 +4266,7 @@ dependencies = [
  "directories 5.0.1",
  "futures",
  "indexmap",
+ "mistralrs-agent-tools",
  "notify",
  "once_cell",
  "parking_lot",
