@@ -1,0 +1,330 @@
+---
+# AST-Grep Rules for Panic Detection and Prevention
+# Detects: unimplemented!(), todo!(), unwrap(), expect(), panic!()
+# Suggests: Proper error handling with Result<T, Error>
+
+id: rust-panic-detection
+language: rust
+severity: error
+note: "Panic-inducing code detected - replace with proper error handling"
+
+rules:
+  # Rule 1: Detect unimplemented!() macro
+  - id: unimplemented-macro
+    message: "unimplemented!() will panic at runtime - replace with proper error or Result"
+    severity: error
+    language: rust
+    rule:
+      pattern: unimplemented!($$$ARGS)
+    fix: |
+      candle_core::bail!("Not yet implemented: $$$ARGS")
+    note: |
+      Example fix:
+      Before: unimplemented!("Feature X")
+      After:  candle_core::bail!("Feature X not yet implemented. Please use alternative Y")
+      
+      Or return Result:
+      fn example() -> Result<T> {
+          Err(Error::NotImplemented("Feature X".to_string()))
+      }
+
+  # Rule 2: Detect todo!() macro
+  - id: todo-macro
+    message: "todo!() will panic at runtime - implement or return error"
+    severity: error
+    language: rust
+    rule:
+      pattern: todo!($$$ARGS)
+    fix: |
+      candle_core::bail!("TODO: $$$ARGS - not yet implemented")
+    note: |
+      Example fix:
+      Before: todo!("Add validation")
+      After:  candle_core::bail!("Validation not yet implemented")
+      
+      Better: Actually implement the functionality or document why it's deferred
+
+  # Rule 3: Detect unwrap() calls
+  - id: unwrap-call
+    message: "unwrap() will panic on None/Err - use ? operator or explicit error handling"
+    severity: warning
+    language: rust
+    rule:
+      pattern: $EXPR.unwrap()
+    fix: |
+      $EXPR?
+    note: |
+      Example fixes:
+      1. Use ? operator: value.some_method()?
+      2. Use unwrap_or: value.unwrap_or(default)
+      3. Use unwrap_or_else: value.unwrap_or_else(|| compute_default())
+      4. Match explicitly:
+         match value {
+             Some(v) => v,
+             None => return Err(Error::ValueMissing),
+         }
+
+  # Rule 4: Detect expect() calls
+  - id: expect-call
+    message: "expect() will panic on None/Err - prefer ? operator or proper error handling"
+    severity: warning
+    language: rust
+    rule:
+      pattern: $EXPR.expect($MSG)
+    fix: |
+      $EXPR.map_err(|e| Error::from_context($MSG, e))?
+    note: |
+      Example fix:
+      Before: value.expect("Should have value")
+      After:  value.ok_or_else(|| Error::ValueMissing("Should have value".into()))?
+
+  # Rule 5: Detect panic!() macro
+  - id: panic-macro
+    message: "panic!() causes immediate program termination - return error instead"
+    severity: error
+    language: rust
+    rule:
+      pattern: panic!($$$ARGS)
+    fix: |
+      return Err(Error::Panic("$$$ARGS".to_string()))
+    note: |
+      panic!() should only be used for truly unrecoverable errors.
+      Most cases should return Result<T, Error> instead.
+
+  # Rule 6: Detect unreachable!() in reachable code
+  - id: unreachable-macro
+    message: "unreachable!() will panic if reached - ensure it's truly unreachable"
+    severity: warning
+    language: rust
+    rule:
+      pattern: unreachable!($$$ARGS)
+    note: |
+      Verify this is truly unreachable. If not, return an error:
+      return Err(Error::UnexpectedState("$$$ARGS".into()))
+
+  # Rule 7: Detect indexing without bounds checks
+  - id: unchecked-index
+    message: "Indexing without bounds check can panic - use get() or check bounds first"
+    severity: warning
+    language: rust
+    rule:
+      any:
+        - pattern: $ARRAY[$INDEX]
+        - pattern: $VEC[$INDEX]
+    constraints:
+      ARRAY:
+        not:
+          regex: "^(slice|arr|buffer)"  # Common safe names
+    fix: |
+      $ARRAY.get($INDEX).ok_or(Error::IndexOutOfBounds)?
+    note: |
+      Example fix:
+      Before: let item = vec[index];
+      After:  let item = vec.get(index).ok_or(Error::IndexOutOfBounds)?;
+      
+      Or with bounds check:
+      if index < vec.len() {
+          let item = vec[index];
+      }
+
+  # Rule 8: Detect division without zero check
+  - id: unchecked-division
+    message: "Division can panic on zero - add zero check or use checked_div"
+    severity: warning
+    language: rust
+    rule:
+      pattern: $EXPR / $DIVISOR
+    constraints:
+      DIVISOR:
+        not:
+          kind: integer_literal
+    fix: |
+      $EXPR.checked_div($DIVISOR).ok_or(Error::DivisionByZero)?
+    note: |
+      Example fix:
+      Before: let result = a / b;
+      After:  let result = a.checked_div(b).ok_or(Error::DivisionByZero)?;
+
+  # Rule 9: Detect .as_ref().unwrap() chain
+  - id: as-ref-unwrap
+    message: "Chaining as_ref().unwrap() can panic - use pattern matching or ?"
+    severity: warning
+    language: rust
+    rule:
+      pattern: $EXPR.as_ref().unwrap()
+    fix: |
+      $EXPR.as_ref().ok_or(Error::NoneValue)?
+    note: |
+      Better pattern:
+      match &$EXPR {
+          Some(ref val) => val,
+          None => return Err(Error::NoneValue),
+      }
+
+  # Rule 10: Detect unsafe blocks with potential panics
+  - id: unsafe-with-panic
+    message: "Unsafe block contains panic-inducing code - ensure safety invariants"
+    severity: error
+    language: rust
+    rule:
+      all:
+        - pattern: |
+            unsafe {
+              $$$BODY
+            }
+        - inside:
+            any:
+              - pattern: unwrap()
+              - pattern: expect($_)
+              - pattern: panic!($$$)
+              - pattern: unimplemented!($$$)
+              - pattern: todo!($$$)
+    note: |
+      Unsafe blocks should not contain panicking code.
+      Either handle errors properly or document why panic is safe here.
+
+  # Rule 11: Detect Result/Option unwrap in library code
+  - id: library-unwrap
+    message: "Library code should not use unwrap() - propagate errors to caller"
+    severity: error
+    language: rust
+    rule:
+      pattern: $EXPR.unwrap()
+    constraints:
+      FILE:
+        regex: "^(mistralrs-core|mistralrs-quant|mistralrs-mcp)/src/.*\\.rs$"
+    note: |
+      Library code should propagate errors using ? or return Result.
+      Only use unwrap() in:
+      - Test code
+      - Example code
+      - After explicit checks that guarantee success
+
+  # Rule 12: Detect unwrap in match arms without prior checks
+  - id: match-arm-unwrap
+    message: "unwrap() in match arm without prior validation can panic"
+    severity: warning
+    language: rust
+    rule:
+      pattern: |
+        match $EXPR {
+          $$$BEFORE
+          $PATTERN => $$$UNWRAP.unwrap(),
+          $$$AFTER
+        }
+    note: |
+      Ensure the match pattern guarantees the unwrap() will succeed,
+      or use proper error handling instead.
+
+  # Rule 13: Detect string/slice operations that can panic
+  - id: string-slice-panic
+    message: "String/slice operations can panic on invalid indices - use safe methods"
+    severity: warning
+    language: rust
+    rule:
+      any:
+        - pattern: $STR[$START..$END]
+        - pattern: $STR[..$END]
+        - pattern: $STR[$START..]
+    note: |
+      Use safe alternatives:
+      - str.get(start..end).ok_or(Error::InvalidRange)?
+      - String operations: chars(), split(), etc.
+      
+      String slicing must be on UTF-8 character boundaries.
+
+  # Rule 14: Detect array/vec initialization with fixed size that might panic
+  - id: fixed-size-init
+    message: "Fixed-size initialization can panic if size is wrong - validate size"
+    severity: info
+    language: rust
+    rule:
+      pattern: |
+        let $VAR: [$TYPE; $SIZE] = $INIT;
+    note: |
+      Ensure the initialization matches the declared size.
+      Consider using Vec or validating length at runtime.
+
+  # Rule 15: Detect try_into/try_from unwrap
+  - id: try-into-unwrap
+    message: "try_into/try_from can fail - use ? instead of unwrap()"
+    severity: warning
+    language: rust
+    rule:
+      any:
+        - pattern: $EXPR.try_into().unwrap()
+        - pattern: $TYPE::try_from($EXPR).unwrap()
+    fix: |
+      $EXPR.try_into()?
+    note: |
+      Example fix:
+      Before: let val: u32 = x.try_into().unwrap();
+      After:  let val: u32 = x.try_into()?;
+
+# Additional context-specific rules
+---
+id: context-specific-panics
+language: rust
+rules:
+  # Rule 16: Flash attention without feature check
+  - id: flash-attn-panic
+    message: "Flash attention call without feature check will panic"
+    severity: error
+    language: rust
+    rule:
+      all:
+        - pattern: flash_attn($$$ARGS)
+        - not:
+            inside:
+              pattern: |
+                #[cfg(any(feature = "flash-attn", feature = "flash-attn-v3"))]
+    fix: |
+      #[cfg(any(feature = "flash-attn", feature = "flash-attn-v3"))]
+      flash_attn($$$ARGS)
+      #[cfg(not(any(feature = "flash-attn", feature = "flash-attn-v3")))]
+      return Err(Error::FeatureNotEnabled("flash-attn"))
+    note: |
+      Flash attention requires compile-time feature flags.
+      Check feature availability or return appropriate error.
+
+  # Rule 17: Quantization methods with unimplemented
+  - id: quant-unimplemented
+    message: "Quantization method not implemented - return error to caller"
+    severity: error
+    language: rust
+    rule:
+      all:
+        - pattern: unimplemented!($MSG)
+        - inside:
+            pattern: |
+              impl QuantMethod for $TYPE {
+                $$$BODY
+              }
+    fix: |
+      candle_core::bail!("Quantization method not yet implemented: $MSG. Use GGUF or ISQ instead.")
+    note: |
+      Document unsupported quantization methods clearly.
+      Guide users to working alternatives.
+
+  # Rule 18: Missing error context in bail
+  - id: bail-without-context
+    message: "Error message lacks context - add helpful information"
+    severity: info
+    language: rust
+    rule:
+      pattern: candle_core::bail!($MSG)
+    constraints:
+      MSG:
+        not:
+          regex: "(not|un|alternative|instead|use|try|recompile|feature)"
+    note: |
+      Good error messages include:
+      - What went wrong
+      - Why it went wrong
+      - What the user should do
+      
+      Example:
+      candle_core::bail!(
+          "Flash attention not available. Recompile with --features flash-attn \
+          or use standard attention by setting attention_backend='standard'"
+      )

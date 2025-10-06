@@ -91,14 +91,16 @@ repos:
   # Local custom hooks
   - repo: local
     hooks:
-      # auto-claude for commit message generation and context
-      - id: auto-claude
-        name: auto-claude
-        entry: node C:\Users\david\.claude\auto-claude\scripts\auto-claude.cjs --staged
+      # auto-claude for automated code fixing (TODO/FIXME/HACK resolution)
+      - id: auto-claude-fix
+        name: auto-claude (code quality + TODO/FIXME fixes)
+        entry: C:\Users\david\bin\auto-claude.exe
+        args: [analyze, --fix, --fail-on-errors, --target-files]
         language: system
-        pass_filenames: false
+        types_or: [rust, python, typescript, javascript, toml, yaml]
+        exclude: ^(target/|node_modules/|dist/|\.venv/|__pycache__/)
+        pass_filenames: true
         stages: [pre-commit]
-        always_run: true
 
       # semantic_index for code analysis
       - id: semantic-index

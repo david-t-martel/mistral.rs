@@ -738,6 +738,27 @@ An adapter model is a model with X-LoRA or LoRA. X-LoRA support is provided by s
 ### Chat Templates and Tokenizer
 Mistral.rs will attempt to automatically load a chat template and tokenizer. This enables high flexibility across models and ensures accurate and flexible chat templating. However, this behavior can be customized. Please find detailed documentation [here](docs/CHAT_TOK.md).
 
+## Known Limitations
+
+While mistral.rs supports a wide range of features and models, some capabilities are experimental or under active development:
+
+### Experimental Features
+- **BitsAndBytes (BnB) Quantization**: Core methods partially implemented - some operations may fail. Use GGUF/ISQ quantization for production.
+- **AFQ Quantization**: Under development - not recommended for production use. Use HQQ or GGUF instead.
+- **XLora + DeepSeek Models**: Not yet supported for DeepSeek2 and DeepSeek3 architectures. Other models with XLora work as expected.
+
+### Feature Requirements
+- **Flash Attention**: Requires compilation with `--features flash-attn` or `--features flash-attn-v3`. Standard attention is used as fallback if not enabled.
+- **Importance Matrix (imatrix)**: Not supported for HQQ, AFQ, and FP8 quantization methods. System will warn and continue without imatrix when attempted.
+
+### Workarounds
+- If using experimental features causes issues, consider:
+  - **For quantization**: Use ISQ (In-Situ Quantization) with Q4_K, Q5_K, or Q8_0
+  - **For adapters**: Use models other than DeepSeek for XLora support
+  - **For performance**: Enable flash attention during compilation for 2-3x faster inference on supported hardware
+
+These limitations are actively being addressed. See [TODO_ANALYSIS.md](TODO_ANALYSIS.md) for detailed status and planned improvements.
+
 ## Contributing
 
 Thank you for contributing! If you have any problems or want to contribute something, please raise an issue or pull request.

@@ -188,7 +188,12 @@ impl QuantMethod for AfqLayer {
         _imatrix_weight: Option<Vec<f32>>,
         _guard: QuantizeOntoGuard,
     ) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!(
+            "In-situ quantization (ISQ) is not yet supported for AFQ quantization. \
+            AFQ layers are already quantized in an experimental format. \
+            To use a different quantization method, please apply GGUF or HQQ quantization directly to the original model. \
+            Note: AFQ is experimental and not recommended for production use."
+        )
     }
 }
 

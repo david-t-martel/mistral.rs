@@ -1,0 +1,346 @@
+# Auto-Claude Configuration for mistral.rs
+# Version: 1.0.0
+
+version: "1.0.0"
+enabled: true
+debug: false
+log_level: "info"
+
+# === CONCURRENCY ===
+concurrency:
+  max_files_parallel: 10
+  max_tools_parallel: 4
+  max_fix_operations: 50
+  timeout_per_file: 30000
+  max_workers: 8
+
+# === TOOL CONFIGURATION ===
+tools:
+  # Rust linting with clippy
+  rust:
+    enabled: true
+    clippy:
+      enabled: true
+      fix: true
+      args: ["--workspace", "--all-targets", "--", "-D", "warnings"]
+    cargo:
+      check: true
+      test: false
+      fmt: true
+    timeout: 60000
+    
+  # Python linting with ruff
+  ruff:
+    enabled: true
+    fix_mode: "unsafe"  # Enable aggressive auto-fixing
+    output_format: "json-lines"
+    timeout: 30000
+    cache_enabled: true
+    rules:
+      - "+ALL"
+      - "-E501"  # Line length handled by formatter
+    
+  # AST-based structural analysis
+  ast_grep:
+    enabled: true
+    config_file: "tools/ast-grep/sgconfig.yml"
+    fix_mode: "auto"
+    timeout: 20000
+    cache_enabled: true
+    
+  # JavaScript/TypeScript formatting
+  biome:
+    enabled: true
+    fix_mode: "auto"
+    timeout: 15000
+
+# === REDIS CACHING (Optional) ===
+redis:
+  enabled: false  # Disable for now, can enable if Redis is running
+  host: "localhost"
+  port: 6379
+  db: 2
+  prefix: "auto_claude_mistralrs"
+  
+  ttl:
+    file_analysis: 1800      # 30 minutes
+    ai_suggestions: 3600     # 1 hour
+    fix_results: 7200        # 2 hours
+
+# === FILE DISCOVERY ===
+discovery:
+  include_patterns:
+    python: ["**/*.py", "**/*.pyi"]
+    typescript: ["**/*.ts", "**/*.tsx"]
+    javascript: ["**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"]
+    rust: ["**/*.rs"]
+    config: ["**/*.json", "**/*.yml", "**/*.yaml", "**/*.toml"]
+    
+  exclude_dirs:
+    - "target"
+    - "node_modules"
+    - "__pycache__"
+    - ".git"
+    - ".venv"
+    - "venv"
+    - "dist"
+    - "build"
+    - ".next"
+    - ".mypy_cache"
+    - ".ruff_cache"
+    - "coverage"
+    - ".pytest_cache"
+    - "llvm-cov-target"
+    - "TprojectsruLanguageStyle-mistralmistral.rssandbox"
+    
+  exclude_files:
+    - "*.log"
+    - "*.tmp"
+    - "*.bak"
+    - "*.pyc"
+    - "*.pyo"
+    - "*.min.js"
+    - "*.bundle.js"
+    - "package-lock.json"
+    - "yarn.lock"
+    - "Cargo.lock"
+    
+  max_depth: 10
+  max_files_per_type: 2000
+  max_file_size: 10485760  # 10MB
+
+# === FIX PRIORITIZATION ===
+prioritization:
+  weights:
+    security: 100
+    correctness: 95
+    syntax: 90
+    performance: 80
+    maintainability: 60
+    style: 40
+    
+  security_patterns:
+    - "B"   # Bandit codes
+    - "S"   # Security codes
+    - "sql"
+    - "xss"
+    - "injection"
+    - "unsafe"
+    
+  correctness_patterns:
+    - "TODO"
+    - "FIXME"
+    - "HACK"
+    - "XXX"
+    - "BUG"
+    - "panic"
+    - "unwrap"
+    - "expect"
+    
+  performance_patterns:
+    - "PERF"
+    - "C901"
+    - "async"
+    - "clone"
+    - "allocate"
+    
+  maintainability_patterns:
+    - "C"   # Complexity
+    - "R"   # Refactoring
+    - "N"   # Naming
+    - "dead_code"
+    - "unused"
+
+# === INTELLIGENT FIXING ===
+intelligent_fixing:
+  enabled: true
+  
+  # Safety checks
+  safety_checks:
+    enabled: true
+    backup_files: true
+    validate_syntax: true
+    rollback_on_error: true
+    
+  # Anti-duplication enforcement (CRITICAL)
+  anti_duplication:
+    enabled: true
+    strict_mode: true
+    forbidden_patterns:
+      - "*_enhanced.*"
+      - "*_simple.*"
+      - "*_v[0-9].*"
+      - "*_updated.*"
+      - "improved_*.*"
+      - "optimized_*.*"
+      - "new_*.*"
+      - "*_fixed.*"
+      - "*_temp.*"
+      - "*_backup.*"
+    action: "block_and_suggest"  # Block commits with violations
+    
+  # TODO/FIXME resolution
+  todo_fixme_handling:
+    enabled: true
+    auto_fix_simple: true
+    require_ai_for_complex: false  # Set to true if AI available
+    patterns:
+      - "TODO"
+      - "FIXME"
+      - "HACK"
+      - "XXX"
+      - "BUG"
+    action: "fix_or_document"  # Either fix or add proper documentation
+    
+  # Conflict resolution
+  conflict_resolution:
+    strategy: "tool_priority"  # tool_priority, user_prompt
+    tool_priority:
+      - "clippy"
+      - "ruff"
+      - "ast_grep"
+      - "biome"
+
+# === RUST-SPECIFIC SETTINGS ===
+rust:
+  # Focus areas for TODO/FIXME fixing
+  focus_modules:
+    - "mistralrs-core/src/lib.rs"
+    - "mistralrs-core/src/engine/"
+    - "mistralrs-quant/src/"
+    - "mistralrs-agent-tools/src/"
+    - "mistralrs-mcp/src/"
+  
+  # Clippy lints to enforce
+  clippy_lints:
+    - "clippy::todo"
+    - "clippy::unimplemented"
+    - "clippy::unwrap_used"
+    - "clippy::expect_used"
+    - "clippy::panic"
+    - "clippy::missing_errors_doc"
+    - "clippy::missing_safety_doc"
+    
+  # Auto-fix patterns
+  auto_fix_patterns:
+    # Replace unwrap() with proper error handling
+    - pattern: ".unwrap()"
+      replacement: "?"
+      requires_error_type: true
+      
+    # Document TODO items properly
+    - pattern: "// TODO"
+      replacement: "// TODO(auto-claude): "
+      action: "add_context"
+
+# === REPORTING ===
+reporting:
+  enabled: true
+  formats:
+    - "console"  # Real-time terminal output
+    - "json"     # Machine-readable for CI/CD
+    - "markdown" # Human-readable reports
+  
+  output_paths:
+    json: "auto-claude-report.json"
+    markdown: "AUTO_CLAUDE_REPORT.md"
+    html: "reports/auto-claude-report.html"
+  
+  # What to include in reports
+  include:
+    summary: true
+    by_category: true
+    by_tool: true
+    by_file: true
+    performance_metrics: true
+    duplication_violations: true
+    todo_fixme_analysis: true
+
+# === PRE-COMMIT INTEGRATION ===
+pre_commit:
+  enabled: true
+  fail_on:
+    - "duplication_violations"
+    - "security_issues"
+    - "syntax_errors"
+  warn_on:
+    - "todo_items"
+    - "fixme_items"
+    - "performance_issues"
+  
+  # Quick mode for pre-commit (faster)
+  quick_mode:
+    enabled: true
+    only_staged_files: true
+    skip_tests: true
+    cache_enabled: true
+
+# === AI INTEGRATION (Optional - disabled by default) ===
+ai:
+  enabled: false  # Enable if Gemma or other AI models available
+  provider: "gemini"  # gemini, claude, gpt
+  model: "gemini-1.5-pro"
+  
+  # When to use AI
+  use_for:
+    - "complex_todos"
+    - "refactoring_suggestions"
+    - "performance_optimization"
+  
+  # AI settings
+  settings:
+    max_tokens: 8000
+    temperature: 0.3
+    retry_on_failure: true
+    fallback_to_tools: true
+
+# === PERFORMANCE ===
+performance:
+  # Memory limits
+  max_memory_mb: 4096
+  
+  # Timeouts
+  global_timeout: 300000  # 5 minutes
+  per_file_timeout: 30000  # 30 seconds
+  
+  # Streaming
+  use_streaming: true
+  stream_chunk_size: 1024
+  
+  # Parallelization
+  parallel_analysis: true
+  parallel_fixing: false  # Sequential fixing is safer
+
+# === LOGGING ===
+logging:
+  level: "info"  # debug, info, warn, error
+  output: "console"  # console, file, both
+  file_path: "logs/auto-claude.log"
+  
+  # What to log
+  log_tool_output: false
+  log_fix_details: true
+  log_performance: true
+  log_cache_hits: false
+
+# === CUSTOM RULES (Project-Specific) ===
+custom_rules:
+  # Mistral.rs specific patterns
+  - id: "mistralrs-error-handling"
+    description: "Enforce Result<T> return types for fallible operations"
+    severity: "warning"
+    pattern: "fn.*\\(.*\\).*->.*T"
+    exclude_pattern: "fn.*\\(.*\\).*->.*Result"
+    suggestion: "Return Result<T, Error> instead of T for fallible functions"
+    
+  - id: "mistralrs-unwrap-usage"
+    description: "Avoid .unwrap() in production code"
+    severity: "error"
+    pattern: "\\.unwrap\\(\\)"
+    auto_fix: "Replace with ? operator or proper error handling"
+    
+  - id: "mistralrs-todo-format"
+    description: "TODOs must include context"
+    severity: "warning"
+    pattern: "// TODO(?!\\()"
+    auto_fix: "Add context: // TODO(username): description"

@@ -1199,8 +1199,12 @@ impl NormalModel for DeepSeekV3 {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement xlora_forward for DeepSeek3 (spec decoding aware)
-        unimplemented!()
+        candle_core::bail!(
+            "X-LoRA is not yet supported for DeepSeek V3 models. \
+            DeepSeek V3 uses MLA (Multi-head Latent Attention) with MoE architecture that requires \
+            specialized adapter integration and speculative decoding awareness. \
+            Use standard LoRA adapters with non-XLora models, or use XLora with other supported architectures."
+        )
     }
     fn cache(&self) -> &EitherCache {
         &self.cache
