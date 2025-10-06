@@ -1,22 +1,25 @@
 # Code Coverage Baseline - mistral.rs
 
-**Date**: 2025-01-05  
-**Analysis Method**: Static analysis + test marker count  
-**Coverage Tool**: cargo-llvm-cov (to be run)  
-**Status**: Initial Baseline Assessment
+**Date**: 2025-10-05  
+**Analysis Method**: cargo-llvm-cov actual measurements  
+**Coverage Tool**: cargo-llvm-cov 0.6.20  
+**Status**: Baseline Established (Phase 1.1 Complete)
 
 ---
 
 ## Executive Summary
 
-### Current Test Coverage (Static Analysis)
+### Actual Measured Test Coverage
 
-Based on static analysis of test markers and code structure:
+**Overall Coverage**: **1.84%** ⚠️
 
-- **Total Test Markers**: ~851 (`#[test]`, `#[tokio::test]`, `#[cfg(test)]`)
-- **Files with Tests**: 142
-- **Dedicated Test Files**: 22
-- **Test Directories**: 12
+| Metric | Total | Covered | Coverage % |
+|--------|-------|---------|------------|
+| **Lines** | 136,001 | 2,498 | **1.84%** |
+| **Functions** | 5,384 | 70 | **1.30%** |
+| **Regions** | 82,763 | 1,297 | **1.57%** |
+
+**Status**: 🔴 **CRITICAL** - Requires immediate attention
 
 ### Coverage Status by Crate
 

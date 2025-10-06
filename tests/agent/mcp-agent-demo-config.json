@@ -17,7 +17,7 @@
       "source": {
         "type": "Process",
         "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-time"],
+        "args": ["-y", "@theobrigitte/mcp-time"],
         "env": null,
         "work_dir": null
       }
