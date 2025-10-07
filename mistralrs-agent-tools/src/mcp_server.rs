@@ -21,6 +21,10 @@ use std::sync::Arc;
 /// MCP JSON-RPC 2.0 request structure
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
+    // TODO: enforce supported JSON-RPC version at parse time instead of silently accepting any
+    // value.
+    // TODO(warning): consume this field during request validation so the dead_code warning goes
+    // away once version enforcement is implemented.
     jsonrpc: String,
     id: Option<Value>,
     method: String,
@@ -50,6 +54,10 @@ struct JsonRpcError {
 /// MCP tool schema for tool discovery
 #[derive(Debug, Serialize)]
 struct McpToolSchema {
+    // TODO: integrate this schema struct with list_tools() to avoid manual JSON construction and
+    // ensure schema changes stay type-checked.
+    // TODO(warning): compiler currently warns that this struct is never constructed; wire it into
+    // list_tools once the schema migration is implemented.
     name: String,
     description: String,
     #[serde(rename = "inputSchema")]
