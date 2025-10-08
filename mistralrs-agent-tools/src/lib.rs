@@ -29,8 +29,8 @@ pub mod mcp_server;
 pub mod test_utils;
 
 // Re-exports for convenience
-use std::path::PathBuf;
 pub use catalog::{ToolCatalog, ToolDefinition, ToolExample};
+use std::path::PathBuf;
 pub use tools::file::{cat, ls};
 pub use tools::sandbox::Sandbox;
 pub use tools::shell::execute;

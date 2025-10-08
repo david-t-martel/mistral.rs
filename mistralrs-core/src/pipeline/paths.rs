@@ -452,14 +452,29 @@ pub(crate) fn get_chat_template(
                     info!("Using chat template from .jinja file.");
                     let mut template = ChatTemplate::default();
                     template.chat_template = Some(ChatTemplateValue(Either::Left(
-                        template_content.as_ref().expect("Value should exist").clone(),
+                        template_content
+                            .as_ref()
+                            .expect("Value should exist")
+                            .clone(),
                     )));
                     template
                 } else {
-                    serde_json::from_str(&template_content.as_ref().expect("Failed to parse JSON").clone()).expect("Failed to parse JSON")
+                    serde_json::from_str(
+                        &template_content
+                            .as_ref()
+                            .expect("Failed to parse JSON")
+                            .clone(),
+                    )
+                    .expect("Failed to parse JSON")
                 }
             } else {
-                serde_json::from_str(&template_content.as_ref().expect("Failed to parse JSON").clone()).expect("Failed to parse JSON")
+                serde_json::from_str(
+                    &template_content
+                        .as_ref()
+                        .expect("Failed to parse JSON")
+                        .clone(),
+                )
+                .expect("Failed to parse JSON")
             }
         }
     };
@@ -476,7 +491,8 @@ pub(crate) fn get_chat_template(
                 struct AutomaticTemplate {
                     chat_template: String,
                 }
-                let deser: AutomaticTemplate = serde_json::from_str(&ct).expect("Failed to parse JSON");
+                let deser: AutomaticTemplate =
+                    serde_json::from_str(&ct).expect("Failed to parse JSON");
                 deser.chat_template
             };
 
@@ -495,10 +511,11 @@ pub(crate) fn get_chat_template(
         template.chat_template = Some(ChatTemplateValue(Either::Left(ct)));
     }
 
-    let processor_conf: Option<crate::vision_models::processor_config::ProcessorConfig> = paths
-        .get_processor_config()
-        .as_ref()
-        .map(|f| serde_json::from_str(&fs::read_to_string(f).expect("Failed to parse JSON")).expect("Failed to parse JSON"));
+    let processor_conf: Option<crate::vision_models::processor_config::ProcessorConfig> =
+        paths.get_processor_config().as_ref().map(|f| {
+            serde_json::from_str(&fs::read_to_string(f).expect("Failed to parse JSON"))
+                .expect("Failed to parse JSON")
+        });
     if let Some(processor_conf) = processor_conf {
         if processor_conf.chat_template.is_some() {
             template.chat_template = processor_conf
@@ -524,13 +541,16 @@ pub(crate) fn get_chat_template(
         None => {
             info!("`tokenizer_config.json` does not contain a chat template, attempting to use specified JINJA chat template.");
             let mut deser: HashMap<String, Value> =
-                serde_json::from_str(&template_content.expect("Failed to parse JSON")).expect("Failed to parse JSON");
+                serde_json::from_str(&template_content.expect("Failed to parse JSON"))
+                    .expect("Failed to parse JSON");
 
             match chat_template_fallback.cloned() {
                 Some(t) => {
                     info!("Loading specified loading chat template file at `{t}`.");
-                    let templ: SpecifiedTemplate =
-                        serde_json::from_str(&fs::read_to_string(t.clone()).expect("Failed to parse JSON")).expect("Failed to parse JSON");
+                    let templ: SpecifiedTemplate = serde_json::from_str(
+                        &fs::read_to_string(t.clone()).expect("Failed to parse JSON"),
+                    )
+                    .expect("Failed to parse JSON");
                     deser.insert(
                         "chat_template".to_string(),
                         Value::String(templ.chat_template),

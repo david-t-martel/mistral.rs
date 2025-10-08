@@ -246,7 +246,10 @@ impl GgufModelBuilder {
             self.hf_revision,
             self.token_source,
             &ModelDType::Auto,
-            &self.device.clone().unwrap_or_else(|| best_device(self.force_cpu).expect("Failed to initialize device - no suitable GPU or CPU found")),
+            &self.device.clone().unwrap_or_else(|| {
+                best_device(self.force_cpu)
+                    .expect("Failed to initialize device - no suitable GPU or CPU found")
+            }),
             !self.with_logging,
             self.device_mapping
                 .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
@@ -260,7 +263,9 @@ impl GgufModelBuilder {
                     .lock()
                     .await
                     .get_metadata()
-                    .cache_config.as_ref().expect("PagedAttention enabled but cache config not initialized")
+                    .cache_config
+                    .as_ref()
+                    .expect("PagedAttention enabled but cache config not initialized")
                     .clone();
 
                 SchedulerConfig::PagedAttentionMeta {

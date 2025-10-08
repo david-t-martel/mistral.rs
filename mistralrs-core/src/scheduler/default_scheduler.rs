@@ -96,13 +96,13 @@ impl<Backer: FcfsBacker> BucketingManager<Backer> for FixedBucketingManager {
             )) {
                 Some(bucket) => {
                     if !discrete {
-                        *seq_priorities
-                            .get_mut(&(
-                                len,
-                                seq.images().is_some() && seq.is_prompt(),
-                                seq.token_offset(),
-                            ))
-                            .unwrap() += seq.compute_priority();
+                        if let Some(priority) = seq_priorities.get_mut(&(
+                            len,
+                            seq.images().is_some() && seq.is_prompt(),
+                            seq.token_offset(),
+                        )) {
+                            *priority += seq.compute_priority();
+                        }
                     }
                     bucket.push(seq);
                 }
@@ -145,7 +145,7 @@ impl<Backer: FcfsBacker> BucketingManager<Backer> for FixedBucketingManager {
             let len = if !discrete {
                 seq_priorities
                     .iter()
-                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
                     .map(|(a, b)| (a, *b))
                     .unwrap_or_else(|| (&min, seq_priorities[&min]))
                     .0
@@ -154,7 +154,7 @@ impl<Backer: FcfsBacker> BucketingManager<Backer> for FixedBucketingManager {
             };
             let highest_priority_seqs = seq_buckets
                 .remove(len)
-                .unwrap()
+                .expect("Sequence bucket disappeared during scheduling")
                 .into_iter()
                 .map(|s| s.reset_urgency())
                 .collect();

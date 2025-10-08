@@ -75,7 +75,9 @@ impl GgufXLoraModelBuilder {
                     .lock()
                     .await
                     .get_metadata()
-                    .cache_config.as_ref().expect("PagedAttention enabled but cache config not initialized")
+                    .cache_config
+                    .as_ref()
+                    .expect("PagedAttention enabled but cache config not initialized")
                     .clone();
 
                 SchedulerConfig::PagedAttentionMeta {

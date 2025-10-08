@@ -103,7 +103,8 @@ impl ChatTool {
                     }
                 }
             })
-            .as_object().expect("Static JSON schema should be valid object")
+            .as_object()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
         properties.insert(
@@ -112,7 +113,8 @@ impl ChatTool {
                 "type": "integer",
                 "description": "Maximum number of tokens to generate"
             })
-            .as_object().expect("Static JSON schema should be valid object")
+            .as_object()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
         properties.insert(
@@ -123,7 +125,8 @@ impl ChatTool {
                 "minimum": 0.0,
                 "maximum": 2.0
             })
-            .as_object().expect("Static JSON schema should be valid object")
+            .as_object()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
 
@@ -204,7 +207,10 @@ pub struct HttpMcpHandler {
 
 impl HttpMcpHandler {
     pub fn new(state: SharedMistralRsState) -> Self {
-        let modalities = &state.config(None).expect("Model configuration not initialized").modalities;
+        let modalities = &state
+            .config(None)
+            .expect("Model configuration not initialized")
+            .modalities;
 
         let mut tools: HashMap<String, Arc<dyn McpTool>> = HashMap::new();
         if modalities.input.contains(&SupportedModality::Text)
@@ -252,7 +258,10 @@ impl HttpMcpHandler {
             "initialize" => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: request.id,
-                result: Some(serde_json::to_value(&self.server_info).expect("Failed to serialize response to JSON")),
+                result: Some(
+                    serde_json::to_value(&self.server_info)
+                        .expect("Failed to serialize response to JSON"),
+                ),
                 error: None,
             },
             "ping" => JsonRpcResponse {
@@ -271,7 +280,9 @@ impl HttpMcpHandler {
                 JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: request.id,
-                    result: Some(serde_json::to_value(result).expect("Failed to serialize response to JSON")),
+                    result: Some(
+                        serde_json::to_value(result).expect("Failed to serialize response to JSON"),
+                    ),
                     error: None,
                 }
             }
@@ -287,7 +298,10 @@ impl HttpMcpHandler {
                         Ok(result) => JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             id: request.id,
-                            result: Some(serde_json::to_value(result).expect("Failed to serialize response to JSON")),
+                            result: Some(
+                                serde_json::to_value(result)
+                                    .expect("Failed to serialize response to JSON"),
+                            ),
                             error: None,
                         },
                         Err(e) => JsonRpcResponse {

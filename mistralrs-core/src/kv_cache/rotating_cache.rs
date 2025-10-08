@@ -114,7 +114,11 @@ impl RotatingCache {
             let mut shape = src.dims().to_vec();
             shape[self.dim] = self.capacity_seq_len;
             let ad = Tensor::zeros(shape, src.dtype(), src.device())?;
-            ad.slice_set(self.all_data.as_ref().expect("Cache operation failed"), self.dim, 0)?;
+            ad.slice_set(
+                self.all_data.as_ref().expect("Cache operation failed"),
+                self.dim,
+                0,
+            )?;
             self.all_data = Some(ad);
         }
 

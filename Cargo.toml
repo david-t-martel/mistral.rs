@@ -207,9 +207,6 @@ debug = true
 [profile.release]
 lto = true
 opt-level = 3
-debug = true
-debug-assertions = true
-overflow-checks = true
 panic = "unwind"
 
 [profile.dev]

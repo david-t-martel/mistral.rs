@@ -239,7 +239,9 @@ async fn text_interactive_mode(
     do_search: bool,
     enable_thinking: Option<bool>,
 ) {
-    let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
 
     let mut sampling_params = interactive_sample_parameters();
@@ -252,16 +254,24 @@ async fn text_interactive_mode(
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .expect("Control-C handler mutex poisoned") = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned")())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned")()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     'outer: loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -313,7 +323,9 @@ async fn text_interactive_mode(
         }
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &terminate_handler;
 
         let request_messages = RequestMessage::Chat {
             messages: messages.clone(),
@@ -337,7 +349,10 @@ async fn text_interactive_mode(
             web_search_options: do_search.then(WebSearchOptions::default),
             model_id: None,
         }));
-        sender.send(req).await.expect("Failed to send request to model");
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
         let start_ttft = Instant::now();
         let mut first_token_duration: Option<std::time::Duration> = None;
 
@@ -455,12 +470,16 @@ async fn vision_interactive_mode(
     let image_regex = Regex::new(IMAGE_REGEX).expect("IMAGE_REGEX pattern is invalid");
     let audio_regex = Regex::new(AUDIO_REGEX).expect("AUDIO_REGEX pattern is invalid");
 
-    let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
     let mut images = Vec::new();
     let mut audios = Vec::new();
 
-    let config = mistralrs.config(None).expect("Model configuration not initialized");
+    let config = mistralrs
+        .config(None)
+        .expect("Model configuration not initialized");
     let prefixer = match &config.category {
         ModelCategory::Vision { prefixer } => prefixer,
         ModelCategory::Text
@@ -482,16 +501,24 @@ async fn vision_interactive_mode(
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .expect("Control-C handler mutex poisoned") = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned")())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned")()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     'outer: loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -619,7 +646,9 @@ async fn vision_interactive_mode(
         }
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &terminate_handler;
 
         let request_messages = RequestMessage::VisionChat {
             images: images.clone(),
@@ -645,7 +674,10 @@ async fn vision_interactive_mode(
             web_search_options: do_search.then(WebSearchOptions::default),
             model_id: None,
         }));
-        sender.send(req).await.expect("Failed to send request to model");
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
         let start_ttft = Instant::now();
         let mut first_token_duration: Option<std::time::Duration> = None;
 
@@ -742,7 +774,9 @@ async fn audio_interactive_mode(
 }
 
 async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
-    let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
 
     let diffusion_params = DiffusionGenerationParams::default();
 
@@ -754,16 +788,24 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .expect("Control-C handler mutex poisoned") = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned")())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned")()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -784,7 +826,9 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         };
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {
@@ -809,11 +853,20 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         }));
 
         let start = Instant::now();
-        sender.send(req).await.expect("Failed to send request to model");
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
 
-        let ResponseOk::ImageGeneration(response) = rx.recv().await.expect("Channel closed").as_result().expect("Request failed")
+        let ResponseOk::ImageGeneration(response) = rx
+            .recv()
+            .await
+            .expect("Channel closed")
+            .as_result()
+            .expect("Request failed")
         else {
-            eprintln!("Error: Got unexpected response type."); return;
+            eprintln!("Error: Got unexpected response type.");
+            return;
         };
         let end = Instant::now();
 
@@ -834,7 +887,9 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
 }
 
 async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
-    let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
 
     info!("Starting interactive loop for speech");
     println!(
@@ -844,10 +899,16 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .expect("Control-C handler mutex poisoned") = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned")())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned")()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
@@ -855,7 +916,9 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     let mut n = 0;
     loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -876,7 +939,9 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         };
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .expect("Control-C handler mutex poisoned") = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {
@@ -899,21 +964,32 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         }));
 
         let start = Instant::now();
-        sender.send(req).await.expect("Failed to send request to model");
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
 
         let ResponseOk::Speech {
             pcm,
             rate,
             channels,
-        } = rx.recv().await.expect("Channel closed").as_result().expect("Request failed")
+        } = rx
+            .recv()
+            .await
+            .expect("Channel closed")
+            .as_result()
+            .expect("Request failed")
         else {
-            eprintln!("Error: Got unexpected response type."); return;
+            eprintln!("Error: Got unexpected response type.");
+            return;
         };
         let end = Instant::now();
 
         let out_file = format!("speech-{n}.wav");
-        let mut output = std::fs::File::create(&out_file).expect("Failed to create output audio file");
-        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16).expect("Failed to write WAV file");
+        let mut output =
+            std::fs::File::create(&out_file).expect("Failed to create output audio file");
+        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16)
+            .expect("Failed to write WAV file");
 
         let duration = end.duration_since(start).as_secs_f32();
         println!("Speech generated can be found at `{out_file}`. Took {duration:.2}s.");

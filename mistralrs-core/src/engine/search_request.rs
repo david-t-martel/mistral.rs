@@ -43,7 +43,21 @@ async fn do_search(
         messages.push(message);
     }
     let tool_call_params: SearchFunctionParameters =
-        serde_json::from_str(&tool_calls.function.arguments).unwrap();
+        match serde_json::from_str(&tool_calls.function.arguments) {
+            Ok(params) => params,
+            Err(e) => {
+                tracing::error!("Failed to parse search tool arguments: {}", e);
+                // Return early with error message in tool response
+                let mut message: IndexMap<String, MessageContent> = IndexMap::new();
+                message.insert("role".to_string(), Either::Left("tool".to_string()));
+                message.insert(
+                    "content".to_string(),
+                    Either::Left(format!("Error: Failed to parse search arguments: {}", e)),
+                );
+                messages.push(message);
+                return second_request;
+            }
+        };
     println!();
     tracing::info!(
         "Called search tool with query `{}`.",
@@ -73,16 +87,32 @@ async fn do_search(
         let mut results = tokio::task::block_in_place(|| {
             tracing::dispatcher::with_default(&dispatch, || {
                 let base_results = if let Some(cb) = &this.search_callback {
-                    cb(&tool_call_params).unwrap()
+                    match cb(&tool_call_params) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            tracing::error!("Search callback failed: {}", e);
+                            return Vec::new();
+                        }
+                    }
                 } else {
-                    search::run_search_tool(&tool_call_params).unwrap()
+                    match search::run_search_tool(&tool_call_params) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            tracing::error!("Search tool failed: {}", e);
+                            return Vec::new();
+                        }
+                    }
                 };
                 base_results
                     .into_iter()
-                    .map(|mut result| {
-                        result = result
-                            .cap_content_len(&tokenizer, max_results_budget_toks)
-                            .unwrap();
+                    .filter_map(|mut result| {
+                        result = match result.cap_content_len(&tokenizer, max_results_budget_toks) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                tracing::warn!("Failed to cap content length: {}", e);
+                                return None;
+                            }
+                        };
                         let len = {
                             let inp = InputSequence::Raw(Cow::from(&result.content));
                             tokenizer
@@ -90,7 +120,7 @@ async fn do_search(
                                 .map(|x| x.len())
                                 .unwrap_or(usize::MAX)
                         };
-                        (result, len)
+                        Some((result, len))
                     })
                     .collect::<Vec<_>>()
             })

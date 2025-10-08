@@ -40,18 +40,33 @@ pub fn nccl_daemon_replicator(request_sender: Sender<Request>) {
     use std::io::BufReader;
 
     std::thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new().expect("Failed to create tokio runtime for NCCL daemon");
         rt.block_on(async move {
             use interprocess::local_socket::traits::Stream;
             use interprocess::local_socket::Stream as LocalStream;
 
             loop {
-                let name = ipc_name().unwrap();
+                let name = match ipc_name() {
+                    Ok(n) => n,
+                    Err(e) => {
+                        tracing::error!("Failed to get IPC name: {}", e);
+                        continue;
+                    }
+                };
                 if let Ok(stream) = LocalStream::connect(name) {
                     let mut reader = BufReader::new(stream);
                     let mut buf = String::new();
-                    reader.read_line(&mut buf).unwrap();
-                    let mut req: Request = serde_json::from_str(&buf).unwrap();
+                    if let Err(e) = reader.read_line(&mut buf) {
+                        tracing::error!("Failed to read from IPC stream: {}", e);
+                        continue;
+                    }
+                    let mut req: Request = match serde_json::from_str(&buf) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            tracing::error!("Failed to deserialize request: {}", e);
+                            continue;
+                        }
+                    };
 
                     req = match req {
                         Request::ReIsq(x) => Request::ReIsq(x),

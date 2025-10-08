@@ -250,19 +250,33 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                 } else {
                     seqs[0].normal_cache()
                 };
-                let Some(cache) = src_cache.get(layer).expect("Cache layer should exist for model").as_ref() else {
+                let Some(cache) = src_cache
+                    .get(layer)
+                    .expect("Cache layer should exist for model")
+                    .as_ref()
+                else {
                     // This is hit in gemma3n for the shared kv cache
                     new_k_cache.push(None);
                     new_v_cache.push(None);
                     continue;
                 };
                 match cache {
-                    KvCache::Normal { k, v } => {
-                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                    }
-                    KvCache::Rotating { k, v } => {
-                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                    }
+                    KvCache::Normal { k, v } => (
+                        k.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                        v.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                    ),
+                    KvCache::Rotating { k, v } => (
+                        k.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                        v.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                    ),
                 }
             };
             // Build dims for batched cache
@@ -270,8 +284,10 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
             let mut dims_v = first_v.dims().to_vec();
             dims_k[0] *= batch_len;
             dims_v[0] *= batch_len;
-            let batch_k = Tensor::zeros(dims_k.clone(), first_k.dtype(), first_k.device()).expect("Failed to allocate batch K cache tensor - out of memory?");
-            let batch_v = Tensor::zeros(dims_v.clone(), first_v.dtype(), first_v.device()).expect("Failed to allocate batch V cache tensor - out of memory?");
+            let batch_k = Tensor::zeros(dims_k.clone(), first_k.dtype(), first_k.device())
+                .expect("Failed to allocate batch K cache tensor - out of memory?");
+            let batch_v = Tensor::zeros(dims_v.clone(), first_v.dtype(), first_v.device())
+                .expect("Failed to allocate batch V cache tensor - out of memory?");
             // Fill each sequence's cache slice
             for (i, seq) in seqs.iter_mut().enumerate() {
                 let src_cache = if modify_draft_cache {
@@ -279,21 +295,39 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                 } else {
                     seq.normal_cache()
                 };
-                let Some(cache) = src_cache.get(layer).expect("Cache layer should exist for model").as_ref() else {
+                let Some(cache) = src_cache
+                    .get(layer)
+                    .expect("Cache layer should exist for model")
+                    .as_ref()
+                else {
                     // Skip for shared kv cache layers in models like gemma3n
                     continue;
                 };
                 let (src_k, src_v) = match cache {
-                    KvCache::Normal { k, v } => {
-                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                    }
-                    KvCache::Rotating { k, v } => {
-                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                    }
+                    KvCache::Normal { k, v } => (
+                        k.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                        v.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                    ),
+                    KvCache::Rotating { k, v } => (
+                        k.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                        v.all_data
+                            .clone()
+                            .expect("Cache data should be initialized"),
+                    ),
                 };
                 let offset = i * first_k.dims()[0];
-                batch_k.slice_set(&src_k, 0, offset).expect("Failed to set cache slice - shape mismatch?");
-                batch_v.slice_set(&src_v, 0, offset).expect("Failed to set cache slice - shape mismatch?");
+                batch_k
+                    .slice_set(&src_k, 0, offset)
+                    .expect("Failed to set cache slice - shape mismatch?");
+                batch_v
+                    .slice_set(&src_v, 0, offset)
+                    .expect("Failed to set cache slice - shape mismatch?");
             }
             new_k_cache.push(Some(batch_k));
             new_v_cache.push(Some(batch_v));
@@ -339,14 +373,16 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
 
                     caches.push(KvCache::Normal {
                         k: SingleCache {
-                            all_data: k_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
+                            all_data: k_cache
+                                .map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
                             capacity_seq_len: template_cache_capsl,
                         },
                         v: SingleCache {
-                            all_data: v_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
+                            all_data: v_cache
+                                .map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -363,7 +399,8 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
 
                     caches.push(KvCache::Rotating {
                         k: RotatingCache {
-                            all_data: k_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
+                            all_data: k_cache
+                                .map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -371,7 +408,8 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                             capacity_seq_len: template_cache_capsl,
                         },
                         v: RotatingCache {
-                            all_data: v_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
+                            all_data: v_cache
+                                .map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -387,24 +425,41 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
     fn clone_out_cache(&self, pipeline: &T, seqs: &mut [&mut Sequence], modify_draft_cache: bool) {
         let all_cache = pipeline.cache().normal();
         for layer in 0..pipeline.get_metadata().num_hidden_layers {
-            let cache = all_cache.0.get(layer).expect("Cache layer index out of bounds");
+            let cache = all_cache
+                .0
+                .get(layer)
+                .expect("Cache layer index out of bounds");
             // This case for llama 3.2 vision cross attn
             if cache.k().expect("Cache key should be accessible").is_none() {
                 continue;
             }
 
             let (k_cache, v_cache) = match cache {
-                KvCache::Normal { k, v } => {
-                    (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                }
-                KvCache::Rotating { k, v } => {
-                    (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
-                }
+                KvCache::Normal { k, v } => (
+                    k.all_data
+                        .clone()
+                        .expect("Cache data should be initialized"),
+                    v.all_data
+                        .clone()
+                        .expect("Cache data should be initialized"),
+                ),
+                KvCache::Rotating { k, v } => (
+                    k.all_data
+                        .clone()
+                        .expect("Cache data should be initialized"),
+                    v.all_data
+                        .clone()
+                        .expect("Cache data should be initialized"),
+                ),
             };
 
-            let k_caches = k_cache.chunk(seqs.len(), 0).expect("Failed to chunk cache tensor");
+            let k_caches = k_cache
+                .chunk(seqs.len(), 0)
+                .expect("Failed to chunk cache tensor");
             debug_assert_eq!(k_caches.len(), seqs.len());
-            let v_caches = v_cache.chunk(seqs.len(), 0).expect("Failed to chunk cache tensor");
+            let v_caches = v_cache
+                .chunk(seqs.len(), 0)
+                .expect("Failed to chunk cache tensor");
             debug_assert_eq!(v_caches.len(), seqs.len());
 
             for (seq_i, seq) in seqs.iter_mut().enumerate() {
@@ -414,8 +469,14 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                     seq.normal_cache()
                 };
                 let seq_cache = &mut output_cache[layer];
-                let k = k_caches.get(seq_i).expect("Sequence index out of bounds in K cache").clone();
-                let v = v_caches.get(seq_i).expect("Sequence index out of bounds in V cache").clone();
+                let k = k_caches
+                    .get(seq_i)
+                    .expect("Sequence index out of bounds in K cache")
+                    .clone();
+                let v = v_caches
+                    .get(seq_i)
+                    .expect("Sequence index out of bounds in V cache")
+                    .clone();
 
                 match cache {
                     KvCache::Normal {
@@ -502,8 +563,11 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
             let mut k_caches = Vec::new();
             let mut v_caches = Vec::new();
             for seq in seqs.iter_mut() {
-                let (mut k_preallocated_cache, mut v_preallocated_cache) =
-                    (*seq.preallocated_cache().as_ref().expect("Preallocated cache should be initialized")).clone();
+                let (mut k_preallocated_cache, mut v_preallocated_cache) = (*seq
+                    .preallocated_cache()
+                    .as_ref()
+                    .expect("Preallocated cache should be initialized"))
+                .clone();
                 if let Some(layer_devices) = &layer_devices {
                     let layer_dev = &layer_devices[layer_idx];
                     k_preallocated_cache = k_preallocated_cache
@@ -535,14 +599,22 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
 
                     let cache = KvCache::Normal {
                         k: SingleCache {
-                            all_data: Some(k_cache.zeros_like().expect("Failed to create zeros_like tensor")),
+                            all_data: Some(
+                                k_cache
+                                    .zeros_like()
+                                    .expect("Failed to create zeros_like tensor"),
+                            ),
                             dim: template_cache_dim,
                             current_seq_len: 0,
                             max_seq_len: template_cache_msl,
                             capacity_seq_len: k_cache.dims()[template_cache_dim],
                         },
                         v: SingleCache {
-                            all_data: Some(v_cache.zeros_like().expect("Failed to create zeros_like tensor")),
+                            all_data: Some(
+                                v_cache
+                                    .zeros_like()
+                                    .expect("Failed to create zeros_like tensor"),
+                            ),
                             dim: template_cache_dim,
                             current_seq_len: 0,
                             max_seq_len: template_cache_msl,
@@ -728,7 +800,9 @@ fn clone_in_cache(
                 SeqCache::XLora => seq.xlora_cache(),
                 SeqCache::Draft => seq.draft_cache(),
             };
-            let cache = src_cache.get(layer).expect("Cache layer should exist for model");
+            let cache = src_cache
+                .get(layer)
+                .expect("Cache layer should exist for model");
             // This case for llama 3.2 vision cross attn
             if cache.is_none() {
                 new_cache.push(None);
@@ -769,12 +843,24 @@ fn clone_out_cache(
             continue;
         }
 
-        let k_cache = cache.as_ref().expect("Cache should be initialized").0.clone();
-        let v_cache = cache.as_ref().expect("Cache should be initialized").1.clone();
+        let k_cache = cache
+            .as_ref()
+            .expect("Cache should be initialized")
+            .0
+            .clone();
+        let v_cache = cache
+            .as_ref()
+            .expect("Cache should be initialized")
+            .1
+            .clone();
 
-        let k_caches = k_cache.chunk(seqs.len(), 0).expect("Failed to chunk cache tensor");
+        let k_caches = k_cache
+            .chunk(seqs.len(), 0)
+            .expect("Failed to chunk cache tensor");
         debug_assert_eq!(k_caches.len(), seqs.len());
-        let v_caches = v_cache.chunk(seqs.len(), 0).expect("Failed to chunk cache tensor");
+        let v_caches = v_cache
+            .chunk(seqs.len(), 0)
+            .expect("Failed to chunk cache tensor");
         debug_assert_eq!(v_caches.len(), seqs.len());
 
         for (seq_i, seq) in seqs.iter_mut().enumerate() {
@@ -784,8 +870,14 @@ fn clone_out_cache(
                 SeqCache::Draft => seq.draft_cache(),
             };
             let seq_cache = &mut output_cache[layer];
-            let k = k_caches.get(seq_i).expect("Sequence index out of bounds in K cache").clone();
-            let v = v_caches.get(seq_i).expect("Sequence index out of bounds in V cache").clone();
+            let k = k_caches
+                .get(seq_i)
+                .expect("Sequence index out of bounds in K cache")
+                .clone();
+            let v = v_caches
+                .get(seq_i)
+                .expect("Sequence index out of bounds in V cache")
+                .clone();
             *seq_cache = Some((k, v));
         }
     }

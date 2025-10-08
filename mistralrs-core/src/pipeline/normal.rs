@@ -167,9 +167,18 @@ impl NormalLoaderBuilder {
         } else {
             info!(
                 "Using adapter base model ID: `{}`",
-                self.xlora_order.as_ref().expect("XLora order required").base_model_id
+                self.xlora_order
+                    .as_ref()
+                    .expect("XLora order required")
+                    .base_model_id
             );
-            Some(self.xlora_order.as_ref().expect("XLora order required").base_model_id.clone())
+            Some(
+                self.xlora_order
+                    .as_ref()
+                    .expect("XLora order required")
+                    .base_model_id
+                    .clone(),
+            )
         };
         self
     }
@@ -279,7 +288,8 @@ impl Loader for NormalLoader {
             self.config.from_uqff.is_some()
         );
         if let Some(from_uqff) = self.config.from_uqff.clone() {
-            *self.from_uqff.write().unwrap_or_else(|p| p.into_inner()) = Some(get_uqff_paths!(&from_uqff, self, silent));
+            *self.from_uqff.write().unwrap_or_else(|p| p.into_inner()) =
+                Some(get_uqff_paths!(&from_uqff, self, silent));
         }
         *self
             .token_source
@@ -356,7 +366,8 @@ impl Loader for NormalLoader {
             // ISQ or UQFF: quantized path
             // Match logic below where UQFF has priority
             let (layer_sizes_in_bytes, non_mapped_size_in_bytes, total_model_size_in_bytes) =
-                if let Some(serialized) = &*self.from_uqff.read().unwrap_or_else(|p| p.into_inner()) {
+                if let Some(serialized) = &*self.from_uqff.read().unwrap_or_else(|p| p.into_inner())
+                {
                     let weight_pack_factor = {
                         let ser_artifacts = unsafe {
                             candle_core::safetensors::MmapedSafetensors::multi(serialized)?
@@ -1203,8 +1214,11 @@ impl AnyMoePipelineMixin for NormalPipeline {
                     if regex.is_match(&key) {
                         // Idx of the last char of the layer id, +1
                         // Assumes N.MLP
-                        let last_layer_idx = key.find(&match_regex_clone).expect("Pattern should exist") - 1;
-                        let first_layer_idx = key[..last_layer_idx].rfind('.').expect("Pattern should exist");
+                        let last_layer_idx =
+                            key.find(&match_regex_clone).expect("Pattern should exist") - 1;
+                        let first_layer_idx = key[..last_layer_idx]
+                            .rfind('.')
+                            .expect("Pattern should exist");
                         let layer_n = key[first_layer_idx + 1..last_layer_idx]
                             .parse::<usize>()
                             .unwrap();
