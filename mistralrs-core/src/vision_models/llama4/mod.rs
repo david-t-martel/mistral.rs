@@ -206,8 +206,9 @@ impl NormalModel for Llama4Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement forward for LLaMA4 multimodal fusion module
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this LLaMA4 vision model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &EitherCache {
         self.language_model.cache()

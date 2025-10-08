@@ -57,7 +57,7 @@ impl<'a> Adapter<'a> {
             lora_preload_adapter_info,
         } = paths.get_adapter_paths()
         else {
-            todo!()
+            anyhow::bail!("Expected XLora adapter paths but got a different adapter type. Ensure the model paths are configured correctly for XLora.")
         };
 
         let lora_config = adapter_configs.as_ref().unwrap();

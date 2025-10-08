@@ -1616,7 +1616,7 @@ impl NormalModelLoader for Qwen2Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -2415,7 +2415,7 @@ impl NormalModelLoader for DeepSeekV2Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -2745,7 +2745,7 @@ impl NormalModelLoader for DeepSeekV3Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -3076,7 +3076,7 @@ impl NormalModelLoader for Qwen3Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -3263,7 +3263,7 @@ impl NormalModelLoader for GLM4Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -3445,7 +3445,7 @@ impl NormalModelLoader for Qwen3MoELoader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)
@@ -3658,7 +3658,7 @@ impl NormalModelLoader for SmolLm3Loader {
         _normal_loading_metadata: NormalLoadingMetadata,
         _preload_adapters: &Option<HashMap<String, (ShardedVarBuilder, LoraConfig)>>,
     ) -> Result<Box<dyn NormalModel + Send + Sync>> {
-        todo!()
+        anyhow::bail!("XLora is not supported for this model architecture. Use a model with XLora support or use LoRA adapters without XLora.")
     }
     fn is_gptx(&self, _: &str) -> Result<bool> {
         Ok(true)

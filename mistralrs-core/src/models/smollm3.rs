@@ -656,8 +656,9 @@ impl NormalModel for SmolLm3 {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement xlora_forward for SmolLM3
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this SmolLM3 model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &crate::pipeline::EitherCache {
         &self.kv_cache

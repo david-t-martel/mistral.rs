@@ -1551,7 +1551,8 @@ impl IsqModel for TextModel {
     }
 
     fn imatrix_names(&self) -> candle_core::Result<Vec<Option<String>>> {
-        todo!()
+        // IMatrix (importance matrix) quantization is not yet implemented for Gemma3n
+        Ok(vec![])
     }
 }
 

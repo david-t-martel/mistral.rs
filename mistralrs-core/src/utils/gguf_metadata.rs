@@ -348,8 +348,32 @@ impl DeviceMappedModelLoader for GgufDeviceMapLoaderInner<'_, '_> {
                 token_embd + output_norm + output
             }
             _ => {
-                // TODO: Implement size_in_bytes support for remaining GGUF architectures (add tensor accounting logic here)
-                unimplemented!()
+                // For architectures not yet covered, provide a default fallback
+                // This prevents panics for new/uncommon architectures
+                tracing::warn!(
+                    "Using generic GGUF fallback for architecture: {:?}. \
+                     Size estimates may be less accurate. Consider adding explicit support.",
+                    self.arch
+                );
+
+                let token_embd = tensor_info_size_in_bytes!(
+                    self.model.tensor_info("token_embd.weight")?,
+                    DType::F32
+                );
+                let output_norm = if self.model.has_tensor("output_norm.weight") {
+                    tensor_info_size_in_bytes!(
+                        self.model.tensor_info("output_norm.weight")?,
+                        DType::F32
+                    )
+                } else {
+                    0
+                };
+                let output = if self.model.has_tensor("output.weight") {
+                    tensor_info_size_in_bytes!(self.model.tensor_info("output.weight")?)
+                } else {
+                    tensor_info_size_in_bytes!(self.model.tensor_info("token_embd.weight")?)
+                };
+                token_embd + output_norm + output
             }
         };
         Ok(size_in_bytes)
@@ -595,8 +619,87 @@ impl DeviceMappedModelLoader for GgufDeviceMapLoaderInner<'_, '_> {
                 attn_norm + ffn_norm + attn_q + attn_k + attn_v + attn_output + ffn_up + ffn_down
             }
             _ => {
-                // TODO: Implement layer size accounting for remaining GGUF architectures
-                unimplemented!()
+                // For architectures not explicitly listed, provide a generic fallback
+                // that attempts to infer layer size from layer 0 tensor sizes
+                tracing::warn!(
+                    "Using generic GGUF layer size fallback for architecture: {:?}. \
+                     Probing layer 0 tensors. Consider adding explicit support for better accuracy.",
+                    self.arch
+                );
+
+                let mut size_in_bytes = 0;
+
+                // Try to get attention norm (required in most architectures)
+                if self.model.has_tensor("blk.0.attn_norm.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(
+                        self.model.tensor_info("blk.0.attn_norm.weight")?,
+                        DType::F32
+                    );
+                }
+
+                // Try to get FFN norm if present
+                if self.model.has_tensor("blk.0.ffn_norm.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(
+                        self.model.tensor_info("blk.0.ffn_norm.weight")?,
+                        DType::F32
+                    );
+                }
+
+                // Try to get attention weights
+                if self.model.has_tensor("blk.0.attn_q.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.attn_q.weight")?);
+                }
+                if self.model.has_tensor("blk.0.attn_k.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.attn_k.weight")?);
+                }
+                if self.model.has_tensor("blk.0.attn_v.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.attn_v.weight")?);
+                }
+                if self.model.has_tensor("blk.0.attn_output.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.attn_output.weight")?);
+                }
+
+                // Try to get FFN weights
+                if self.model.has_tensor("blk.0.ffn_gate.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.ffn_gate.weight")?);
+                }
+                if self.model.has_tensor("blk.0.ffn_up.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.ffn_up.weight")?);
+                }
+                if self.model.has_tensor("blk.0.ffn_down.weight") {
+                    size_in_bytes += tensor_info_size_in_bytes!(self
+                        .model
+                        .tensor_info("blk.0.ffn_down.weight")?);
+                }
+
+                if size_in_bytes == 0 {
+                    anyhow::bail!(
+                        "Unable to determine layer size for GGUF architecture {:?}. \
+                         The model may use unsupported tensor naming conventions. \
+                         Please file an issue with model details.",
+                        self.arch
+                    );
+                }
+
+                tracing::debug!(
+                    "Generic GGUF fallback computed layer size: {} bytes for architecture {:?}",
+                    size_in_bytes,
+                    self.arch
+                );
+
+                size_in_bytes
             }
         };
         Ok(vec![size_in_bytes; self.num_layers(config)?])

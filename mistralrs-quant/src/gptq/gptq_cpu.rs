@@ -32,23 +32,23 @@ impl QuantMethod for GptqLayer {
     }
 
     fn dequantize_w(&self) -> Result<Tensor> {
-        todo!()
+        candle_core::bail!("GPTQ dequantization is only supported on CUDA.")
     }
 
     fn forward(&self, _a: &Tensor) -> Result<Tensor> {
-        todo!()
+        candle_core::bail!("GPTQ forward is only supported on CUDA.")
     }
 
     fn quantized_act_type(&self) -> Option<DType> {
-        todo!()
+        None // GPTQ not supported on CPU
     }
 
     fn add_delta_w(&self, _delta: &Tensor) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!("GPTQ add_delta_w is only supported on CUDA.")
     }
 
     fn dtype_and_device(&self) -> (DType, candle_core::Device) {
-        todo!()
+        (DType::F32, candle_core::Device::Cpu) // Dummy values for unsupported CPU path
     }
 
     fn apply_isq(
@@ -59,7 +59,7 @@ impl QuantMethod for GptqLayer {
         _imatrix_weight: Option<Vec<f32>>,
         _guard: QuantizeOntoGuard,
     ) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!("GPTQ ISQ is only supported on CUDA.")
     }
 }
 

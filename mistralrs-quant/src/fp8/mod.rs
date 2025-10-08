@@ -155,7 +155,7 @@ impl QuantMethod for FP8Linear {
         _imatrix_weight: Option<Vec<f32>>,
         _guard: QuantizeOntoGuard,
     ) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!("ISQ (In-Situ Quantization) is not supported for FP8 layers. FP8 quantization must be applied during model loading.")
     }
 }
 

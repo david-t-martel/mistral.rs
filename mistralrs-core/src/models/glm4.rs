@@ -764,8 +764,9 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement xlora_forward for GLM4 (position encoding + multi-stream state)
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this GLM4 model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &EitherCache {
         &self.cache
