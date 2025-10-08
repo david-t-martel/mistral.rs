@@ -109,12 +109,11 @@ pub(crate) fn util_append_token_to_blocks(
         None => {
             logical_token_blocks.push(LogicalTokenBlock::new(block_size));
             logical_token_blocks
-                .last_mut()
-                .unwrap()
+                .last_mut().expect("Logical token blocks should never be empty")
                 .append_token_id(tok);
         }
     }
-    if logical_token_blocks.last().as_ref().unwrap().is_full() {
+    if logical_token_blocks.last().expect("Logical token blocks should never be empty").is_full() {
         logical_token_blocks.push(LogicalTokenBlock::new(block_size));
     }
 }
@@ -140,7 +139,7 @@ impl SequenceCustomMetadata {
                 physical_blocks_prefill: _,
                 block_size: _,
             } => {
-                let last = logical_token_blocks.last_mut().unwrap();
+                let last = logical_token_blocks.last_mut().expect("Logical token blocks should never be empty");
                 last.pop_token();
             }
             Self::None => (),
@@ -664,9 +663,7 @@ impl Sequence {
         }
         // Use xlora cache first because of non granular
         if self.xlora_cache.as_ref().is_some_and(|c| c[0].is_some()) {
-            self.xlora_cache.as_ref().unwrap()[0]
-                .as_ref()
-                .unwrap()
+            self.xlora_cache.as_ref().expect("XLora cache should be initialized")[0].as_ref().expect("XLora cache layer 0 should be present")
                 .0
                 .dims()[2]
                 + 1
@@ -683,32 +680,32 @@ impl Sequence {
 
     pub fn is_running(&self) -> bool {
         matches!(
-            *self.state.read().unwrap(),
+            *self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()),
             SequenceState::RunningCompletion | SequenceState::RunningPrompt // | SequenceState::RunningPrefillPrompt
         )
     }
 
     pub fn is_completion(&self) -> bool {
         matches!(
-            *self.state.read().unwrap(),
+            *self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()),
             SequenceState::RunningCompletion
         )
     }
 
     pub fn is_prompt(&self) -> bool {
         matches!(
-            *self.state.read().unwrap(),
+            *self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()),
             SequenceState::RunningPrompt | SequenceState::RunningPrefillPrompt
         )
     }
 
     pub fn is_waiting(&self) -> bool {
-        matches!(*self.state.read().unwrap(), SequenceState::Waiting)
+        matches!(*self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()), SequenceState::Waiting)
     }
 
     pub fn is_finished_paged_attn(&self) -> bool {
         matches!(
-            *self.state.read().unwrap(),
+            *self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()),
             SequenceState::FinishedAborted
                 | SequenceState::FinishedIgnored
                 | SequenceState::Done(_)
@@ -871,11 +868,11 @@ impl Sequence {
             let mut group = get_mut_group!(self);
             group.n_choices = group.n_choices.saturating_sub(1);
         }
-        *self.state.write().unwrap() = state;
+        *self.state.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = state;
     }
 
     pub fn getstate(&self) -> SequenceState {
-        *self.state.read().unwrap()
+        *self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     pub fn is_done(
@@ -891,7 +888,7 @@ impl Sequence {
         if is_eos {
             Some(StopReason::Eos)
         } else if matches!(
-            &*self.state.read().unwrap(),
+            &*self.state.read().unwrap_or_else(|poisoned| poisoned.into_inner()),
             SequenceState::Done(StopReason::Canceled)
         ) {
             Some(StopReason::Canceled)
