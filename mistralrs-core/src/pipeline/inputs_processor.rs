@@ -259,7 +259,7 @@ pub mod text_models_inputs_processor {
             let mut seqlens_q_map = HashMap::new();
             let mut seqlens_k_map = HashMap::new();
 
-            let devices = mapper.unwrap().get_unique_devices();
+            let devices = mapper.expect("Device mapper should be initialized").get_unique_devices();
             for device in devices {
                 seqlens_q_map.insert(device.location(), seqlens_q.to_device(&device)?);
                 seqlens_k_map.insert(device.location(), seqlens_k.to_device(&device)?);
@@ -306,7 +306,7 @@ pub mod text_models_inputs_processor {
             .reshape(((),))?;
 
             // For device mapping, make a copy of each tensor for each device
-            let devices = mapper.unwrap().get_unique_devices();
+            let devices = mapper.expect("Device mapper should be initialized").get_unique_devices();
             let mut slot_mappings_map = HashMap::new();
             let mut block_tables_map = HashMap::new();
             let mut context_lens_map = HashMap::new();
@@ -438,7 +438,7 @@ pub mod text_models_inputs_processor {
             let mut seqlens_q_map = HashMap::new();
             let mut seqlens_k_map = HashMap::new();
 
-            let devices = mapper.unwrap().get_unique_devices();
+            let devices = mapper.expect("Device mapper should be initialized").get_unique_devices();
             for device in devices {
                 seqlens_q_map.insert(device.location(), seqlens_q.to_device(&device)?);
                 seqlens_k_map.insert(device.location(), seqlens_k.to_device(&device)?);
@@ -476,7 +476,7 @@ pub mod text_models_inputs_processor {
             )?;
 
             // For device mapping, make a copy of each tensor for each device
-            let devices = mapper.unwrap().get_unique_devices();
+            let devices = mapper.expect("Device mapper should be initialized").get_unique_devices();
             let mut slot_mappings_map = HashMap::new();
             let mut block_tables_map = HashMap::new();
             let mut context_lens_map = HashMap::new();

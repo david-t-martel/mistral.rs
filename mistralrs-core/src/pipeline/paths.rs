@@ -172,7 +172,7 @@ pub fn get_xlora_paths(
                         .get(name)
                         .unwrap_or_else(|| panic!("Adapter {name} not found."));
                     for path in paths {
-                        if path.extension().unwrap() == "safetensors" {
+                        if path.extension().expect("File should have extension") == "safetensors" {
                             adapters_safetensors.push((name.clone(), path.to_owned()));
                         } else {
                             let conf = fs::read_to_string(path)?;
@@ -241,7 +241,7 @@ pub fn get_xlora_paths(
                             .get(&adapter.name)
                             .unwrap_or_else(|| panic!("Adapter {} not found.", adapter.name));
                         for path in paths {
-                            if path.extension().unwrap() == "safetensors" {
+                            if path.extension().expect("File should have extension") == "safetensors" {
                                 safetensor = Some(path.to_owned());
                             } else {
                                 let conf = fs::read_to_string(path)?;
@@ -250,7 +250,7 @@ pub fn get_xlora_paths(
                             }
                         }
 
-                        let (config, safetensor) = (config.unwrap(), safetensor.unwrap());
+                        let (config, safetensor) = (config.expect("Config required"), safetensor.unwrap());
                         output.insert(adapter.name.clone(), (safetensor, config));
                     }
                     Some(output)
@@ -319,7 +319,7 @@ pub fn get_model_paths(
 ) -> Result<Vec<PathBuf>> {
     match quantized_filename {
         Some(names) => {
-            let id = quantized_model_id.unwrap();
+            let id = quantized_model_id.expect("Model ID should be set");
             let mut files = Vec::new();
 
             for name in names {
@@ -383,7 +383,7 @@ pub fn get_model_paths(
                 "Found model weight filenames {:?}",
                 files
                     .iter()
-                    .map(|x| x.split('/').next_back().unwrap())
+                    .map(|x| x.split('/').next_back().expect("Value should exist"))
                     .collect::<Vec<_>>()
             );
             for rfilename in files {
@@ -452,14 +452,14 @@ pub(crate) fn get_chat_template(
                     info!("Using chat template from .jinja file.");
                     let mut template = ChatTemplate::default();
                     template.chat_template = Some(ChatTemplateValue(Either::Left(
-                        template_content.as_ref().unwrap().clone(),
+                        template_content.as_ref().expect("Value should exist").clone(),
                     )));
                     template
                 } else {
-                    serde_json::from_str(&template_content.as_ref().unwrap().clone()).unwrap()
+                    serde_json::from_str(&template_content.as_ref().expect("Failed to parse JSON").clone()).expect("Failed to parse JSON")
                 }
             } else {
-                serde_json::from_str(&template_content.as_ref().unwrap().clone()).unwrap()
+                serde_json::from_str(&template_content.as_ref().expect("Failed to parse JSON").clone()).expect("Failed to parse JSON")
             }
         }
     };
@@ -476,7 +476,7 @@ pub(crate) fn get_chat_template(
                 struct AutomaticTemplate {
                     chat_template: String,
                 }
-                let deser: AutomaticTemplate = serde_json::from_str(&ct).unwrap();
+                let deser: AutomaticTemplate = serde_json::from_str(&ct).expect("Failed to parse JSON");
                 deser.chat_template
             };
 
@@ -498,7 +498,7 @@ pub(crate) fn get_chat_template(
     let processor_conf: Option<crate::vision_models::processor_config::ProcessorConfig> = paths
         .get_processor_config()
         .as_ref()
-        .map(|f| serde_json::from_str(&fs::read_to_string(f).unwrap()).unwrap());
+        .map(|f| serde_json::from_str(&fs::read_to_string(f).expect("Failed to parse JSON")).expect("Failed to parse JSON"));
     if let Some(processor_conf) = processor_conf {
         if processor_conf.chat_template.is_some() {
             template.chat_template = processor_conf
@@ -524,13 +524,13 @@ pub(crate) fn get_chat_template(
         None => {
             info!("`tokenizer_config.json` does not contain a chat template, attempting to use specified JINJA chat template.");
             let mut deser: HashMap<String, Value> =
-                serde_json::from_str(&template_content.unwrap()).unwrap();
+                serde_json::from_str(&template_content.expect("Failed to parse JSON")).expect("Failed to parse JSON");
 
             match chat_template_fallback.cloned() {
                 Some(t) => {
                     info!("Loading specified loading chat template file at `{t}`.");
                     let templ: SpecifiedTemplate =
-                        serde_json::from_str(&fs::read_to_string(t.clone()).unwrap()).unwrap();
+                        serde_json::from_str(&fs::read_to_string(t.clone()).expect("Failed to parse JSON")).expect("Failed to parse JSON");
                     deser.insert(
                         "chat_template".to_string(),
                         Value::String(templ.chat_template),
@@ -538,19 +538,19 @@ pub(crate) fn get_chat_template(
                     if templ.bos_token.is_some() {
                         deser.insert(
                             "bos_token".to_string(),
-                            Value::String(templ.bos_token.unwrap()),
+                            Value::String(templ.bos_token.expect("Value should exist")),
                         );
                     }
                     if templ.eos_token.is_some() {
                         deser.insert(
                             "eos_token".to_string(),
-                            Value::String(templ.eos_token.unwrap()),
+                            Value::String(templ.eos_token.expect("Value should exist")),
                         );
                     }
                     if templ.unk_token.is_some() {
                         deser.insert(
                             "unk_token".to_string(),
-                            Value::String(templ.unk_token.unwrap()),
+                            Value::String(templ.unk_token.expect("Value should exist")),
                         );
                     }
                 }
@@ -562,7 +562,7 @@ pub(crate) fn get_chat_template(
 
             let ser = serde_json::to_string_pretty(&deser)
                 .expect("Serialization of modified chat template failed.");
-            serde_json::from_str(&ser).unwrap()
+            serde_json::from_str(&ser).expect("Failed to parse JSON")
         }
     }
 }

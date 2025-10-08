@@ -167,9 +167,9 @@ impl NormalLoaderBuilder {
         } else {
             info!(
                 "Using adapter base model ID: `{}`",
-                self.xlora_order.as_ref().unwrap().base_model_id
+                self.xlora_order.as_ref().expect("XLora order required").base_model_id
             );
-            Some(self.xlora_order.as_ref().unwrap().base_model_id.clone())
+            Some(self.xlora_order.as_ref().expect("XLora order required").base_model_id.clone())
         };
         self
     }
@@ -229,7 +229,7 @@ impl NormalLoaderBuilder {
         };
         Ok(Box::new(NormalLoader {
             inner: loader,
-            model_id: self.model_id.unwrap(),
+            model_id: self.model_id.expect("Model ID required"),
             config: self.config,
             xlora_model_id: self.xlora_model_id,
             lora_adapter_ids: self.lora_adapter_ids,
@@ -279,7 +279,7 @@ impl Loader for NormalLoader {
             self.config.from_uqff.is_some()
         );
         if let Some(from_uqff) = self.config.from_uqff.clone() {
-            *self.from_uqff.write().unwrap() = Some(get_uqff_paths!(&from_uqff, self, silent));
+            *self.from_uqff.write().unwrap_or_else(|p| p.into_inner()) = Some(get_uqff_paths!(&from_uqff, self, silent));
         }
         *self
             .token_source
@@ -356,7 +356,7 @@ impl Loader for NormalLoader {
             // ISQ or UQFF: quantized path
             // Match logic below where UQFF has priority
             let (layer_sizes_in_bytes, non_mapped_size_in_bytes, total_model_size_in_bytes) =
-                if let Some(serialized) = &*self.from_uqff.read().unwrap() {
+                if let Some(serialized) = &*self.from_uqff.read().unwrap_or_else(|p| p.into_inner()) {
                     let weight_pack_factor = {
                         let ser_artifacts = unsafe {
                             candle_core::safetensors::MmapedSafetensors::multi(serialized)?
@@ -775,7 +775,7 @@ impl Loader for NormalLoader {
                         }
                     }
                     EitherCache::Normal(normal) => {
-                        for layer in &mut *normal.lock().unwrap().0 {
+                        for layer in &mut *normal.lock().unwrap_or_else(|p| p.into_inner()).0 {
                             layer.reset();
                         }
                     }
@@ -830,7 +830,7 @@ impl Loader for NormalLoader {
                 },
                 multi_progress.clone(),
             )?;
-        } else if let Some(from_uqff) = &*self.from_uqff.read().unwrap() {
+        } else if let Some(from_uqff) = &*self.from_uqff.read().unwrap_or_else(|p| p.into_inner()) {
             model.load_from_artifacts(
                 device.clone(),
                 self.config.topology.as_ref(),
@@ -892,7 +892,7 @@ impl Loader for NormalLoader {
         let llg_factory = build_llg_factory(tokenizer.clone())?;
         let num_hidden_layers = match model.cache() {
             EitherCache::Full(full) => full.lock().len(),
-            EitherCache::Normal(normal) => normal.lock().unwrap().0.len(),
+            EitherCache::Normal(normal) => normal.lock().unwrap_or_else(|p| p.into_inner()).0.len(),
         };
         let eos = calculate_eos_tokens(&chat_template, gen_conf, &tokenizer);
         let sliding_window = model.config().sliding_window;
@@ -1203,8 +1203,8 @@ impl AnyMoePipelineMixin for NormalPipeline {
                     if regex.is_match(&key) {
                         // Idx of the last char of the layer id, +1
                         // Assumes N.MLP
-                        let last_layer_idx = key.find(&match_regex_clone).unwrap() - 1;
-                        let first_layer_idx = key[..last_layer_idx].rfind('.').unwrap();
+                        let last_layer_idx = key.find(&match_regex_clone).expect("Pattern should exist") - 1;
+                        let first_layer_idx = key[..last_layer_idx].rfind('.').expect("Pattern should exist");
                         let layer_n = key[first_layer_idx + 1..last_layer_idx]
                             .parse::<usize>()
                             .unwrap();
