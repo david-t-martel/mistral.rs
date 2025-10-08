@@ -236,8 +236,9 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
         seqs: &mut [&mut crate::sequence::Sequence],
         modify_draft_cache: bool,
     ) {
-        let mut new_k_cache = Vec::new();
-        let mut new_v_cache = Vec::new();
+        let num_layers = pipeline.get_metadata().num_hidden_layers;
+        let mut new_k_cache = Vec::with_capacity(num_layers);
+        let mut new_v_cache = Vec::with_capacity(num_layers);
 
         for layer in 0..pipeline.get_metadata().num_hidden_layers {
             // Preallocate combined k and v caches across all sequences, avoiding Tensor::cat copies
@@ -249,7 +250,7 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                 } else {
                     seqs[0].normal_cache()
                 };
-                let Some(cache) = src_cache.get(layer).unwrap().as_ref() else {
+                let Some(cache) = src_cache.get(layer).expect("Cache layer should exist for model").as_ref() else {
                     // This is hit in gemma3n for the shared kv cache
                     new_k_cache.push(None);
                     new_v_cache.push(None);
@@ -257,10 +258,10 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                 };
                 match cache {
                     KvCache::Normal { k, v } => {
-                        (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                     }
                     KvCache::Rotating { k, v } => {
-                        (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                     }
                 }
             };
@@ -278,21 +279,21 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                 } else {
                     seq.normal_cache()
                 };
-                let Some(cache) = src_cache.get(layer).unwrap().as_ref() else {
+                let Some(cache) = src_cache.get(layer).expect("Cache layer should exist for model").as_ref() else {
                     // Skip for shared kv cache layers in models like gemma3n
                     continue;
                 };
                 let (src_k, src_v) = match cache {
                     KvCache::Normal { k, v } => {
-                        (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                     }
                     KvCache::Rotating { k, v } => {
-                        (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                        (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                     }
                 };
                 let offset = i * first_k.dims()[0];
-                batch_k.slice_set(&src_k, 0, offset).unwrap();
-                batch_v.slice_set(&src_v, 0, offset).unwrap();
+                batch_k.slice_set(&src_k, 0, offset).expect("Failed to set cache slice - shape mismatch?");
+                batch_v.slice_set(&src_v, 0, offset).expect("Failed to set cache slice - shape mismatch?");
             }
             new_k_cache.push(Some(batch_k));
             new_v_cache.push(Some(batch_v));
@@ -338,14 +339,14 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
 
                     caches.push(KvCache::Normal {
                         k: SingleCache {
-                            all_data: k_cache.map(|x| x.contiguous().unwrap()),
+                            all_data: k_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
                             capacity_seq_len: template_cache_capsl,
                         },
                         v: SingleCache {
-                            all_data: v_cache.map(|x| x.contiguous().unwrap()),
+                            all_data: v_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -362,7 +363,7 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
 
                     caches.push(KvCache::Rotating {
                         k: RotatingCache {
-                            all_data: k_cache.map(|x| x.contiguous().unwrap()),
+                            all_data: k_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -370,7 +371,7 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
                             capacity_seq_len: template_cache_capsl,
                         },
                         v: RotatingCache {
-                            all_data: v_cache.map(|x| x.contiguous().unwrap()),
+                            all_data: v_cache.map(|x| x.contiguous().expect("Failed to make tensor contiguous")),
                             dim: template_cache_dim,
                             current_seq_len: template_cache_csl,
                             max_seq_len: template_cache_msl,
@@ -388,16 +389,16 @@ impl<T: CacheManagerMixin + MetadataMixin + ?Sized> CacheManager<T> for NormalCa
         for layer in 0..pipeline.get_metadata().num_hidden_layers {
             let cache = all_cache.0.get(layer).unwrap();
             // This case for llama 3.2 vision cross attn
-            if cache.k().unwrap().is_none() {
+            if cache.k().expect("Cache key should be accessible").is_none() {
                 continue;
             }
 
             let (k_cache, v_cache) = match cache {
                 KvCache::Normal { k, v } => {
-                    (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                    (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                 }
                 KvCache::Rotating { k, v } => {
-                    (k.all_data.clone().unwrap(), v.all_data.clone().unwrap())
+                    (k.all_data.clone().expect("Cache data should be initialized"), v.all_data.clone().expect("Cache data should be initialized"))
                 }
             };
 
@@ -727,7 +728,7 @@ fn clone_in_cache(
                 SeqCache::XLora => seq.xlora_cache(),
                 SeqCache::Draft => seq.draft_cache(),
             };
-            let cache = src_cache.get(layer).unwrap();
+            let cache = src_cache.get(layer).expect("Cache layer should exist for model");
             // This case for llama 3.2 vision cross attn
             if cache.is_none() {
                 new_cache.push(None);

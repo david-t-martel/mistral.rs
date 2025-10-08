@@ -192,7 +192,7 @@ pub mod text_models_inputs_processor {
                 seqlens_k.push((ctxt.len() + chunk_offset_toks) as u32);
             }
 
-            seqs_tensors.push(Tensor::new(ctxt, device).unwrap().unsqueeze(0).unwrap());
+            seqs_tensors.push(Tensor::new(ctxt, device).expect("Failed to create input tensor").unsqueeze(0).expect("Failed to unsqueeze tensor dimension"));
 
             if let Some(paged_attn_metadata) = &mut paged_attn_metadata {
                 let block_engine = get_mut_arcmutex!(paged_attn_metadata.block_engine);
@@ -232,11 +232,11 @@ pub mod text_models_inputs_processor {
                             table.len()
                         );
                     } else {
-                        table.get(i / paged_attn_metadata.block_size).unwrap()
+                        table.get(i / paged_attn_metadata.block_size).expect("Block table index out of bounds")
                     };
                     let block_offset = i % paged_attn_metadata.block_size;
                     let slot = block_number * paged_attn_metadata.block_size + block_offset;
-                    slot_mapping.push(slot.try_into().unwrap());
+                    slot_mapping.push(slot.try_into().expect("Slot index out of range"));
                     block_tables.push(table.clone());
                 }
                 slot_mappings.push(slot_mapping);
@@ -245,8 +245,8 @@ pub mod text_models_inputs_processor {
         }
 
         let (max_q, max_k, seqlens_q_map, seqlens_k_map) = if flash_attn {
-            let max_q = *seqlens_q.iter().max().unwrap();
-            let max_k = *seqlens_k.iter().max().unwrap();
+            let max_q = *seqlens_q.iter().max().expect("Sequence list should not be empty");
+            let max_k = *seqlens_k.iter().max().expect("Sequence list should not be empty");
             let seqlens_q = Tensor::new(seqlens_q, device)?
                 .to_dtype(DType::F32)?
                 .cumsum(0)?
@@ -269,14 +269,14 @@ pub mod text_models_inputs_processor {
             (0, 0, HashMap::new(), HashMap::new())
         };
 
-        let input = Tensor::cat(&seqs_tensors, 0).unwrap();
+        let input = Tensor::cat(&seqs_tensors, 0).expect("Failed to concatenate input tensors - shape mismatch?");
 
         let paged_attn_meta = if paged_attn_metadata.is_some() {
-            let max_slot_mapping_len = slot_mappings.iter().map(|x| x.len()).max().unwrap();
+            let max_slot_mapping_len = slot_mappings.iter().map(|x| x.len()).max().expect("Sequence list should not be empty");
             let slot_mappings =
                 _make_tensor_with_pad(slot_mappings, max_slot_mapping_len, _PAD_SLOT_ID, device)?;
 
-            let max_block_table_len = block_tables.iter().map(|x| x.len()).max().unwrap();
+            let max_block_table_len = block_tables.iter().map(|x| x.len()).max().expect("Sequence list should not be empty");
             let block_tables = _make_tensor_with_pad(
                 block_tables
                     .iter()
@@ -377,11 +377,11 @@ pub mod text_models_inputs_processor {
                 seqlens_k.push((ctxt.len() + start_pos) as u32);
             }
 
-            seqs_tensors.push(Tensor::new(ctxt, device).unwrap().unsqueeze(0).unwrap());
+            seqs_tensors.push(Tensor::new(ctxt, device).expect("Failed to create input tensor").unsqueeze(0).expect("Failed to unsqueeze tensor dimension"));
 
             if let Some(paged_attn_metadata) = &mut paged_attn_metadata {
                 let block_engine = get_mut_arcmutex!(paged_attn_metadata.block_engine);
-                let table = block_engine.block_tables.get(seq.id()).unwrap();
+                let table = block_engine.block_tables.get(seq.id()).expect("Sequence block table not found");
 
                 let table = table
                     .iter()
@@ -398,7 +398,7 @@ pub mod text_models_inputs_processor {
                 };
                 let block_offset = block_pos % paged_attn_metadata.block_size;
                 let slot = block_number * paged_attn_metadata.block_size + block_offset;
-                let slot = slot.try_into().unwrap();
+                let slot = slot.try_into().expect("Slot index out of range");
                 slot_mappings.push(vec![slot]);
 
                 if let Some(sliding_window) = paged_attn_metadata.sliding_window {
@@ -424,8 +424,8 @@ pub mod text_models_inputs_processor {
         }
 
         let (max_q, max_k, seqlens_q_map, seqlens_k_map) = if flash_attn {
-            let max_q = *seqlens_q.iter().max().unwrap();
-            let max_k = *seqlens_k.iter().max().unwrap();
+            let max_q = *seqlens_q.iter().max().expect("Sequence list should not be empty");
+            let max_k = *seqlens_k.iter().max().expect("Sequence list should not be empty");
             let seqlens_q = Tensor::new(seqlens_q, device)?
                 .to_dtype(DType::F32)?
                 .cumsum(0)?
@@ -451,7 +451,7 @@ pub mod text_models_inputs_processor {
         let paged_attn_meta = if paged_attn_metadata.is_some() {
             let slot_mappings = _make_tensor_with_pad(slot_mappings, 1, _PAD_SLOT_ID, device)?;
 
-            let max_block_table_len = block_tables.iter().map(|x| x.len()).max().unwrap();
+            let max_block_table_len = block_tables.iter().map(|x| x.len()).max().expect("Sequence list should not be empty");
 
             let block_tables = _make_tensor_with_pad(
                 block_tables
@@ -464,7 +464,7 @@ pub mod text_models_inputs_processor {
             )?;
             let block_tables = block_tables.reshape(((), max_block_table_len))?;
 
-            let max_context_len = paged_attn_context_lens.iter().max().unwrap();
+            let max_context_len = paged_attn_context_lens.iter().max().expect("Sequence list should not be empty");
 
             let context_lens = Tensor::from_vec(
                 paged_attn_context_lens
@@ -502,7 +502,7 @@ pub mod text_models_inputs_processor {
         };
 
         Ok(InputMetadata {
-            input: Tensor::cat(&seqs_tensors, 0).unwrap(),
+            input: Tensor::cat(&seqs_tensors, 0).expect("Failed to concatenate input tensors - shape mismatch?"),
             positions: seqlen_offsets,
             context_lens,
             position_ids,

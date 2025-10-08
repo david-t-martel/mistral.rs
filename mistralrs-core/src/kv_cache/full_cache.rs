@@ -24,7 +24,7 @@ impl EitherCache {
     /// Panics otherwise!
     pub fn normal(&self) -> MutexGuard<'_, NormalCache> {
         match self {
-            Self::Normal(normal) => normal.lock().unwrap(),
+            Self::Normal(normal) => normal.lock().expect("Cache operation failed"),
             Self::Full(_) => panic!("Got full cache, expected normal cache."),
         }
     }

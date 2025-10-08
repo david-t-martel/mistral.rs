@@ -98,11 +98,11 @@ impl SingleCache {
             let mut shape = src.dims().to_vec();
             shape[self.dim] = self.capacity_seq_len;
             let ad = Tensor::zeros(shape, src.dtype(), src.device())?;
-            ad.slice_set(self.all_data.as_ref().unwrap(), self.dim, 0)?;
+            ad.slice_set(self.all_data.as_ref().expect("Cache operation failed"), self.dim, 0)?;
             self.all_data = Some(ad);
         }
 
-        let ad = self.all_data.as_mut().unwrap();
+        let ad = self.all_data.as_mut().expect("Cache operation failed");
 
         ad.slice_set(src, self.dim, self.current_seq_len)?;
         self.current_seq_len += seq_len;
