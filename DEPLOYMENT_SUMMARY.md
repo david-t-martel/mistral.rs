@@ -1,5 +1,7 @@
 # Deployment Infrastructure Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before following this deployment roadmap._
+
 Complete production-ready deployment infrastructure for mistral.rs LLM inference server.
 
 ## Created Files

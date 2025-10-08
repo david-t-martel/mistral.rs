@@ -48,9 +48,16 @@ impl ToolCatalog {
                 Self::define_wc(),
                 Self::define_sort(),
                 Self::define_uniq(),
-                Self::define_execute(),
+                Self::define_shell(),
+                Self::define_shell_alias(),
             ],
         }
+    }
+
+    fn define_shell_alias() -> ToolDefinition {
+        let mut shell = Self::define_shell();
+        shell.name = "execute".to_string();
+        shell
     }
 
     /// Get all tool definitions
@@ -336,10 +343,10 @@ impl ToolCatalog {
         }
     }
 
-    fn define_execute() -> ToolDefinition {
+    fn define_shell() -> ToolDefinition {
         ToolDefinition {
-            name: "execute".to_string(),
-            description: "Execute a shell command. Use with caution.".to_string(),
+            name: "shell".to_string(),
+            description: "Execute a shell command inside the sandbox.".to_string(),
             parameters: json!({
                 "type": "object",
                 "properties": {
@@ -347,21 +354,45 @@ impl ToolCatalog {
                         "type": "string",
                         "description": "Shell command to execute"
                     },
-                    "args": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Command arguments"
+                    "shell": {
+                        "type": "string",
+                        "description": "Shell to use (bash, pwsh, cmd)"
                     },
                     "timeout": {
                         "type": "integer",
-                        "description": "Timeout in seconds"
+                        "description": "Timeout in seconds",
+                        "default": 30
+                    },
+                    "working_dir": {
+                        "type": "string",
+                        "description": "Working directory for the command"
+                    },
+                    "capture_stdout": {
+                        "type": "boolean",
+                        "description": "Capture standard output",
+                        "default": true
+                    },
+                    "capture_stderr": {
+                        "type": "boolean",
+                        "description": "Capture standard error",
+                        "default": true
+                    },
+                    "env": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": "Environment variables to set"
                     }
                 },
                 "required": ["command"]
             }),
             examples: Some(vec![ToolExample {
-                description: "List processes".to_string(),
-                arguments: json!({"command": "ps", "args": ["aux"]}),
+                description: "List Python processes".to_string(),
+                arguments: json!({
+                    "command": "ps aux | grep python",
+                    "shell": "bash",
+                    "capture_stdout": true,
+                    "capture_stderr": false
+                }),
             }]),
         }
     }

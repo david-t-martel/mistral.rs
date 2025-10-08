@@ -3,7 +3,7 @@ $entries = @()
 
 if (Test-Path $modelsRoot) {
     $files = Get-ChildItem -Path $modelsRoot -Recurse -File -Include *.gguf,*.safetensors -ErrorAction SilentlyContinue
-    
+
     foreach ($f in $files) {
         $entries += [pscustomobject]@{
             name = $f.BaseName

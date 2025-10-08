@@ -165,9 +165,7 @@ def test_error_handling():
         request = ChatCompletionRequest(messages=messages)
 
         try:
-            response = runner.send_chat_completion_request(
-                request, model_id="non-existent-model"
-            )
+            runner.send_chat_completion_request(request, model_id="non-existent-model")
             print("   ❌ Should have raised an error for non-existent model")
         except Exception as e:
             print(f"   ✓ Correctly raised error: {type(e).__name__}")

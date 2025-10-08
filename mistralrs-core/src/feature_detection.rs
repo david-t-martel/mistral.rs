@@ -1,8 +1,7 @@
 /// Runtime feature detection and capability reporting for mistral.rs
-/// 
+///
 /// This module provides compile-time and runtime checks for optional features
 /// to give users better error messages and debugging information.
-
 use std::fmt;
 
 /// Available features that can be enabled at compile time

@@ -36,23 +36,23 @@ if (Wait-Job $job -Timeout 120) {
     $sw.Stop()
     $output = Receive-Job $job
     $outputText = $output | Out-String
-    
+
     # Save full log
     $logFile = Join-Path $logDir 'tui-test.log'
     $outputText | Out-File -Encoding utf8 $logFile
-    
+
     Write-Host "✓ TUI test completed in $([math]::Round($sw.Elapsed.TotalSeconds, 1))s" -ForegroundColor Green
     Write-Host ""
-    
+
     # Display first 15 lines
     $lines = $outputText -split "`n"
     Write-Host "--- First 15 lines of output ---" -ForegroundColor Cyan
     $lines | Select-Object -First 15 | ForEach-Object { Write-Host $_ }
-    
+
     Write-Host ""
     Write-Host "--- Last 15 lines of output ---" -ForegroundColor Cyan
     $lines | Select-Object -Last 15 | ForEach-Object { Write-Host $_ }
-    
+
     # Validate results
     Write-Host ""
     Write-Host "=== Validation ===" -ForegroundColor Yellow
@@ -63,7 +63,7 @@ if (Wait-Job $job -Timeout 120) {
         'Help command' = ($outputText -match 'help|commands|usage')
         'Clean exit' = ($outputText -notmatch 'error|panic|failed' -or $outputText -match 'exit|quit')
     }
-    
+
     $passed = 0
     $total = $checks.Count
     foreach ($check in $checks.GetEnumerator()) {
@@ -71,10 +71,10 @@ if (Wait-Job $job -Timeout 120) {
         $color = if ($check.Value) { 'Green' } else { 'Red' }
         Write-Host "  $status $($check.Key)" -ForegroundColor $color
     }
-    
+
     Write-Host ""
     Write-Host "Results: $passed/$total checks passed" -ForegroundColor $(if ($passed -eq $total) { 'Green' } else { 'Yellow' })
-    
+
     # Create result JSON
     $result = @{
         phase = '3A-TUI'
@@ -87,16 +87,16 @@ if (Wait-Job $job -Timeout 120) {
         status = if ($passed -ge 3) { 'PASS' } else { 'FAIL' }
         timestamp = (Get-Date -Format 'o')
     }
-    
+
     $resultFile = Join-Path $projectRoot 'TUI_TEST_RESULTS.json'
     $result | ConvertTo-Json -Depth 3 | Out-File -Encoding utf8 $resultFile
     Write-Host "✓ Results saved to TUI_TEST_RESULTS.json" -ForegroundColor Green
-    
+
 } else {
     $sw.Stop()
     Write-Host "✗ TUI test timeout after $([math]::Round($sw.Elapsed.TotalSeconds, 1))s" -ForegroundColor Red
     Stop-Job $job -ErrorAction SilentlyContinue
-    
+
     # Try to get partial output
     $partialOutput = Receive-Job $job -ErrorAction SilentlyContinue
     if ($partialOutput) {
@@ -104,7 +104,7 @@ if (Wait-Job $job -Timeout 120) {
         $partialOutput | Out-String | Out-File -Encoding utf8 $timeoutLog
         Write-Host "Partial output saved to $timeoutLog" -ForegroundColor Yellow
     }
-    
+
     $result = @{
         phase = '3A-TUI'
         status = 'TIMEOUT'

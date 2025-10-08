@@ -39,11 +39,11 @@ function Test-MCPServer {
         [string]$Type,
         [scriptblock]$ValidationTest
     )
-    
+
     Write-Host "`n========================================" -ForegroundColor Yellow
     Write-Host "Testing: $Name ($Type)" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Yellow
-    
+
     $serverResult = @{
         name = $Name
         type = $Type
@@ -53,7 +53,7 @@ function Test-MCPServer {
         tests = @()
         errors = @()
     }
-    
+
     try {
         # Check if command exists
         Write-Host "  Checking command availability: $Command" -ForegroundColor Gray
@@ -62,7 +62,7 @@ function Test-MCPServer {
             throw "Command not found: $Command"
         }
         Write-Host "  ✅ Command found: $Command" -ForegroundColor Green
-        
+
         # Set environment variables if provided
         if ($Env) {
             foreach ($key in $Env.Keys) {
@@ -76,7 +76,7 @@ function Test-MCPServer {
                 }
             }
         }
-        
+
         # Try to start server process
         Write-Host "  Starting server process..." -ForegroundColor Gray
         $processArgs = @{
@@ -87,7 +87,7 @@ function Test-MCPServer {
             RedirectStandardOutput = "$LogFile.$Name.out"
             RedirectStandardError = "$LogFile.$Name.err"
         }
-        
+
         if ($Env) {
             # Merge environment variables
             $processEnv = @{}
@@ -101,14 +101,14 @@ function Test-MCPServer {
                 $processEnv[$key] = $value
             }
         }
-        
+
         $process = Start-Process @processArgs
         $serverResult.pid = $process.Id
         Write-Host "  Process started (PID: $($process.Id))" -ForegroundColor Gray
-        
+
         # Wait a bit for initialization
         Start-Sleep -Seconds 5
-        
+
         # Check if process is still running
         if ($process.HasExited) {
             $exitCode = $process.ExitCode
@@ -118,15 +118,15 @@ function Test-MCPServer {
             }
             throw "Server exited immediately with code $exitCode. Error: $errorLog"
         }
-        
+
         Write-Host "  ✅ Server process running" -ForegroundColor Green
-        
+
         # Run validation test if provided
         if ($ValidationTest) {
             Write-Host "  Running validation tests..." -ForegroundColor Gray
             $validationResult = & $ValidationTest
             $serverResult.tests += $validationResult
-            
+
             if ($validationResult.status -eq "PASSED") {
                 Write-Host "  ✅ Validation passed" -ForegroundColor Green
                 $serverResult.status = "PASSED"
@@ -138,21 +138,21 @@ function Test-MCPServer {
             Write-Host "  ✅ Server started (no validation test)" -ForegroundColor Green
             $serverResult.status = "STARTED"
         }
-        
+
         # Cleanup: Stop the process
         Write-Host "  Stopping server..." -ForegroundColor Gray
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 1
-        
+
     } catch {
         Write-Host "  ❌ Failed: $_" -ForegroundColor Red
         $serverResult.status = "FAILED"
         $serverResult.errors += $_.Exception.Message
-        
+
         # Log to file
         Add-Content -Path $LogFile -Value "[$Name] FAILED: $($_.Exception.Message)"
     }
-    
+
     $serverResult.end_time = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     return $serverResult
 }
@@ -371,7 +371,7 @@ try {
     $redisCheck = & redis-cli ping 2>&1
     if ($redisCheck -match "PONG") {
         Write-Host "  ✅ Redis is running" -ForegroundColor Green
-        
+
         $ragRedisPath = "C:/users/david/bin/rag-redis-mcp-server.exe"
         if (-not (Test-Path $ragRedisPath)) {
             Write-Host "  ⚠️ RAG-Redis binary not found at $ragRedisPath - SKIPPING" -ForegroundColor Yellow

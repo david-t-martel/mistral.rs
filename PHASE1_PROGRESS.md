@@ -1,5 +1,7 @@
 # Phase 1 Progress Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before continuing with this progress plan._
+
 **Status**: In Progress (Phases 1.1-1.2 Complete) \
 **Started**: 2025-10-05 \
 **Last Updated**: 2025-10-05T07:33:00Z

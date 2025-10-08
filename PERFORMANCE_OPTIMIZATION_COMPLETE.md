@@ -1,5 +1,7 @@
 # mistral.rs Performance Optimization - Implementation Complete
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before extending this optimization work._
+
 **Date**: 2025-10-03
 **Focus**: High Performance, High Stability Local LLM Framework
 **Status**: ✅ Core Implementations Complete, Ready for Testing

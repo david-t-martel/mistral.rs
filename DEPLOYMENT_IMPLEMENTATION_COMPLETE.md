@@ -1,5 +1,7 @@
 # Deployment Targets Implementation - COMPLETE ✅
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before extending this deployment work._
+
 **Project:** mistral.rs Makefile Deployment Targets
 **Date:** 2025-10-03
 **Status:** ✅ **IMPLEMENTATION COMPLETE AND VALIDATED**

@@ -24,6 +24,7 @@ Best for public APIs, RESTful services, and servers behind load balancers.
 ```
 
 ### Features
+
 - Server-Sent Events (SSE) support for streaming responses
 - Custom headers for API versioning or client identification
 - Bearer token authentication (added as `Authorization: Bearer <token>`)
@@ -31,6 +32,7 @@ Best for public APIs, RESTful services, and servers behind load balancers.
 - Standard HTTP semantics
 
 ### Example: Hugging Face MCP
+
 ```rust
 McpServerSource::Http {
     url: "https://hf.co/mcp".to_string(),
@@ -61,6 +63,7 @@ Best for real-time applications, bidirectional communication, and low-latency re
 ```
 
 ### Features
+
 - Persistent connections reduce handshake overhead
 - Server-initiated notifications
 - Lower latency for frequent tool calls
@@ -68,6 +71,7 @@ Best for real-time applications, bidirectional communication, and low-latency re
 - WebSocket-specific headers support
 
 ### Example: Real-time Data Feed
+
 ```rust
 McpServerSource::WebSocket {
     url: "wss://data.example.com/mcp".to_string(),
@@ -98,6 +102,7 @@ Best for local tools, development servers, and sandboxed environments.
 ```
 
 ### Features
+
 - No network overhead
 - Process isolation for security
 - Direct stdin/stdout communication
@@ -106,6 +111,7 @@ Best for local tools, development servers, and sandboxed environments.
 - No authentication needed (process inherits permissions)
 
 ### Example: Filesystem Server
+
 ```rust
 McpServerSource::Process {
     command: "mcp-server-filesystem".to_string(),
@@ -117,28 +123,31 @@ McpServerSource::Process {
 
 ## Transport Selection Guide
 
-| Use Case | Recommended Transport | Why |
-|----------|---------------------|-----|
-| Public APIs | HTTP | Standard auth, caching, load balancing |
-| Local tools | Process | No network, process isolation |
-| Real-time data | WebSocket | Low latency, server push |
-| Corporate proxies | HTTP | Proxy support, standard ports |
-| Development | Process | Easy debugging, no network setup |
-| Interactive apps | WebSocket | Bidirectional, persistent connection |
+| Use Case          | Recommended Transport | Why                                    |
+| ----------------- | --------------------- | -------------------------------------- |
+| Public APIs       | HTTP                  | Standard auth, caching, load balancing |
+| Local tools       | Process               | No network, process isolation          |
+| Real-time data    | WebSocket             | Low latency, server push               |
+| Corporate proxies | HTTP                  | Proxy support, standard ports          |
+| Development       | Process               | Easy debugging, no network setup       |
+| Interactive apps  | WebSocket             | Bidirectional, persistent connection   |
 
 ## Security Considerations
 
 ### HTTP
+
 - Always use HTTPS in production
 - Bearer tokens transmitted with each request
 - Consider token rotation strategies
 
 ### WebSocket
+
 - Use WSS (WebSocket Secure) in production
 - Bearer token sent during handshake
 - Connection persists with authenticated state
 
 ### Process
+
 - Inherits user permissions
 - Sandboxing via work_dir and env
 - No network exposure
@@ -146,12 +155,13 @@ McpServerSource::Process {
 ## Performance Tips
 
 1. **HTTP**: Enable keep-alive, use connection pooling
-2. **WebSocket**: Reuse connections, handle reconnection gracefully
-3. **Process**: Minimize startup time, use long-running processes
+1. **WebSocket**: Reuse connections, handle reconnection gracefully
+1. **Process**: Minimize startup time, use long-running processes
 
 ## Error Handling
 
 All transports implement automatic retry with exponential backoff:
+
 - Initial retry: 1 second
 - Max retry: 60 seconds
 - Max attempts: 5

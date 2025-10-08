@@ -139,11 +139,11 @@ $highPriorityTodos = @(
 
 function New-IssueMarkdown {
     param($Todo)
-    
+
     @"
 ## 📍 Location
-**File**: ``$($Todo.File)``  
-**Line**: $($Todo.Line)  
+**File**: ``$($Todo.File)``
+**Line**: $($Todo.Line)
 **Function/Module**: ``$($Todo.Module)``
 
 ## 🔍 Current State
@@ -174,7 +174,7 @@ $($Todo.Solution)
 
 function Show-Issue {
     param($Todo)
-    
+
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "TITLE: $($Todo.Title)" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Cyan
@@ -198,39 +198,39 @@ Write-Host "Dry Run: $DryRun`n" -ForegroundColor Cyan
 
 if ($DryRun) {
     Write-Host "📄 DRY RUN MODE - Showing issue previews`n" -ForegroundColor Yellow
-    
+
     foreach ($todo in $todosToProcess) {
         Show-Issue -Todo $todo
     }
-    
+
     Write-Host "`n✅ Dry run complete. No issues created." -ForegroundColor Green
     Write-Host "Run without -DryRun to create issues via GitHub CLI (gh)`n" -ForegroundColor Yellow
 } else {
     # Check for GitHub CLI
     $ghAvailable = Get-Command gh -ErrorAction SilentlyContinue
-    
+
     if (-not $ghAvailable) {
         Write-Host "❌ GitHub CLI (gh) not found!" -ForegroundColor Red
         Write-Host "Install: https://cli.github.com/`n" -ForegroundColor Yellow
         exit 1
     }
-    
+
     Write-Host "🚀 Creating GitHub issues...`n" -ForegroundColor Green
-    
+
     $created = 0
     $failed = 0
-    
+
     foreach ($todo in $todosToProcess) {
         try {
             $body = New-IssueMarkdown -Todo $todo
-            
+
             # Create issue via GitHub CLI
             $result = gh issue create `
                 --title $todo.Title `
                 --body $body `
                 --label "technical-debt,priority-$($todo.Priority.ToLower())" `
                 2>&1
-            
+
             if ($LASTEXITCODE -eq 0) {
                 $created++
                 Write-Host "✅ Created: $($todo.Title)" -ForegroundColor Green
@@ -243,7 +243,7 @@ if ($DryRun) {
             Write-Host "   Error: $_" -ForegroundColor Red
         }
     }
-    
+
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "📊 Summary:" -ForegroundColor Yellow
     Write-Host "   Created: $created" -ForegroundColor Green

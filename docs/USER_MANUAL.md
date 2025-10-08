@@ -1,29 +1,30 @@
 # mistral.rs User Manual
 
-**Version:** 1.0  
-**Last Updated:** 2025-02-10  
+**Version:** 1.0\
+**Last Updated:** 2025-02-10\
 **For:** mistralrs-server v0.4.3 with CUDA support
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Installation Verification](#installation-verification)
-3. [Starting the Server](#starting-the-server)
-4. [Model Selection](#model-selection)
-5. [API Usage](#api-usage)
-6. [MCP Integration](#mcp-integration)
-7. [Performance Tuning](#performance-tuning)
-8. [Monitoring](#monitoring)
-9. [Troubleshooting](#troubleshooting)
-10. [Advanced Configuration](#advanced-configuration)
+1. [Installation Verification](#installation-verification)
+1. [Starting the Server](#starting-the-server)
+1. [Model Selection](#model-selection)
+1. [API Usage](#api-usage)
+1. [MCP Integration](#mcp-integration)
+1. [Performance Tuning](#performance-tuning)
+1. [Monitoring](#monitoring)
+1. [Troubleshooting](#troubleshooting)
+1. [Advanced Configuration](#advanced-configuration)
 
----
+______________________________________________________________________
 
 ## Quick Start
 
 ### Prerequisites
+
 - ✅ Windows 11 with PowerShell 7+
 - ✅ NVIDIA GPU with CUDA 12.8+
 - ✅ 16GB+ VRAM recommended
@@ -46,15 +47,17 @@ curl http://localhost:8080/health
 ```
 
 **Expected Output:**
+
 ```json
 {"status":"ok","model":"gemma-2-2b-it"}
 ```
 
----
+______________________________________________________________________
 
 ## Installation Verification
 
 ### Check Binary
+
 ```powershell
 Get-Item "C:\Users\david\.cargo\shared-target\release\mistralrs-server.exe"
 ```
@@ -62,6 +65,7 @@ Get-Item "C:\Users\david\.cargo\shared-target\release\mistralrs-server.exe"
 **Expected:** File exists, ~382 MB
 
 ### Check CUDA
+
 ```powershell
 nvidia-smi
 ```
@@ -69,6 +73,7 @@ nvidia-smi
 **Expected:** Shows RTX 5060 Ti, 16GB VRAM
 
 ### Check Models
+
 ```powershell
 Get-ChildItem "C:\codedev\llm\.models" -Recurse -Filter "*.gguf"
 ```
@@ -76,28 +81,32 @@ Get-ChildItem "C:\codedev\llm\.models" -Recurse -Filter "*.gguf"
 **Expected:** 4 GGUF files (8.67 GB total)
 
 ### Run Full Verification
+
 ```powershell
 .\test-mistralrs.ps1 -Quick
 ```
 
 **Expected:** 5+ tests passing (62%+)
 
----
+______________________________________________________________________
 
 ## Starting the Server
 
 ### Default Start (Gemma 2B)
+
 ```powershell
 .\launch-mistralrs.ps1
 ```
 
 **Parameters:**
+
 - Port: 8080
 - Model: Gemma 2 2B Instruct
 - VRAM: ~3 GB
 - Tokens/sec: 60-80 (estimated)
 
 ### Specific Model
+
 ```powershell
 # Fast responses (1.5B model)
 .\launch-mistralrs.ps1 -Model qwen1.5b
@@ -110,6 +119,7 @@ Get-ChildItem "C:\codedev\llm\.models" -Recurse -Filter "*.gguf"
 ```
 
 ### With MCP Integration
+
 ```powershell
 .\launch-mistralrs.ps1 -EnableMCP
 ```
@@ -117,41 +127,45 @@ Get-ChildItem "C:\codedev\llm\.models" -Recurse -Filter "*.gguf"
 **Note:** MCP servers must be configured in `MCP_CONFIG.json`
 
 ### Custom Port
+
 ```powershell
 .\launch-mistralrs.ps1 -Port 8081
 ```
 
 ### Background Mode
+
 ```powershell
 Start-Job -ScriptBlock {
     & "T:\projects\rust-mistral\mistral.rs\launch-mistralrs.ps1"
 }
 ```
 
----
+______________________________________________________________________
 
 ## Model Selection
 
 ### Available Models
 
-| Model | Size | VRAM | Speed | Best For |
-|-------|------|------|-------|----------|
+| Model        | Size    | VRAM  | Speed        | Best For                    |
+| ------------ | ------- | ----- | ------------ | --------------------------- |
 | **qwen1.5b** | 0.92 GB | ~2 GB | 80-100 tok/s | Quick queries, simple tasks |
-| **gemma2** | 1.59 GB | ~3 GB | 60-80 tok/s | General use, balanced |
-| **qwen3b** | 1.80 GB | ~4 GB | 50-70 tok/s | Code analysis, refactoring |
-| **qwen7b** | 4.36 GB | ~8 GB | 25-40 tok/s | Complex reasoning, research |
+| **gemma2**   | 1.59 GB | ~3 GB | 60-80 tok/s  | General use, balanced       |
+| **qwen3b**   | 1.80 GB | ~4 GB | 50-70 tok/s  | Code analysis, refactoring  |
+| **qwen7b**   | 4.36 GB | ~8 GB | 25-40 tok/s  | Complex reasoning, research |
 
 ### Model Capabilities
 
 #### Qwen 1.5B Instruct
+
 - **Strengths:** Speed, low memory, quick responses
-- **Use Cases:** 
+- **Use Cases:**
   - Command generation
   - Simple Q&A
   - Text completion
 - **Limitations:** Less nuanced understanding
 
 #### Gemma 2 2B Instruct
+
 - **Strengths:** Balance of speed and quality
 - **Use Cases:**
   - General chat
@@ -160,6 +174,7 @@ Start-Job -ScriptBlock {
 - **Limitations:** Not specialized for code
 
 #### Qwen 2.5 Coder 3B
+
 - **Strengths:** Code understanding, syntax analysis
 - **Use Cases:**
   - Code review
@@ -169,6 +184,7 @@ Start-Job -ScriptBlock {
 - **Limitations:** Smaller context window
 
 #### Qwen 2.5 7B Instruct
+
 - **Strengths:** Best reasoning, largest context
 - **Use Cases:**
   - Architecture design
@@ -180,6 +196,7 @@ Start-Job -ScriptBlock {
 ### Choosing the Right Model
 
 **Decision Tree:**
+
 ```
 Need code analysis? → qwen3b
 Need speed? → qwen1.5b
@@ -187,16 +204,18 @@ Need balanced performance? → gemma2
 Need deep reasoning? → qwen7b
 ```
 
----
+______________________________________________________________________
 
 ## API Usage
 
 ### Health Check
+
 ```powershell
 curl http://localhost:8080/health
 ```
 
 ### Chat Completion (Basic)
+
 ```powershell
 $body = @{
     model = "gemma2"
@@ -211,6 +230,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/v1/chat/completions" `
 ```
 
 ### Chat Completion (Advanced)
+
 ```powershell
 $body = @{
     model = "qwen3b"
@@ -229,6 +249,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/v1/chat/completions" `
 ```
 
 ### Streaming Response
+
 ```powershell
 $body = @{
     model = "gemma2"
@@ -253,6 +274,7 @@ $response.Content -split "`n" | Where-Object { $_ -match "data: " } | ForEach-Ob
 ```
 
 ### Python Example
+
 ```python
 import requests
 
@@ -271,6 +293,7 @@ print(result['choices'][0]['message']['content'])
 ```
 
 ### cURL Example
+
 ```bash
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -281,13 +304,14 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   }'
 ```
 
----
+______________________________________________________________________
 
 ## MCP Integration
 
 ### What is MCP?
 
 Model Context Protocol (MCP) allows the LLM to use external tools like:
+
 - File system operations
 - Database queries
 - Web searches
@@ -297,6 +321,7 @@ Model Context Protocol (MCP) allows the LLM to use external tools like:
 ### Configuring MCP Servers
 
 Edit `MCP_CONFIG.json`:
+
 ```json
 {
   "servers": [
@@ -321,16 +346,17 @@ Edit `MCP_CONFIG.json`:
 
 ### Available MCP Servers
 
-| Server | Status | Purpose |
-|--------|--------|---------|
-| Memory | ✅ Working | Persistent context between sessions |
-| Filesystem | ✅ Working | Read/write files, directory operations |
-| Sequential Thinking | ✅ Working | Step-by-step reasoning chains |
-| GitHub | ⚠️ Needs Token | GitHub API operations |
-| Fetch | ✅ Working | HTTP requests |
-| Time | ❌ Deprecated | Date/time operations (broken) |
+| Server              | Status         | Purpose                                |
+| ------------------- | -------------- | -------------------------------------- |
+| Memory              | ✅ Working     | Persistent context between sessions    |
+| Filesystem          | ✅ Working     | Read/write files, directory operations |
+| Sequential Thinking | ✅ Working     | Step-by-step reasoning chains          |
+| GitHub              | ⚠️ Needs Token | GitHub API operations                  |
+| Fetch               | ✅ Working     | HTTP requests                          |
+| Time                | ❌ Deprecated  | Date/time operations (broken)          |
 
 ### Testing MCP Servers
+
 ```powershell
 .\test-mcp-servers.ps1 -Verbose
 ```
@@ -353,17 +379,19 @@ Invoke-RestMethod -Uri "http://localhost:8080/v1/chat/completions" `
 ```
 
 The model will:
-1. Recognize it needs to read a file
-2. Call the Filesystem MCP server
-3. Return the file contents in its response
 
----
+1. Recognize it needs to read a file
+1. Call the Filesystem MCP server
+1. Return the file contents in its response
+
+______________________________________________________________________
 
 ## Performance Tuning
 
 ### GPU Optimization
 
 #### Check VRAM Usage
+
 ```powershell
 nvidia-smi dmon -s mu -c 10
 ```
@@ -371,6 +399,7 @@ nvidia-smi dmon -s mu -c 10
 **Optimal VRAM:** 70-90% utilization
 
 #### Monitor Temperature
+
 ```powershell
 nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader -l 1
 ```
@@ -380,16 +409,19 @@ nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader -l 1
 ### Parameter Tuning
 
 #### Temperature
+
 - **0.1-0.3:** Factual, deterministic responses
 - **0.7-0.9:** Creative, varied responses
 - **1.0+:** Very creative, unpredictable
 
 #### Top-P (Nucleus Sampling)
+
 - **0.9:** Recommended default
 - **0.95:** More variety
 - **0.5-0.7:** More focused
 
 #### Max Tokens
+
 - **50-100:** Short answers
 - **500:** Paragraph responses
 - **2000+:** Long-form content
@@ -397,6 +429,7 @@ nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader -l 1
 ### Batch Processing
 
 For multiple requests:
+
 ```powershell
 # Process files in parallel
 $files = Get-ChildItem *.txt
@@ -412,13 +445,14 @@ $files | ForEach-Object -Parallel {
 } -ThrottleLimit 3
 ```
 
----
+______________________________________________________________________
 
 ## Monitoring
 
 ### Server Logs
 
 Logs are written to stdout. Capture them:
+
 ```powershell
 .\launch-mistralrs.ps1 2>&1 | Tee-Object -FilePath "server.log"
 ```
@@ -426,6 +460,7 @@ Logs are written to stdout. Capture them:
 ### Performance Metrics
 
 #### Tokens Per Second
+
 ```powershell
 # Measure inference speed
 Measure-Command {
@@ -441,9 +476,11 @@ Measure-Command {
 ```
 
 #### Time to First Token
+
 Monitor in server logs for `TTFT` metric.
 
 ### GPU Monitoring Dashboard
+
 ```powershell
 # Continuous monitoring
 while ($true) {
@@ -462,25 +499,28 @@ while ($true) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Server Won't Start
 
 **Problem:** Binary not found
+
 ```
 Solution: Check binary location
 Get-Item "C:\Users\david\.cargo\shared-target\release\mistralrs-server.exe"
 ```
 
 **Problem:** Port already in use
+
 ```powershell
 Solution: Use different port or kill existing process
 Get-Process | Where-Object { $_.Name -match "mistralrs" } | Stop-Process
 ```
 
 **Problem:** CUDA not detected
+
 ```
 Solution: Check NVIDIA drivers
 nvidia-smi
@@ -490,12 +530,14 @@ nvidia-smi
 ### Model Loading Fails
 
 **Problem:** Model file not found
+
 ```powershell
 Solution: Verify model path
 Test-Path "C:\codedev\llm\.models\gemma-2-2b-it-gguf\gemma-2-2b-it-Q4_K_M.gguf"
 ```
 
 **Problem:** Out of VRAM
+
 ```
 Solution: Use smaller model or close other GPU applications
 nvidia-smi
@@ -503,6 +545,7 @@ nvidia-smi
 ```
 
 **Problem:** Slow loading
+
 ```
 Check: SSD vs HDD, model size, available RAM
 Monitor with: nvidia-smi dmon
@@ -511,6 +554,7 @@ Monitor with: nvidia-smi dmon
 ### Inference Issues
 
 **Problem:** Very slow responses
+
 ```
 Causes:
 1. Wrong model for task (use smaller model)
@@ -522,6 +566,7 @@ Solution: Restart server, use qwen1.5b for testing
 ```
 
 **Problem:** Poor quality responses
+
 ```
 Causes:
 1. Model too small (upgrade to qwen7b)
@@ -532,6 +577,7 @@ Solution: Use appropriate model for task complexity
 ```
 
 **Problem:** Timeout errors
+
 ```
 Causes:
 1. Server overloaded
@@ -544,12 +590,14 @@ Solution: Increase timeout, reduce concurrent requests
 ### MCP Issues
 
 **Problem:** MCP server won't start
+
 ```powershell
 Solution: Test individually
 .\test-mcp-servers.ps1 -ServerName "Memory" -Verbose
 ```
 
 **Problem:** Tool not being invoked
+
 ```
 Causes:
 1. MCP not enabled in request
@@ -560,6 +608,7 @@ Solution: Check MCP logs, restart with -EnableMCP
 ```
 
 **Problem:** Bun command not found
+
 ```powershell
 Solution: Install bun or use node alternative
 npm install -g bun
@@ -569,12 +618,14 @@ npm install -g bun
 ### Common Error Messages
 
 #### "CUDA out of memory"
+
 ```
 Fix: Use smaller model or reduce batch size
 .\launch-mistralrs.ps1 -Model qwen1.5b
 ```
 
 #### "Model format not supported"
+
 ```
 Fix: Ensure using GGUF format
 Supported: *.gguf
@@ -582,12 +633,13 @@ Not supported: *.sbs, *.bin (for some models)
 ```
 
 #### "Connection refused"
+
 ```
 Fix: Server not running or wrong port
 Check: curl http://localhost:8080/health
 ```
 
----
+______________________________________________________________________
 
 ## Advanced Configuration
 
@@ -610,6 +662,7 @@ $env:RUST_BACKTRACE = "1"  # Enable backtraces
 ### Custom Launch Script
 
 Create `my-config.ps1`:
+
 ```powershell
 # Custom configuration
 $env:CUDA_VISIBLE_DEVICES = "0"
@@ -630,7 +683,8 @@ $modelPath = "C:\codedev\llm\.models\qwen2.5-coder-3b-gguf\Qwen2.5-Coder-3B-Inst
 ### Model-Specific Settings
 
 #### For Code Tasks (qwen3b)
-```powershell
+
+````powershell
 $body = @{
     model = "qwen3b"
     temperature = 0.3  # More deterministic
@@ -638,9 +692,10 @@ $body = @{
     max_tokens = 1000
     stop = @("```", "END")  # Stop at code block end
 }
-```
+````
 
 #### For Creative Writing (gemma2)
+
 ```powershell
 $body = @{
     model = "gemma2"
@@ -652,6 +707,7 @@ $body = @{
 ```
 
 #### For Factual Q&A (qwen7b)
+
 ```powershell
 $body = @{
     model = "qwen7b"
@@ -664,6 +720,7 @@ $body = @{
 ### Multi-Model Setup
 
 Run multiple models simultaneously:
+
 ```powershell
 # Terminal 1: Fast model on port 8080
 .\launch-mistralrs.ps1 -Model qwen1.5b -Port 8080
@@ -676,6 +733,7 @@ Run multiple models simultaneously:
 ```
 
 Load balancer script:
+
 ```powershell
 function Invoke-SmartInference {
     param([string]$Prompt, [string]$Task = "general")
@@ -699,18 +757,18 @@ function Invoke-SmartInference {
 Invoke-SmartInference -Prompt "Optimize this code" -Task "code"
 ```
 
----
+______________________________________________________________________
 
 ## Appendix A: API Reference
 
 ### Endpoints
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/health` | GET | Server health check |
-| `/v1/models` | GET | List available models |
-| `/v1/chat/completions` | POST | Generate chat completion |
-| `/v1/completions` | POST | Generate text completion |
+| Endpoint               | Method | Purpose                  |
+| ---------------------- | ------ | ------------------------ |
+| `/health`              | GET    | Server health check      |
+| `/v1/models`           | GET    | List available models    |
+| `/v1/chat/completions` | POST   | Generate chat completion |
+| `/v1/completions`      | POST   | Generate text completion |
 
 ### Request Schema
 
@@ -759,7 +817,7 @@ Invoke-SmartInference -Prompt "Optimize this code" -Task "code"
 }
 ```
 
----
+______________________________________________________________________
 
 ## Appendix B: Keyboard Shortcuts
 
@@ -769,7 +827,7 @@ When running interactively in terminal:
 - **Ctrl+Z**: Suspend (then `fg` to resume on Unix)
 - **Ctrl+L**: Clear terminal (doesn't affect server)
 
----
+______________________________________________________________________
 
 ## Appendix C: Quick Reference Card
 
@@ -799,15 +857,15 @@ TROUBLESHOOTING
 └─ View logs: .\launch-mistralrs.ps1 2>&1 | Tee-Object -FilePath "server.log"
 ```
 
----
+______________________________________________________________________
 
 ## Support & Resources
 
 - **Documentation**: See `TEST_RESULTS.md` for performance benchmarks
-- **Project**: T:\projects\rust-mistral\mistral.rs
+- **Project**: T:\\projects\\rust-mistral\\mistral.rs
 - **Logs**: Enable with `$env:RUST_LOG = "debug"`
 - **Issues**: Check `TODO.md` for known issues
 
----
+______________________________________________________________________
 
 **End of User Manual**

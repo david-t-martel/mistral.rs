@@ -44,6 +44,8 @@ pub struct AgentUiState {
     pub palette_filter: String,
     /// Tool palette cursor position
     pub palette_cursor: usize,
+    /// Pending prompt requesting additional palette input
+    pub palette_prompt: Option<PalettePrompt>,
 }
 
 impl Default for AgentUiState {
@@ -60,6 +62,7 @@ impl Default for AgentUiState {
             palette_visible: false,
             palette_filter: String::new(),
             palette_cursor: 0,
+            palette_prompt: None,
         }
     }
 }
@@ -90,6 +93,7 @@ impl AgentUiState {
         self.panel_visible = false;
         self.browser_visible = false;
         self.history_visible = false;
+        self.palette_prompt = None;
     }
 
     /// Start tracking a new tool execution
@@ -126,6 +130,7 @@ impl AgentUiState {
         self.palette_visible = true;
         self.palette_filter.clear();
         self.palette_cursor = 0;
+        self.palette_prompt = None;
     }
 
     /// Hide the tool palette
@@ -133,6 +138,7 @@ impl AgentUiState {
         self.palette_visible = false;
         self.palette_filter.clear();
         self.palette_cursor = 0;
+        self.palette_prompt = None;
     }
 
     /// Toggle palette visibility
@@ -144,12 +150,66 @@ impl AgentUiState {
         }
     }
 
+    /// Begin prompting for palette input
+    pub fn begin_palette_prompt(&mut self, title: impl Into<String>, hint: Option<String>) {
+        self.palette_prompt = Some(PalettePrompt {
+            title: title.into(),
+            buffer: String::new(),
+            hint,
+        });
+    }
+
+    /// Clear any active palette prompt
+    pub fn clear_palette_prompt(&mut self) {
+        self.palette_prompt = None;
+    }
+
+    /// Returns true if the palette is currently prompting for input
+    pub fn palette_prompt_active(&self) -> bool {
+        self.palette_prompt.is_some()
+    }
+
+    /// Append a character to the prompt buffer
+    pub fn palette_prompt_push(&mut self, ch: char) {
+        if let Some(prompt) = self.palette_prompt.as_mut() {
+            prompt.buffer.push(ch);
+        }
+    }
+
+    /// Remove the last character from the prompt buffer
+    pub fn palette_prompt_backspace(&mut self) {
+        if let Some(prompt) = self.palette_prompt.as_mut() {
+            prompt.buffer.pop();
+        }
+    }
+
+    /// Take the buffered prompt input
+    pub fn take_palette_prompt_input(&mut self) -> Option<String> {
+        self.palette_prompt
+            .as_mut()
+            .map(|prompt| std::mem::take(&mut prompt.buffer))
+    }
+
+    /// Borrow the prompt metadata
+    pub fn palette_prompt(&self) -> Option<&PalettePrompt> {
+        self.palette_prompt.as_ref()
+    }
+
     /// Update UI state from execution event
     pub fn update_from_event(&mut self, event: &ExecutionEvent) {
         match event {
             ExecutionEvent::Started {
                 call_id, tool_name, ..
             } => {
+                if let Some(execution) = self.active_execution.as_mut() {
+                    if execution.call_id == *call_id {
+                        execution.status_message = "Executing...".to_string();
+                        execution.progress = 0.1;
+                        execution.error_message = None;
+                        return;
+                    }
+                }
+
                 // Start new execution tracking
                 let call_id_copy = *call_id;
                 self.start_execution(
@@ -203,6 +263,14 @@ pub struct ActiveExecution {
     pub error_message: Option<String>,
 }
 
+/// Prompt metadata for palette-driven argument collection
+#[derive(Debug, Clone)]
+pub struct PalettePrompt {
+    pub title: String,
+    pub buffer: String,
+    pub hint: Option<String>,
+}
+
 impl ActiveExecution {
     /// Create new active execution from tool call
     pub fn new(call_id: uuid::Uuid, tool_name: String, arguments: serde_json::Value) -> Self {
@@ -245,12 +313,20 @@ impl ActiveExecution {
                     self.error_message = result.error.clone();
                 }
             }
-            ExecutionEvent::Failed { error, .. } => {
+            ExecutionEvent::Failed { error, result, .. } => {
                 self.completed = true;
                 self.success = false;
                 self.progress = 1.0;
                 self.status_message = "Failed".to_string();
-                self.error_message = Some(error.clone());
+                if let Some(res) = result {
+                    self.error_message = res.error.clone().or_else(|| Some(error.clone()));
+                    if let serde_json::Value::String(output) = &res.output {
+                        self.output_lines
+                            .extend(output.lines().map(std::string::ToString::to_string));
+                    }
+                } else {
+                    self.error_message = Some(error.clone());
+                }
             }
         }
     }
@@ -717,6 +793,7 @@ pub fn render_tool_palette(
     tools: &[ToolInfo],
     filter_text: &str,
     cursor: usize,
+    prompt: Option<&PalettePrompt>,
 ) {
     // Create a centered overlay (60% width, 60% height)
     let popup_width = (area.width * 3) / 5;
@@ -735,7 +812,11 @@ pub fn render_tool_palette(
     let background = Block::default()
         .style(Style::default().bg(Color::Black))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .border_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .title("Tool Palette (Esc to close)");
     frame.render_widget(background, popup_area);
 
@@ -747,9 +828,15 @@ pub fn render_tool_palette(
         height: popup_area.height.saturating_sub(2),
     };
 
+    let mut constraints = vec![Constraint::Length(3)];
+    if prompt.is_some() {
+        constraints.push(Constraint::Length(4));
+    }
+    constraints.push(Constraint::Min(1));
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(1)])
+        .constraints(constraints)
         .split(inner_area);
 
     // Render search input
@@ -761,6 +848,38 @@ pub fn render_tool_palette(
     let search_para = Paragraph::new(search_text).block(search_block);
     frame.render_widget(search_para, chunks[0]);
 
+    let list_index = if let Some(prompt) = prompt {
+        let prompt_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Magenta))
+            .title(prompt.title.as_str());
+
+        let mut lines = vec![Line::from(vec![
+            Span::styled(
+                format!("{}", prompt.buffer),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("▏", Style::default().fg(Color::Yellow)),
+        ])];
+
+        if let Some(hint) = &prompt.hint {
+            lines.push(Line::from(Span::styled(
+                hint,
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+
+        let prompt_para = Paragraph::new(lines)
+            .block(prompt_block)
+            .wrap(Wrap { trim: false });
+        frame.render_widget(prompt_para, chunks[1]);
+        2
+    } else {
+        1
+    };
+
     // Filter and rank tools based on search text
     let filtered_tools: Vec<&ToolInfo> = if filter_text.is_empty() {
         tools.iter().collect()
@@ -771,7 +890,7 @@ pub fn render_tool_palette(
             .filter_map(|t| {
                 let name_lower = t.name.to_lowercase();
                 let desc_lower = t.description.to_lowercase();
-                
+
                 // Scoring: exact match > starts with > contains
                 let score = if name_lower == filter_lower {
                     100
@@ -787,7 +906,7 @@ pub fn render_tool_palette(
                 Some((t, score))
             })
             .collect();
-        
+
         matches.sort_by(|a, b| b.1.cmp(&a.1));
         matches.into_iter().map(|(t, _)| t).collect()
     };
@@ -830,24 +949,22 @@ pub fn render_tool_palette(
         .borders(Borders::ALL)
         .title(format!("Tools ({} found)", filtered_tools.len()));
 
-    let list = List::new(items)
-        .block(results_block)
-        .highlight_style(
-            Style::default()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        );
+    let list = List::new(items).block(results_block).highlight_style(
+        Style::default()
+            .fg(Color::Black)
+            .bg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    );
 
     let mut state = ListState::default();
     if !filtered_tools.is_empty() {
         state.select(Some(cursor.min(filtered_tools.len() - 1)));
     }
-    frame.render_stateful_widget(list, chunks[1], &mut state);
+    frame.render_stateful_widget(list, chunks[list_index], &mut state);
 }
 
-/// Helper function to create sample tools for testing
-pub fn sample_tools() -> Vec<ToolInfo> {
+/// Helper function to create the default tool catalog
+pub fn default_tools() -> Vec<ToolInfo> {
     vec![
         ToolInfo::new(
             "ls".to_string(),
@@ -865,19 +982,34 @@ pub fn sample_tools() -> Vec<ToolInfo> {
             ToolCategory::TextProcessing,
         ),
         ToolInfo::new(
-            "ps".to_string(),
-            "Display process status".to_string(),
+            "head".to_string(),
+            "Display first lines from a file".to_string(),
+            ToolCategory::TextProcessing,
+        ),
+        ToolInfo::new(
+            "tail".to_string(),
+            "Display last lines from a file".to_string(),
+            ToolCategory::TextProcessing,
+        ),
+        ToolInfo::new(
+            "wc".to_string(),
+            "Count lines, words, bytes, and chars".to_string(),
+            ToolCategory::TextProcessing,
+        ),
+        ToolInfo::new(
+            "sort".to_string(),
+            "Sort lines within a file".to_string(),
+            ToolCategory::TextProcessing,
+        ),
+        ToolInfo::new(
+            "uniq".to_string(),
+            "Deduplicate adjacent lines".to_string(),
+            ToolCategory::TextProcessing,
+        ),
+        ToolInfo::new(
+            "shell".to_string(),
+            "Execute sandboxed shell commands".to_string(),
             ToolCategory::ProcessManagement,
-        ),
-        ToolInfo::new(
-            "curl".to_string(),
-            "Transfer data from URLs".to_string(),
-            ToolCategory::Network,
-        ),
-        ToolInfo::new(
-            "uname".to_string(),
-            "Print system information".to_string(),
-            ToolCategory::SystemInfo,
         ),
     ]
 }

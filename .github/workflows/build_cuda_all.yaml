@@ -17,7 +17,7 @@ jobs:
             compute_capability: [75, 80, 86, 89, 90]
           fail-fast: false
         runs-on: ubuntu-latest
-        
+
         permissions:
             contents: write
             packages: write
@@ -33,7 +33,7 @@ jobs:
               uses: docker/setup-buildx-action@v3
               with:
                 install: true
-            
+
             - name: Setup cache
               uses: actions/cache@v3
               with:

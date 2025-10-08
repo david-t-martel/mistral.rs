@@ -185,7 +185,7 @@ Runs:
 
 Checks:
 
-1. Binary file exists at `target/release/mistralrs-server.exe`
+1. Binary file exists at `target/release/mistral-rs.exe`
 1. Binary is executable
 1. Binary can run `--version` (warns if fails, doesn't error)
 
@@ -193,8 +193,8 @@ Checks:
 make verify-binary
 # Output:
 # Verifying binary...
-# ✓ Binary exists: target/release/mistralrs-server.exe
-# -rwxr-xr-x 1 user 197609 383M Oct  2 19:35 target/release/mistralrs-server.exe
+# ✓ Binary exists: target/release/mistral-rs.exe
+# -rwxr-xr-x 1 user 197609 383M Oct  2 19:35 target/release/mistral-rs.exe
 #
 # Checking binary can execute...
 # WARNING: Binary exists but --version failed (may need GPU/models)
@@ -207,7 +207,7 @@ make verify-binary
 
 **Verify binary help output works.**
 
-Tests that `mistralrs-server --help` executes successfully.
+Tests that `mistral-rs --help` executes successfully (the legacy `mistralrs-server` alias is still supported).
 
 **Use case:** Smoke test for binary functionality.
 
@@ -232,7 +232,7 @@ Generates deployment readiness summary:
 ==================================================
 DEPLOYMENT READINESS SUMMARY
 ==================================================
-Binary: target/release/mistralrs-server.exe
+Binary: target/release/mistral-rs.exe (alias: target/release/mistralrs-server.exe)
 Platform: windows
 Features: CUDA support (requires GPU)
 MCP Servers: 9 configured
@@ -253,7 +253,7 @@ Creates `deployment/` directory with:
 ```
 deployment/
 ├── bin/
-│   └── mistralrs-server.exe
+│   └── mistral-rs.exe
 ├── config/
 │   └── MCP_CONFIG.json
 └── docs/
@@ -832,8 +832,8 @@ make test-status
 
 ### Support Channels
 
-- GitHub Issues: https://github.com/EricLBuehler/mistral.rs/issues
-- Discord: https://discord.gg/SZrecqK8qw
+- GitHub Issues: <https://github.com/EricLBuehler/mistral.rs/issues>
+- Discord: <https://discord.gg/SZrecqK8qw>
 
 ## Summary
 

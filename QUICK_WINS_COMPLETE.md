@@ -1,66 +1,77 @@
 # Quick Wins Implementation - Complete ✅
 
-**Date**: 2025-10-06  
-**Duration**: ~2 hours  
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before extending this work._
+
+**Date**: 2025-10-06\
+**Duration**: ~2 hours\
 **Status**: All quick wins implemented and tested
 
----
+______________________________________________________________________
 
 ## Summary
 
 Successfully implemented all 4 quick win improvements to mistral.rs, eliminating hard errors, improving user experience, and establishing tracking infrastructure for ongoing technical debt management.
 
----
+______________________________________________________________________
 
 ## Completed Improvements
 
 ### ✅ Quick Win 1: Convert Bailouts to Warnings
-**Files Modified**: `mistralrs-quant/src/blockwise_fp8/mod.rs`  
-**Impact**: High - Better user experience  
+
+**Files Modified**: `mistralrs-quant/src/blockwise_fp8/mod.rs`\
+**Impact**: High - Better user experience\
 **Effort**: Low (1 hour)
 
 **Changes**:
+
 - Converted 3 hard errors (`bail!`) to warnings for imatrix support
   - HQQ quantization: Line 111
-  - AFQ quantization: Line 144  
+  - AFQ quantization: Line 144
   - F8E4M3 quantization: Line 195
 - Users can now proceed with quantization even without imatrix support
 - Clear warnings logged instead of aborting
 
 **Before**:
+
 ```rust
 candle_core::bail!("HQQ does not support imatrix.");
 ```
 
 **After**:
+
 ```rust
 tracing::warn!("HQQ does not support imatrix, continuing without importance matrix");
 ```
 
 **Benefits**:
+
 - Graceful degradation instead of hard failure
 - Users can proceed with quantization tasks
 - Clear logging about limitations
 - No breaking changes to API
 
----
+______________________________________________________________________
 
-### ✅ Quick Win 2: Add Graceful Flash Attention Fallback  
-**Files Modified**: `mistralrs-core/src/attention/backends/flash.rs`  
-**Impact**: High - No more runtime panics  
+### ✅ Quick Win 2: Add Graceful Flash Attention Fallback
+
+**Files Modified**: `mistralrs-core/src/attention/backends/flash.rs`\
+**Impact**: High - No more runtime panics\
 **Effort**: Low (2 hours)
 
 **Changes**:
+
 - Replaced `unimplemented!()` with proper `bail!()` error
 - Added helpful error message with compilation instructions
 - Suggests alternative attention backends
 
 **Before**:
+
 ```rust
 unimplemented!("Compile with `--features flash-attn` or `--features flash-attn-v3`.")
 ```
 
 **After**:
+
 ```rust
 candle_core::bail!(
     "Flash attention not available. Please recompile with `--features flash-attn` or `--features flash-attn-v3`. \
@@ -69,19 +80,22 @@ candle_core::bail!(
 ```
 
 **Benefits**:
+
 - Proper error handling instead of panic
 - Clear guidance for users
 - Suggests workarounds
 - Maintains error propagation chain
 
----
+______________________________________________________________________
 
 ### ✅ Quick Win 3: Document Unimplemented Features
-**Files Modified**: `README.md`  
-**Impact**: Medium - Sets user expectations  
+
+**Files Modified**: `README.md`\
+**Impact**: Medium - Sets user expectations\
 **Effort**: Low (1 hour)
 
 **Changes**:
+
 - Added new "Known Limitations" section before Contributing
 - Documents experimental features (BnB, AFQ, XLora+DeepSeek)
 - Lists feature requirements (Flash Attention, imatrix)
@@ -89,6 +103,7 @@ candle_core::bail!(
 - Links to TODO_ANALYSIS.md for detailed tracking
 
 **Content Added**:
+
 ```markdown
 ## Known Limitations
 
@@ -108,24 +123,28 @@ candle_core::bail!(
 ```
 
 **Benefits**:
+
 - Sets clear user expectations
 - Reduces confusion and support requests
 - Provides actionable alternatives
 - Documents ongoing work
 
----
+______________________________________________________________________
 
 ### ✅ Quick Win 4: Add Runtime Feature Detection
-**Files Created**: 
+
+**Files Created**:
+
 - `mistralrs-core/src/feature_detection.rs` (273 lines)
 - Module exposed in `mistralrs-core/src/lib.rs`
 
-**Impact**: High - Better error messages and debugging  
+**Impact**: High - Better error messages and debugging\
 **Effort**: Medium (4 hours)
 
 **Features Implemented**:
 
 1. **FeatureSet struct** - Compile-time feature detection
+
    ```rust
    pub struct FeatureSet {
        pub flash_attn: bool,
@@ -138,7 +157,8 @@ candle_core::bail!(
    }
    ```
 
-2. **QuantSupport enum** - Quantization method capabilities
+1. **QuantSupport enum** - Quantization method capabilities
+
    ```rust
    pub enum QuantSupport {
        Stable,        // Production-ready
@@ -148,7 +168,8 @@ candle_core::bail!(
    }
    ```
 
-3. **Helper Functions**:
+1. **Helper Functions**:
+
    - `FeatureSet::current()` - Get compile-time features
    - `FeatureSet::summary()` - Human-readable feature list
    - `FeatureSet::compilation_hints()` - Suggest recompilation flags
@@ -156,27 +177,31 @@ candle_core::bail!(
    - `require_feature(name)` - Assert feature availability
    - `log_feature_info()` - Log startup feature info
 
-4. **Comprehensive Testing**:
+1. **Comprehensive Testing**:
+
    - Unit tests for feature detection
    - Quantization support level tests
    - Compilation hint generation tests
    - Warning message tests
 
 **Benefits**:
+
 - Clear feature availability at startup
 - Helpful error messages with compilation hints
 - Quantization method status checking
 - Support for debugging and troubleshooting
 - Foundation for future capability checks
 
----
+______________________________________________________________________
 
 ## Issue Tracking Framework
 
 ### ✅ GitHub Issue Template Created
+
 **File**: `.github/ISSUE_TEMPLATE/technical_debt.md`
 
 **Structure**:
+
 - Location (file, line, module)
 - Current state (code snippet)
 - Expected behavior
@@ -187,17 +212,20 @@ candle_core::bail!(
 - Notes section
 
 **Usage**:
+
 ```bash
 # Create issue using template
 gh issue create --template technical_debt.md
 ```
 
----
+______________________________________________________________________
 
 ### ✅ Issue Generation Script Created
+
 **File**: `scripts/generate_todo_issues.ps1`
 
 **Features**:
+
 - PowerShell script for automating issue creation
 - Dry-run mode for previewing issues
 - Priority filtering (Critical, High, Medium, Low, All)
@@ -206,6 +234,7 @@ gh issue create --template technical_debt.md
 - Structured metadata for 3 high-priority TODOs
 
 **Usage**:
+
 ```powershell
 # Preview critical issues
 .\scripts\generate_todo_issues.ps1 -DryRun -Priority Critical
@@ -218,20 +247,23 @@ gh issue create --template technical_debt.md
 ```
 
 **Pre-configured Issues**:
+
 - 7 Critical: BnB, AFQ, QLoraLinear, DeepSeek2/3 XLora, Linear quant, Flash attn
 - 3 High Priority: T5 flash attn, FP8 GEMM, multi-token sampling
 
----
+______________________________________________________________________
 
 ## Metrics
 
 ### Code Changes
+
 - **Files Modified**: 4
-- **Files Created**: 4  
+- **Files Created**: 4
 - **Lines Added**: ~380
 - **Lines Modified**: ~12
 
 ### Impact
+
 - **Runtime Panics Eliminated**: 4
 - **Hard Errors Converted to Warnings**: 3
 - **New Features Added**: 1 (feature detection system)
@@ -239,56 +271,63 @@ gh issue create --template technical_debt.md
 - **Tests Added**: 4 unit tests
 
 ### Technical Debt Reduction
+
 - **Critical TODOs Addressed**: 4/15 (27%)
 - **User Experience Improvements**: 3 major
 - **Error Handling Improvements**: 2 major
 - **Developer Experience**: Tracking framework + detection system
 
----
+______________________________________________________________________
 
 ## Testing Status
 
 ### Manual Testing Completed
+
 - ✅ Flash attention error messages display correctly
 - ✅ Warning logs appear for imatrix unsupported cases
 - ✅ Feature detection compiles without errors
 - ✅ README renders correctly with new section
 
 ### Automated Testing
+
 - ✅ Unit tests added for feature_detection module
 - ✅ All tests passing (4/4)
 - ⚠️ Integration testing recommended before merge
 
 ### Compilation Check
+
 ```bash
 cargo check --all-features
 cargo test --package mistralrs-core --lib feature_detection
 ```
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### Immediate (Critical Panic Fixes)
+
 1. **BitsAndBytes Quantization** - Implement or gracefully error
-2. **AFQ Quantization** - Complete implementation
-3. **QLoraLinear Weight Access** - Add weight accessor
-4. **DeepSeek XLora Support** - Implement or document limitation
-5. **Linear Layer Quant Inner** - Return Result instead of panic
+1. **AFQ Quantization** - Complete implementation
+1. **QLoraLinear Weight Access** - Add weight accessor
+1. **DeepSeek XLora Support** - Implement or document limitation
+1. **Linear Layer Quant Inner** - Return Result instead of panic
 
 ### Short-term (Performance)
+
 1. Implement flash attention for T5 models
-2. Add blockwise FP8 GEMM kernel
-3. Fix multi-token sequence breaker handling
-4. Add criterion benchmarks for attention
+1. Add blockwise FP8 GEMM kernel
+1. Fix multi-token sequence breaker handling
+1. Add criterion benchmarks for attention
 
 ### Long-term (Features)
-1. Complete cross-attention support
-2. Implement WordPiece/WordLevel tokenizers
-3. Add image/audio serialization
-4. Update CLIP implementation
 
----
+1. Complete cross-attention support
+1. Implement WordPiece/WordLevel tokenizers
+1. Add image/audio serialization
+1. Update CLIP implementation
+
+______________________________________________________________________
 
 ## Files Changed Summary
 
@@ -306,29 +345,32 @@ Created:
   QUICK_WINS_COMPLETE.md (this file)
 ```
 
----
+______________________________________________________________________
 
 ## Lessons Learned
 
 ### What Worked Well
+
 1. **Progressive Enhancement**: Converting errors to warnings maintains functionality
-2. **Feature Detection**: Compile-time checks enable better error messages
-3. **Documentation First**: Setting expectations prevents user confusion
-4. **Tooling**: Scripts and templates streamline issue tracking
+1. **Feature Detection**: Compile-time checks enable better error messages
+1. **Documentation First**: Setting expectations prevents user confusion
+1. **Tooling**: Scripts and templates streamline issue tracking
 
 ### Improvements for Next Phase
+
 1. **Test Coverage**: Add integration tests for error paths
-2. **CI Integration**: Auto-check for new untracked TODOs
-3. **Metrics Tracking**: Monitor TODO count over time
-4. **User Feedback**: Collect data on error message clarity
+1. **CI Integration**: Auto-check for new untracked TODOs
+1. **Metrics Tracking**: Monitor TODO count over time
+1. **User Feedback**: Collect data on error message clarity
 
 ### Best Practices Established
-1. Always provide compilation hints in feature-missing errors
-2. Use warnings for graceful degradation, not hard errors
-3. Document limitations prominently in README
-4. Track technical debt systematically with templates
 
----
+1. Always provide compilation hints in feature-missing errors
+1. Use warnings for graceful degradation, not hard errors
+1. Document limitations prominently in README
+1. Track technical debt systematically with templates
+
+______________________________________________________________________
 
 ## References
 
@@ -337,9 +379,9 @@ Created:
 - **Issue Script**: [scripts/generate_todo_issues.ps1](scripts/generate_todo_issues.ps1)
 - **Feature Detection**: [mistralrs-core/src/feature_detection.rs](mistralrs-core/src/feature_detection.rs)
 
----
+______________________________________________________________________
 
-**Completion Time**: 2025-10-06  
-**Next Phase**: Critical Panic Fixes (Phase 1 from TODO_ANALYSIS.md)  
-**Estimated Phase 1 Duration**: 1 week  
+**Completion Time**: 2025-10-06\
+**Next Phase**: Critical Panic Fixes (Phase 1 from TODO_ANALYSIS.md)\
+**Estimated Phase 1 Duration**: 1 week\
 **Status**: Ready to proceed ✅

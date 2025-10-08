@@ -32,10 +32,10 @@ function append(html, cls = '') {
   const d = document.createElement('div');
   if (cls) d.className = cls;
   d.innerHTML = html;
-  addCopyBtns(d); 
+  addCopyBtns(d);
   fixLinks(d);
-  log.appendChild(d); 
-  log.scrollTop = log.scrollHeight; 
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
   return d;
 }
 
@@ -80,11 +80,11 @@ function addCopyBtns(el) {
 /**
  * Fix links to open in new tab
  */
-function fixLinks(el) { 
+function fixLinks(el) {
   el.querySelectorAll('a[href]').forEach(a => {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
-  }); 
+  });
 }
 
 /**
@@ -121,18 +121,18 @@ function updateImageVisibility(kind) {
   const audioInput = document.getElementById('audioInput');
   const textLabel = document.getElementById('textLabel');
   const textInput = document.getElementById('textInput');
-  
+
   const isVision = (kind === 'vision');
   const isText = (kind === 'text');
 
   // Show audio upload for vision models as well (covers audio-enabled models)
   audioLabel.style.display = isVision ? 'inline-block' : 'none';
   if (!isVision) audioInput.value = '';
-  
+
   // Toggle image upload only for vision models
   imageLabel.style.display = isVision ? 'inline-block' : 'none';
   if (!isVision) imageInput.value = '';
-  
+
   // Toggle file upload only for text models
   textLabel.style.display = isText ? 'inline-block' : 'none';
   if (!isText) textInput.value = '';
@@ -146,11 +146,11 @@ function createImagePreview(imageSrc) {
   container.className = 'image-preview-container';
   container.style.position = 'relative';
   container.style.display = 'inline-block';
-  
+
   const img = document.createElement('img');
   img.src = imageSrc;
   img.className = 'chat-preview';
-  
+
   const removeBtn = document.createElement('button');
   removeBtn.className = 'image-remove-btn';
   removeBtn.textContent = '×';
@@ -169,19 +169,19 @@ function createImagePreview(imageSrc) {
   removeBtn.style.display = 'flex';
   removeBtn.style.alignItems = 'center';
   removeBtn.style.justifyContent = 'center';
-  
+
   removeBtn.addEventListener('click', () => {
     container.remove();
   });
-  
+
   removeBtn.addEventListener('mouseenter', () => {
     removeBtn.style.background = '#ff4444';
   });
-  
+
   removeBtn.addEventListener('mouseleave', () => {
     removeBtn.style.background = 'rgba(0,0,0,0.7)';
   });
-  
+
   container.appendChild(img);
   container.appendChild(removeBtn);
 

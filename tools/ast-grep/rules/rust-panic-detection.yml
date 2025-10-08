@@ -22,7 +22,7 @@ rules:
       Example fix:
       Before: unimplemented!("Feature X")
       After:  candle_core::bail!("Feature X not yet implemented. Please use alternative Y")
-      
+
       Or return Result:
       fn example() -> Result<T> {
           Err(Error::NotImplemented("Feature X".to_string()))
@@ -41,7 +41,7 @@ rules:
       Example fix:
       Before: todo!("Add validation")
       After:  candle_core::bail!("Validation not yet implemented")
-      
+
       Better: Actually implement the functionality or document why it's deferred
 
   # Rule 3: Detect unwrap() calls
@@ -121,7 +121,7 @@ rules:
       Example fix:
       Before: let item = vec[index];
       After:  let item = vec.get(index).ok_or(Error::IndexOutOfBounds)?;
-      
+
       Or with bounds check:
       if index < vec.len() {
           let item = vec[index];
@@ -230,7 +230,7 @@ rules:
       Use safe alternatives:
       - str.get(start..end).ok_or(Error::InvalidRange)?
       - String operations: chars(), split(), etc.
-      
+
       String slicing must be on UTF-8 character boundaries.
 
   # Rule 14: Detect array/vec initialization with fixed size that might panic
@@ -322,7 +322,7 @@ rules:
       - What went wrong
       - Why it went wrong
       - What the user should do
-      
+
       Example:
       candle_core::bail!(
           "Flash attention not available. Recompile with --features flash-attn \

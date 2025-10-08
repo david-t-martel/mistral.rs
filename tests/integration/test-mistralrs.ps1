@@ -26,7 +26,7 @@ if (Test-Path $binaryPath) {
     Write-Host "  [OK] Binary found: $binaryPath" -ForegroundColor Green
     Write-Host "  [OK] Size: $fileSize MB" -ForegroundColor Green
     $results["binary_exists"] = $true
-    
+
     # Check build date
     $buildDate = (Get-Item $binaryPath).LastWriteTime
     $daysSince = ((Get-Date) - $buildDate).Days
@@ -47,7 +47,7 @@ if (Test-Path $cargoToml) {
         "cudnn" = $cargoContent -match 'cudnn'
         "mkl" = $cargoContent -match 'mkl'
     }
-    
+
     foreach ($feature in $features.GetEnumerator()) {
         $status = if ($feature.Value) { "[OK]" } else { "[SKIP]" }
         $color = if ($feature.Value) { "Green" } else { "Gray" }
@@ -129,29 +129,29 @@ if (-not $Quick -and $results["binary_exists"] -and $models.ContainsKey($Model))
     if (Test-Path $modelPath) {
         Write-Host "  [INFO] Loading model: $Model" -ForegroundColor Gray
         Write-Host "  [INFO] Path: $modelPath" -ForegroundColor Gray
-        
+
         # Start server in background with timeout
         $serverJob = Start-Job -ScriptBlock {
             param($bin, $path)
             & $bin --port 8080 gguf -m $path -t 1
         } -ArgumentList $binaryPath, $modelPath
-        
+
         Write-Host "  [INFO] Waiting for server startup (max 30s)..." -ForegroundColor Gray
         Start-Sleep -Seconds 5
-        
+
         # Check if job is still running (model loaded)
         $jobState = Get-Job -Id $serverJob.Id
         if ($jobState.State -eq "Running") {
             Write-Host "  [OK] Model loaded successfully" -ForegroundColor Green
             $results["model_loads"] = $true
-            
+
             # Stop the server
             Stop-Job -Id $serverJob.Id
             Remove-Job -Id $serverJob.Id -Force
         } else {
             Write-Host "  [ERROR] Server failed to start" -ForegroundColor Red
             $results["model_loads"] = $false
-            
+
             # Get error output
             $output = Receive-Job -Id $serverJob.Id 2>&1
             if ($output) {
@@ -177,7 +177,7 @@ Write-Host ""
 Write-Host "[7/8] Testing API endpoints..." -ForegroundColor Yellow
 if (-not $SkipInference -and $results["model_loads"]) {
     Write-Host "  [INFO] Starting server for API test..." -ForegroundColor Gray
-    
+
     # This would require actually starting the server and testing
     # Skip for now to avoid long-running tests
     Write-Host "  [SKIP] Requires running server (use manual test)" -ForegroundColor Yellow
@@ -225,7 +225,7 @@ foreach ($test in $results.GetEnumerator() | Sort-Object Name) {
 Write-Host ""
 $passPercent = [math]::Round(($passCount / $totalCount) * 100, 0)
 Write-Host "Tests passed: $passCount / $totalCount ($passPercent%)" -ForegroundColor $(
-    if ($passPercent -ge 80) { "Green" } 
+    if ($passPercent -ge 80) { "Green" }
     elseif ($passPercent -ge 50) { "Yellow" }
     else { "Red" }
 )

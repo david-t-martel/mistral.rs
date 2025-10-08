@@ -1,5 +1,7 @@
 # Phase 1 Implementation Plan: Foundation Integration
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before executing this plan._
+
 **Status**: In Progress\
 **Started**: 2025-10-05\
 **Target Completion**: 2 weeks

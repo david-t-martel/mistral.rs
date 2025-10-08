@@ -11,24 +11,24 @@ Use a simple model topology to configure ISQ and device mapping for *per-layer* 
 
 To support per-layer mix of ISQ, Mistral.rs supports loading a model topology YAML file. This YAML file is formatted as follows:
 
-1) Top-level keys are either:
-    - A range of layers (`start-end`) where `start < end`. `start` is inclusive and `end` is exclusive
-    - A single layer number
-    2) The topology for the range or layer:
-        - An optional key (`isq`) which maps to a single value, which can be any [ISQ type](ISQ.md#isq-quantization-types). If not specified, there is no ISQ for this range of layers applied.
-        - An optional key (`device`) which maps to a single value, which is one of the below. If not specified, the default loading deice will be used.
-          - `cpu`
-          - `cuda[ORDINAL]`
-          - `metal[ORDINAL]`
+1. Top-level keys are either:
+   - A range of layers (`start-end`) where `start < end`. `start` is inclusive and `end` is exclusive
+   - A single layer number
+   2. The topology for the range or layer:
+      - An optional key (`isq`) which maps to a single value, which can be any [ISQ type](ISQ.md#isq-quantization-types). If not specified, there is no ISQ for this range of layers applied.
+      - An optional key (`device`) which maps to a single value, which is one of the below. If not specified, the default loading deice will be used.
+        - `cpu`
+        - `cuda[ORDINAL]`
+        - `metal[ORDINAL]`
 
 Note that:
+
 - The topology for the range is expanded to fill the range
 - If ranges overlap, the range with the higher end layer takes precedence and will overwrite
 - Any layers which are not covered will have no topology mapping. They will inherit any other ISQ (e.g. with `--isq`/`in_situ_quant`) set.
 - Unless the layer is not covered by the topology, the topology value will override any other ISQ (e.g. with `--isq`/`in_situ_quant`).
 - The topology device mapping will override any other device mapping.
 - When using UQFF, only the device mapping is relevant.
-
 
 ```yml
 0-8:
@@ -66,7 +66,9 @@ cargo run --features ... -- --port 1234 plain -m microsoft/Phi-3-mini-128k-instr
 ```
 
 ## Rust example
+
 Example [here](../mistralrs/examples/topology/main.rs).
 
 ## Python example
+
 Example [here](../examples/python/topology.py).

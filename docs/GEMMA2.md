@@ -32,6 +32,7 @@ while True:
 ```
 
 ## Python API
+
 ```py
 from mistralrs import Runner, Which, ChatCompletionRequest, Architecture
 

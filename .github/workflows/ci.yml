@@ -1,11 +1,11 @@
-on: 
+on:
   schedule:
       - cron: '0 0 * * 1'
   push:
-    branches: 
+    branches:
       - master
   pull_request:
-    branches: 
+    branches:
       - master
   workflow_dispatch:
 
@@ -22,15 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
+
       - name: Check formatting
         run: cargo fmt --all -- --check
-      
+
       - name: Run clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
@@ -46,17 +46,17 @@ jobs:
         rust: [stable]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}-check
-      
+
       - name: Run cargo check
         run: cargo check --workspace --all-targets --all-features
 
@@ -72,24 +72,24 @@ jobs:
         rust: [stable]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}-test
-      
+
       - name: Run workspace tests
         env:
           TESTS_HF_TOKEN: ${{ secrets.HF_TOKEN }}
           RUST_TEST_THREADS: 4
         run: |
           cargo test --workspace --all-features -- --nocapture --test-threads=4
-      
+
       - name: Run doc tests
         run: cargo test --workspace --doc
 
@@ -100,26 +100,26 @@ jobs:
     needs: quick-check
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: coverage
-      
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-      
+
       - name: Generate coverage data
         env:
           TESTS_HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
-      
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -134,15 +134,15 @@ jobs:
     needs: quick-check
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: docs
-      
+
       - name: Build documentation
         env:
           RUSTDOCFLAGS: "-D warnings"
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check for typos
         uses: crate-ci/typos@master
         with:
@@ -167,17 +167,17 @@ jobs:
     needs: quick-check
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust MSRV toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.86.0"
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: msrv
-      
+
       - name: Check with MSRV
         run: cargo check --workspace --all-features
 
@@ -187,7 +187,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run cargo-audit
         uses: rustsec/audit-check@v2
         with:
@@ -200,15 +200,15 @@ jobs:
     needs: [check, test]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           key: integration
-      
+
       - name: Run integration tests
         env:
           TESTS_HF_TOKEN: ${{ secrets.HF_TOKEN }}

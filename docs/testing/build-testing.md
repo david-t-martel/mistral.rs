@@ -18,6 +18,7 @@ cargo test
 ```
 
 The Makefile handles:
+
 - Platform detection (Windows/Linux/macOS)
 - CUDA environment setup
 - Feature flag combinations
@@ -28,15 +29,15 @@ The Makefile handles:
 
 ### Quick Reference Table
 
-| Target | Purpose | Platform | Features | Time |
-|--------|---------|----------|----------|------|
-| `make check` | Syntax validation | All | N/A | < 1 min |
-| `make dev` | Debug build | All | Basic | 2-5 min |
-| `make build` | Release CPU | All | CPU only | 5-10 min |
-| `make build-cuda` | CUDA basic | Win/Linux | CUDA | 15-20 min |
-| `make build-cuda-full` | CUDA complete | Win/Linux | CUDA+Flash+cuDNN | 20-30 min |
-| `make build-metal` | Metal acceleration | macOS | Metal | 10-15 min |
-| `make release` | Optimized release | All | All available | 30-45 min |
+| Target                 | Purpose            | Platform  | Features         | Time      |
+| ---------------------- | ------------------ | --------- | ---------------- | --------- |
+| `make check`           | Syntax validation  | All       | N/A              | < 1 min   |
+| `make dev`             | Debug build        | All       | Basic            | 2-5 min   |
+| `make build`           | Release CPU        | All       | CPU only         | 5-10 min  |
+| `make build-cuda`      | CUDA basic         | Win/Linux | CUDA             | 15-20 min |
+| `make build-cuda-full` | CUDA complete      | Win/Linux | CUDA+Flash+cuDNN | 20-30 min |
+| `make build-metal`     | Metal acceleration | macOS     | Metal            | 10-15 min |
+| `make release`         | Optimized release  | All       | All available    | 30-45 min |
 
 ## Platform-Specific Testing
 
@@ -913,6 +914,7 @@ function Benchmark-BuildTimes {
 ### Issue: "NVCC not found"
 
 **Solution**:
+
 ```powershell
 # Set CUDA environment
 $env:CUDA_PATH = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9"
@@ -928,6 +930,7 @@ nvcc --version
 ### Issue: "Out of memory during linking"
 
 **Solution**:
+
 ```bash
 # Increase linker memory
 export RUSTFLAGS="-C link-arg=/STACK:8388608"
@@ -942,6 +945,7 @@ make build JOBS=4
 ### Issue: "Build takes too long"
 
 **Solution**:
+
 ```bash
 # Enable sccache
 cargo install sccache
@@ -964,7 +968,7 @@ cargo build -p mistralrs-core
 - Check [CI/CD Testing](ci-cd-testing.md) for automation
 - Read [Testing Migration](../development/testing-migration.md) for updates
 
----
+______________________________________________________________________
 
 *Last Updated: 2025*
 *Version: 1.0.0*

@@ -85,6 +85,7 @@ When using multiple servers, tool prefixes prevent naming conflicts:
 ## Custom Headers and Authentication
 
 ### API Key in Headers
+
 ```rust
 let mut headers = HashMap::new();
 headers.insert("X-API-Key".to_string(), "your-api-key".to_string());
@@ -98,6 +99,7 @@ McpServerSource::Http {
 ```
 
 ### OAuth2 Bearer Token
+
 ```rust
 McpServerConfig {
     // ...
@@ -126,6 +128,7 @@ McpServerConfig {
 ## Concurrency and Rate Limiting
 
 ### Global Concurrency Control
+
 ```rust
 McpClientConfig {
     // ...
@@ -134,6 +137,7 @@ McpClientConfig {
 ```
 
 ### Per-Tool Timeouts
+
 ```rust
 McpClientConfig {
     // ...
@@ -142,6 +146,7 @@ McpClientConfig {
 ```
 
 ### Custom Rate Limiting
+
 ```python
 # Python example with custom rate limiting
 import time
@@ -172,6 +177,7 @@ class RateLimitedMcpRunner:
 ## Environment-Specific Configuration
 
 ### Development vs Production
+
 ```rust
 let mcp_config = if cfg!(debug_assertions) {
     McpClientConfig {
@@ -191,6 +197,7 @@ let mcp_config = if cfg!(debug_assertions) {
 ```
 
 ### Environment Variables
+
 ```rust
 let mcp_config = McpClientConfig {
     servers: vec![
@@ -212,6 +219,7 @@ let mcp_config = McpClientConfig {
 ## Error Handling and Fallbacks
 
 ### Graceful Degradation
+
 ```rust
 let mcp_config = McpClientConfig {
     servers: vec![
@@ -233,6 +241,7 @@ let mcp_config = McpClientConfig {
 ```
 
 ### Tool-Specific Error Handling
+
 ```python
 # Handle specific tool errors
 try:
@@ -249,12 +258,14 @@ except Exception as e:
 ## Monitoring and Debugging
 
 ### Enable Debug Logging
+
 ```rust
 std::env::set_var("RUST_LOG", "mistralrs_mcp=debug");
 env_logger::init();
 ```
 
 ### Tool Call Inspection
+
 ```rust
 let response = model.send_chat_request(messages).await?;
 
@@ -271,6 +282,7 @@ if let Some(tool_calls) = &response.choices[0].message.tool_calls {
 ## Performance Optimization
 
 ### Connection Pooling
+
 HTTP and WebSocket transports automatically use connection pooling. Configure pool size:
 
 ```rust
@@ -279,6 +291,7 @@ std::env::set_var("MCP_POOL_SIZE", "10");
 ```
 
 ### Caching Tool Responses
+
 ```python
 from functools import lru_cache
 import json
@@ -295,7 +308,7 @@ def cached_tool_call(tool_name, args_json):
 ## Security Best Practices
 
 1. **Token Rotation**: Implement automatic token refresh for long-running applications
-2. **Least Privilege**: Only enable required tools and resources
-3. **Audit Logging**: Log all tool calls for security monitoring
-4. **Network Isolation**: Use Process transport for sensitive local operations
-5. **Input Validation**: MCP servers should validate all tool inputs
+1. **Least Privilege**: Only enable required tools and resources
+1. **Audit Logging**: Log all tool calls for security monitoring
+1. **Network Isolation**: Use Process transport for sensitive local operations
+1. **Input Validation**: MCP servers should validate all tool inputs

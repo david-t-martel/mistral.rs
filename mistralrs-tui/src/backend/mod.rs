@@ -3,6 +3,12 @@
 //! Currently only the crossterm-powered terminal backend is implemented. A
 //! future GPU accelerated path can hook in via the [`Options::prefer_gpu`] flag
 //! once the implementation is ready.
+//!
+//! Pending integration work:
+//! * Promote the GPU backend from the preview module (`gpu.rs`) into the default pipeline once the
+//!   outstanding safety work there is complete.
+//! * Surface backend health in richer UI widgets (current implementation writes to the status line).
+//! * De-duplicate layout code between terminal and GPU paths so shared widgets render identically.
 
 use std::time::Duration;
 
@@ -38,6 +44,9 @@ pub fn run(runtime: &Runtime, app: &mut App, options: Options) -> Result<()> {
                 Ok(()) => return Ok(()),
                 Err(err) => {
                     tracing::warn!(?err, "Falling back to terminal backend after GPU failure");
+                    app.set_status(format!(
+                        "GPU backend unavailable ({err}); using terminal renderer"
+                    ));
                 }
             }
         }

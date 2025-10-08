@@ -11,7 +11,7 @@ This project uses `cargo-llvm-cov` for accurate code coverage measurement and Co
 - **Critical Modules**: 90%+ (engine, inference, safety-critical paths)
 - **Public APIs**: 100% (all public functions tested)
 
----
+______________________________________________________________________
 
 ## Installation
 
@@ -34,7 +34,7 @@ make install-coverage-tools
 cargo llvm-cov --version
 ```
 
----
+______________________________________________________________________
 
 ## Generating Coverage Reports Locally
 
@@ -49,6 +49,7 @@ make test-coverage-text
 ```
 
 **Example Output:**
+
 ```
 Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -69,6 +70,7 @@ make test-coverage-open
 ```
 
 This opens an interactive HTML report showing:
+
 - Line-by-line coverage
 - Branch coverage
 - Function coverage
@@ -100,6 +102,7 @@ make test-coverage-lcov
 ```
 
 LCOV format is used by:
+
 - Codecov
 - Coveralls
 - IDE plugins (VSCode, IntelliJ)
@@ -115,7 +118,7 @@ cargo llvm-cov --workspace --all-features --json --output-path coverage.json
 make test-coverage-json
 ```
 
----
+______________________________________________________________________
 
 ## Coverage for Specific Packages
 
@@ -138,7 +141,7 @@ cargo llvm-cov -p mistralrs-core -p mistralrs-quant --all-features --summary-onl
 cargo llvm-cov --workspace --exclude mistralrs-server --all-features --summary-only
 ```
 
----
+______________________________________________________________________
 
 ## Advanced Usage
 
@@ -183,16 +186,17 @@ cargo llvm-cov clean
 cargo llvm-cov --workspace --all-features --summary-only
 ```
 
----
+______________________________________________________________________
 
 ## CI Integration (GitHub Actions)
 
 ### Automatic Coverage Upload
 
 Our CI workflow automatically:
+
 1. Generates coverage on Linux (fastest platform)
-2. Uploads to Codecov on every push/PR
-3. Comments on PRs with coverage changes
+1. Uploads to Codecov on every push/PR
+1. Comments on PRs with coverage changes
 
 ### Workflow Configuration
 
@@ -221,13 +225,14 @@ coverage:
 **`CODECOV_TOKEN`**: Required for uploading coverage to Codecov.
 
 **Setup**:
-1. Go to https://codecov.io/gh/YOUR_ORG/mistral.rs
-2. Get repository upload token
-3. Add to GitHub: Settings → Secrets → Actions → New secret
-4. Name: `CODECOV_TOKEN`
-5. Value: (paste token from Codecov)
 
----
+1. Go to https://codecov.io/gh/YOUR_ORG/mistral.rs
+1. Get repository upload token
+1. Add to GitHub: Settings → Secrets → Actions → New secret
+1. Name: `CODECOV_TOKEN`
+1. Value: (paste token from Codecov)
+
+______________________________________________________________________
 
 ## Codecov Dashboard
 
@@ -236,6 +241,7 @@ coverage:
 **Project Dashboard**: https://codecov.io/gh/YOUR_ORG/mistral.rs
 
 **Features**:
+
 - Overall coverage trends
 - Per-commit coverage
 - Per-component coverage
@@ -254,12 +260,14 @@ Add to README.md:
 ### PR Comments
 
 Codecov automatically comments on PRs with:
+
 - Coverage change (±%)
 - Files with coverage changes
 - Links to detailed reports
 - Pass/fail status based on targets
 
 **Example Comment**:
+
 ```
 # Codecov Report
 
@@ -277,28 +285,32 @@ Codecov automatically comments on PRs with:
 + Misses        700      579     -121
 ```
 
----
+______________________________________________________________________
 
 ## Interpreting Coverage
 
 ### Coverage Metrics
 
 **Line Coverage**: Percentage of lines executed
+
 - Good: > 80%
 - Acceptable: 70-80%
 - Needs improvement: < 70%
 
 **Branch Coverage**: Percentage of branches taken
+
 - Good: > 80%
 - Important for: if/else, match, loops
 
 **Function Coverage**: Percentage of functions called
+
 - Target: 100% for public APIs
 - Important for: library interfaces
 
 ### What to Cover
 
 **MUST Cover**:
+
 - ✅ All public APIs
 - ✅ Error handling paths
 - ✅ Edge cases and boundary conditions
@@ -306,12 +318,14 @@ Codecov automatically comments on PRs with:
 - ✅ Safety-critical code paths
 
 **SHOULD Cover**:
+
 - ✅ Private helper functions
 - ✅ Internal utilities
 - ✅ Configuration parsing
 - ✅ Data transformations
 
 **MAY Skip** (Low ROI):
+
 - ⚠️ Trivial getters/setters
 - ⚠️ Generated code
 - ⚠️ External bindings (FFI)
@@ -320,12 +334,13 @@ Codecov automatically comments on PRs with:
 ### Coverage Gaps
 
 Low coverage usually indicates:
-1. **Untested error paths**: Add error case tests
-2. **Dead code**: Remove or document why it exists
-3. **Complex conditionals**: Simplify or add branch tests
-4. **Hard-to-test code**: Refactor for testability
 
----
+1. **Untested error paths**: Add error case tests
+1. **Dead code**: Remove or document why it exists
+1. **Complex conditionals**: Simplify or add branch tests
+1. **Hard-to-test code**: Refactor for testability
+
+______________________________________________________________________
 
 ## Best Practices
 
@@ -342,6 +357,7 @@ make test-coverage-open
 ### 2. Focus on Critical Paths First
 
 Prioritize coverage for:
+
 - Security-sensitive code
 - Data validation and parsing
 - Core algorithms
@@ -351,6 +367,7 @@ Prioritize coverage for:
 ### 3. Don't Chase 100% Coverage
 
 **Goal**: Meaningful tests, not just coverage
+
 - 100% coverage doesn't mean bug-free
 - Focus on testing behavior, not lines
 - Quality over quantity
@@ -384,6 +401,7 @@ make test-coverage-open
 ### 6. Ignore Noise in Coverage
 
 Codecov is configured to ignore:
+
 - `tests/` directories
 - `benches/` directories
 - `examples/` directories
@@ -391,13 +409,14 @@ Codecov is configured to ignore:
 
 See `codecov.yml` for full ignore list.
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### "Command not found: cargo-llvm-cov"
 
 **Solution**:
+
 ```bash
 cargo install cargo-llvm-cov
 ```
@@ -405,6 +424,7 @@ cargo install cargo-llvm-cov
 ### "Error: llvm-tools-preview not installed"
 
 **Solution**:
+
 ```bash
 rustup component add llvm-tools-preview
 ```
@@ -412,11 +432,13 @@ rustup component add llvm-tools-preview
 ### Coverage is 0% or Very Low
 
 **Causes**:
+
 1. No tests ran
-2. Tests didn't execute the code
-3. Coverage data was cleaned
+1. Tests didn't execute the code
+1. Coverage data was cleaned
 
 **Solutions**:
+
 ```bash
 # Clean and regenerate
 cargo llvm-cov clean
@@ -429,11 +451,13 @@ cargo test --workspace --all-features
 ### Coverage Differs Between Local and CI
 
 **Causes**:
+
 1. Different feature flags
-2. Platform-specific code
-3. Different test execution
+1. Platform-specific code
+1. Different test execution
 
 **Solutions**:
+
 - Use `--all-features` locally and in CI
 - Check platform-specific `#[cfg]` blocks
 - Run on same platform as CI (Linux)
@@ -441,11 +465,13 @@ cargo test --workspace --all-features
 ### Codecov Upload Fails
 
 **Causes**:
+
 1. Missing `CODECOV_TOKEN` secret
-2. Network issues
-3. Invalid token
+1. Network issues
+1. Invalid token
 
 **Solutions**:
+
 ```bash
 # Check token exists in GitHub Settings → Secrets
 # Try manual upload:
@@ -457,6 +483,7 @@ curl -Os https://uploader.codecov.io/latest/windows/codecov.exe
 ### "No coverage data found"
 
 **Solution**:
+
 ```bash
 # Ensure tests actually run
 cargo test --workspace --all-features -- --test-threads=1
@@ -466,7 +493,7 @@ cargo llvm-cov clean
 cargo llvm-cov --workspace --all-features --summary-only
 ```
 
----
+______________________________________________________________________
 
 ## Coverage Workflow
 
@@ -492,17 +519,17 @@ make test-coverage-text
 ### During PR Review
 
 1. **Check Codecov comment** on PR
-2. **Review coverage diff**: What changed?
-3. **Investigate coverage drops**: Why did coverage decrease?
-4. **Add tests if needed**: Cover new critical code
+1. **Review coverage diff**: What changed?
+1. **Investigate coverage drops**: Why did coverage decrease?
+1. **Add tests if needed**: Cover new critical code
 
 ### After Merging
 
 1. **Monitor dashboard**: https://codecov.io/gh/YOUR_ORG/mistral.rs
-2. **Track trends**: Is coverage increasing or decreasing?
-3. **Set goals**: Target 70% overall, 80% new code
+1. **Track trends**: Is coverage increasing or decreasing?
+1. **Set goals**: Target 70% overall, 80% new code
 
----
+______________________________________________________________________
 
 ## Quick Reference
 
@@ -547,23 +574,23 @@ make test-coverage-ci        # CI format (LCOV)
 - **`coverage.json`**: JSON format coverage data (gitignored)
 - **`target/llvm-cov/html/`**: HTML coverage reports (gitignored)
 
----
+______________________________________________________________________
 
 ## Coverage Targets by Component
 
-| Component | Target | Current | Status |
-|-----------|--------|---------|--------|
-| mistralrs-core | 80% | TBD | ⏳ |
-| mistralrs-agent-tools | 85% | TBD | ⏳ |
-| mistralrs-quant | 75% | TBD | ⏳ |
-| mistralrs-vision | 75% | TBD | ⏳ |
-| mistralrs-audio | 75% | TBD | ⏳ |
-| mistralrs-server | 70% | TBD | ⏳ |
-| mistralrs-mcp | 80% | TBD | ⏳ |
-| mistralrs-tui | 70% | TBD | ⏳ |
-| **Overall** | **70%** | **TBD** | **⏳** |
+| Component             | Target  | Current | Status |
+| --------------------- | ------- | ------- | ------ |
+| mistralrs-core        | 80%     | TBD     | ⏳     |
+| mistralrs-agent-tools | 85%     | TBD     | ⏳     |
+| mistralrs-quant       | 75%     | TBD     | ⏳     |
+| mistralrs-vision      | 75%     | TBD     | ⏳     |
+| mistralrs-audio       | 75%     | TBD     | ⏳     |
+| mistralrs-server      | 70%     | TBD     | ⏳     |
+| mistralrs-mcp         | 80%     | TBD     | ⏳     |
+| mistralrs-tui         | 70%     | TBD     | ⏳     |
+| **Overall**           | **70%** | **TBD** | **⏳** |
 
----
+______________________________________________________________________
 
 ## Resources
 
@@ -572,8 +599,8 @@ make test-coverage-ci        # CI format (LCOV)
 - **LLVM Coverage**: https://llvm.org/docs/CommandGuide/llvm-cov.html
 - **Rust Testing Book**: https://doc.rust-lang.org/book/ch11-00-testing.html
 
----
+______________________________________________________________________
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-01-05  
+**Document Version**: 1.0\
+**Last Updated**: 2025-01-05\
 **Maintained by**: Testing Infrastructure Team

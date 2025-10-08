@@ -9,6 +9,7 @@ Model Context Protocol (MCP) testing validates the integration between mistral.r
 ### Protocol Basics
 
 MCP servers are **NOT HTTP servers**. They communicate through:
+
 - **Transport**: stdio (stdin/stdout)
 - **Protocol**: JSON-RPC 2.0
 - **Message Format**: Line-delimited JSON
@@ -56,17 +57,17 @@ mistralrs-server.exe
 
 ### Available MCP Servers
 
-| Server | Purpose | Command | Key Features |
-|--------|---------|---------|--------------|
-| Memory | Session state | `npx @modelcontextprotocol/server-memory` | Persistent memory across conversations |
-| Filesystem | File operations | `npx @modelcontextprotocol/server-filesystem` | Read, write, list files |
-| Sequential Thinking | Multi-step reasoning | `npx @modelcontextprotocol/server-sequential-thinking` | Chain-of-thought prompting |
-| GitHub | Repository operations | `npx @modelcontextprotocol/server-github` | Issues, PRs, commits |
-| Fetch | HTTP requests | `npx @modelcontextprotocol/server-fetch` | Web scraping, API calls |
-| Time | Date/time utilities | `npx @theo.foobar/mcp-time` | Current time, timezone conversion |
-| RAG-Redis | Vector search | `rag-redis-mcp-server.exe` | Redis-backed RAG system |
-| Serena Claude | Code analysis | `uv run python mcp_server.py` | Python code intelligence |
-| Python FileOps | Enhanced file ops | `uv run python -m desktop_commander.mcp_server` | Advanced file management |
+| Server              | Purpose               | Command                                                | Key Features                           |
+| ------------------- | --------------------- | ------------------------------------------------------ | -------------------------------------- |
+| Memory              | Session state         | `npx @modelcontextprotocol/server-memory`              | Persistent memory across conversations |
+| Filesystem          | File operations       | `npx @modelcontextprotocol/server-filesystem`          | Read, write, list files                |
+| Sequential Thinking | Multi-step reasoning  | `npx @modelcontextprotocol/server-sequential-thinking` | Chain-of-thought prompting             |
+| GitHub              | Repository operations | `npx @modelcontextprotocol/server-github`              | Issues, PRs, commits                   |
+| Fetch               | HTTP requests         | `npx @modelcontextprotocol/server-fetch`               | Web scraping, API calls                |
+| Time                | Date/time utilities   | `npx @theo.foobar/mcp-time`                            | Current time, timezone conversion      |
+| RAG-Redis           | Vector search         | `rag-redis-mcp-server.exe`                             | Redis-backed RAG system                |
+| Serena Claude       | Code analysis         | `uv run python mcp_server.py`                          | Python code intelligence               |
+| Python FileOps      | Enhanced file ops     | `uv run python -m desktop_commander.mcp_server`        | Advanced file management               |
 
 ## Testing MCP Servers
 
@@ -743,6 +744,7 @@ function Test-MCPConcurrency {
 **Cause**: Missing dependencies or incorrect path
 
 **Solution**:
+
 ```powershell
 # Check Node.js installation
 node --version
@@ -760,6 +762,7 @@ uv --version
 **Cause**: Server not fully initialized
 
 **Solution**:
+
 ```powershell
 # Increase initialization timeout
 $initTimeout = 10  # seconds
@@ -774,6 +777,7 @@ Get-Content "tests/results/mcp-$ServerName.err" -Tail 20
 **Cause**: Protocol version mismatch or malformed request
 
 **Solution**:
+
 ```powershell
 # Ensure correct protocol version
 $env:MCP_PROTOCOL_VERSION = "2025-06-18"
@@ -787,6 +791,7 @@ $request | ConvertTo-Json -Depth 10 | Test-Json
 **Cause**: Tool not registered or wrong name
 
 **Solution**:
+
 ```powershell
 # List available tools first
 $tools = Get-MCPTools -Server $ServerName
@@ -935,7 +940,7 @@ function Log-MCPMessage {
 - Check [CI/CD Testing Guide](ci-cd-testing.md) for automation setup
 - Read [Testing Migration Guide](../development/testing-migration.md) for migration help
 
----
+______________________________________________________________________
 
 *Last Updated: 2025*
 *Version: 1.0.0*

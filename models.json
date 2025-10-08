@@ -1,0 +1,42 @@
+[
+  {
+    "name": "gemma-2-2b-it-Q4_K_M",
+    "path": "C:\\codedev\\llm\\.models\\gemma-2-2b-it-gguf\\gemma-2-2b-it-Q4_K_M.gguf",
+    "format": "gguf",
+    "size_gb": 1.67,
+    "notes": "Gemma 2 2B Instruct, Q4_K_M quantization",
+    "use_case": "General purpose"
+  },
+  {
+    "name": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+    "path": "C:\\codedev\\llm\\.models\\qwen2.5-1.5b-it-gguf\\Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
+    "format": "gguf",
+    "size_gb": 0.94,
+    "notes": "Qwen 2.5 1.5B Instruct, Q4_K_M quantization - SMALLEST",
+    "use_case": "Quick responses, code completion"
+  },
+  {
+    "name": "Qwen2.5-7B-Instruct-Q4_K_M",
+    "path": "C:\\codedev\\llm\\.models\\qwen2.5-7b-it-gguf\\Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    "format": "gguf",
+    "size_gb": 4.37,
+    "notes": "Qwen 2.5 7B Instruct, Q4_K_M quantization",
+    "use_case": "Complex reasoning, architecture review"
+  },
+  {
+    "name": "Qwen2.5-Coder-3B-Instruct-Q4_K_M",
+    "path": "C:\\codedev\\llm\\.models\\qwen2.5-coder-3b-gguf\\Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+    "format": "gguf",
+    "size_gb": 1.93,
+    "notes": "Qwen 2.5 Coder 3B Instruct, Q4_K_M quantization",
+    "use_case": "Code analysis, refactoring"
+  },
+  {
+    "name": "gemma-3-4b-it-hf",
+    "path": "C:\\codedev\\llm\\.models\\gemma-3-4b-it-hf",
+    "format": "safetensors",
+    "size_gb": 8.5,
+    "notes": "Gemma 3 4B Instruct, Hugging Face format (safetensors)",
+    "use_case": "General purpose"
+  }
+]

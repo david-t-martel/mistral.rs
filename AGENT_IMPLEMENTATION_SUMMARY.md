@@ -1,5 +1,7 @@
 # Agent Mode Implementation Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before using this plan._
+
 ## 🎯 Objective Completed
 
 **Goal**: Implement autonomous ReAct-style agent functionality for mistral.rs that can independently reason, act, and observe using tools until tasks are complete.

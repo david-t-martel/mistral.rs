@@ -4,14 +4,15 @@
 //! tool callback infrastructure, enabling all 90+ utilities to be used by language models.
 
 use crate::types::{
-    CatOptions, GrepOptions, HeadOptions, LsOptions, SortOptions, TailOptions, UniqOptions,
-    WcOptions,
+    CatOptions, CommandOptions, GrepOptions, HeadOptions, LsOptions, ShellType, SortOptions,
+    TailOptions, UniqOptions, WcOptions,
 };
 use crate::{AgentToolkit, SandboxConfig};
+use anyhow::{anyhow, Result};
 use mistralrs_mcp::{CalledFunction, Function, Tool, ToolCallbackWithTool, ToolType};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Provider that exposes agent-tools as mistralrs-core tool callbacks
@@ -60,7 +61,10 @@ impl AgentToolProvider {
         tools.push(self.create_sort_tool());
         tools.push(self.create_uniq_tool());
 
-        // TODO: Add remaining 82+ tools in follow-up commits
+        // Shell execution
+        tools.push(self.create_shell_tool());
+
+        // Additional utilities are tracked in TODO_ANALYSIS.md for future integration
 
         tools
     }
@@ -228,6 +232,11 @@ impl AgentToolProvider {
                     "type": "integer",
                     "description": "Print NUM lines of trailing context",
                     "default": 0
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Recurse into directories when searching",
+                    "default": false
                 }
             }),
         );
@@ -441,17 +450,67 @@ impl AgentToolProvider {
             },
         }
     }
+
+    fn create_shell_tool(&self) -> Tool {
+        let mut params = HashMap::new();
+        params.insert("type".to_string(), json!("object"));
+        params.insert(
+            "properties".to_string(),
+            json!({
+                "command": {
+                    "type": "string",
+                    "description": "Command to execute"
+                },
+                "shell": {
+                    "type": "string",
+                    "description": "Shell to use (bash, pwsh, cmd)"
+                },
+                "working_dir": {
+                    "type": "string",
+                    "description": "Working directory for the command"
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Timeout in seconds",
+                    "default": 30
+                },
+                "capture_stdout": {
+                    "type": "boolean",
+                    "description": "Capture standard output",
+                    "default": true
+                },
+                "capture_stderr": {
+                    "type": "boolean",
+                    "description": "Capture standard error",
+                    "default": true
+                },
+                "env": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": "Environment variables to set (key/value pairs)"
+                }
+            }),
+        );
+        params.insert("required".to_string(), json!(["command"]));
+
+        Tool {
+            tp: ToolType::Function,
+            function: Function {
+                name: self.tool_name("shell"),
+                description: Some(
+                    "Execute a command inside the sandbox using the configured shell.".to_string(),
+                ),
+                parameters: Some(params),
+            },
+        }
+    }
 }
 
 /// Execute an agent tool with JSON arguments
-fn execute_agent_tool(
-    toolkit: &AgentToolkit,
-    tool_name: &str,
-    args_json: &str,
-) -> anyhow::Result<String> {
+fn execute_agent_tool(toolkit: &AgentToolkit, tool_name: &str, args_json: &str) -> Result<String> {
     // Parse JSON arguments
-    let args: Value = serde_json::from_str(args_json)
-        .map_err(|e| anyhow::anyhow!("Failed to parse arguments: {}", e))?;
+    let args: Value =
+        serde_json::from_str(args_json).map_err(|e| anyhow!("Failed to parse arguments: {}", e))?;
 
     // Route to appropriate tool execution
     match tool_name.rsplit('_').next().unwrap_or(tool_name) {
@@ -463,15 +522,16 @@ fn execute_agent_tool(
         "wc" => execute_wc(toolkit, &args),
         "sort" => execute_sort(toolkit, &args),
         "uniq" => execute_uniq(toolkit, &args),
-        _ => Err(anyhow::anyhow!("Unknown tool: {}", tool_name)),
+        "shell" | "run" | "execute" => execute_shell(toolkit, &args),
+        _ => Err(anyhow!("Unknown tool: {}", tool_name)),
     }
 }
 
-fn execute_cat(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_cat(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = CatOptions {
         number_lines: args
@@ -494,7 +554,7 @@ fn execute_cat(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
     Ok(result)
 }
 
-fn execute_ls(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_ls(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or(".");
     let path = Path::new(path_str);
 
@@ -536,16 +596,16 @@ fn execute_ls(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
     }))?)
 }
 
-fn execute_grep(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_grep(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let pattern = args
         .get("pattern")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'pattern' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'pattern' parameter"))?;
 
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = GrepOptions {
         ignore_case: args
@@ -570,7 +630,10 @@ fn execute_grep(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> 
         files_without_match: false,
         extended_regexp: true,
         fixed_strings: false,
-        recursive: false,
+        recursive: args
+            .get("recursive")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
     };
 
     let path_refs: Vec<&Path> = paths.iter().map(|p| Path::new(p.as_str())).collect();
@@ -590,11 +653,11 @@ fn execute_grep(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> 
     Ok(output)
 }
 
-fn execute_head(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_head(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = HeadOptions {
         lines: args.get("lines").and_then(|v| v.as_u64()).unwrap_or(10) as usize,
@@ -609,11 +672,11 @@ fn execute_head(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> 
     Ok(result)
 }
 
-fn execute_tail(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_tail(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = TailOptions {
         lines: args.get("lines").and_then(|v| v.as_u64()).unwrap_or(10) as usize,
@@ -628,11 +691,11 @@ fn execute_tail(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> 
     Ok(result)
 }
 
-fn execute_wc(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_wc(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = WcOptions {
         lines: args.get("lines").and_then(|v| v.as_bool()).unwrap_or(false),
@@ -648,11 +711,11 @@ fn execute_wc(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
     Ok(crate::tools::text::format_wc_output(&results, &options))
 }
 
-fn execute_sort(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_sort(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = SortOptions {
         reverse: args
@@ -679,11 +742,75 @@ fn execute_sort(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> 
     Ok(result)
 }
 
-fn execute_uniq(toolkit: &AgentToolkit, args: &Value) -> anyhow::Result<String> {
+fn execute_shell(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
+    let command = args
+        .get("command")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Missing 'command' parameter"))?;
+
+    let mut options = CommandOptions::default();
+
+    if let Some(timeout) = args.get("timeout").and_then(|v| v.as_u64()) {
+        options.timeout = Some(timeout);
+    }
+
+    options.capture_stdout = args
+        .get("capture_stdout")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(options.capture_stdout);
+    options.capture_stderr = args
+        .get("capture_stderr")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(options.capture_stderr);
+
+    if let Some(shell_str) = args.get("shell").and_then(|v| v.as_str()) {
+        options.shell = match shell_str.to_ascii_lowercase().as_str() {
+            "bash" => ShellType::Bash,
+            "pwsh" | "powershell" => ShellType::PowerShell,
+            "cmd" => ShellType::Cmd,
+            other => return Err(anyhow!("Unsupported shell '{other}'")),
+        };
+    }
+
+    options.working_dir = args
+        .get("working_dir")
+        .and_then(|v| v.as_str())
+        .map(PathBuf::from);
+
+    if let Some(env_map) = args.get("env").and_then(|v| v.as_object()) {
+        let mut env = Vec::with_capacity(env_map.len());
+        for (key, value) in env_map {
+            let env_val = value
+                .as_str()
+                .ok_or_else(|| anyhow!("Environment variable '{key}' must be a string"))?;
+            env.push((key.clone(), env_val.to_string()));
+        }
+        options.env = env;
+    }
+
+    let result = toolkit.execute(command, &options)?;
+
+    let mut output = String::new();
+    if !result.stdout.is_empty() {
+        output.push_str(&result.stdout);
+    }
+    if !result.stderr.is_empty() {
+        if !output.is_empty() {
+            output.push('\n');
+        }
+        output.push_str("[stderr]:\n");
+        output.push_str(&result.stderr);
+    }
+    output.push_str(&format!("\n[exit code: {}]\n", result.status));
+
+    Ok(output)
+}
+
+fn execute_uniq(toolkit: &AgentToolkit, args: &Value) -> Result<String> {
     let paths: Vec<String> = args
         .get("paths")
         .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .ok_or_else(|| anyhow::anyhow!("Missing 'paths' parameter"))?;
+        .ok_or_else(|| anyhow!("Missing 'paths' parameter"))?;
 
     let options = UniqOptions {
         count: args.get("count").and_then(|v| v.as_bool()).unwrap_or(false),

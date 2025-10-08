@@ -7,11 +7,13 @@ A comprehensive master test runner has been implemented for the mistral.rs proje
 ## Components Created
 
 ### 1. Master Test Runner Script
+
 **File**: `tests/run-all-tests.ps1`
 **Size**: ~750 lines
 **Purpose**: Orchestrate all testing workflows
 
 **Key Features**:
+
 - ✅ Test discovery from organized hierarchy
 - ✅ Selective suite execution (all, integration, mcp, build, quick)
 - ✅ Multiple output formats (console, JSON, Markdown, HTML)
@@ -24,9 +26,11 @@ A comprehensive master test runner has been implemented for the mistral.rs proje
 - ✅ Verbose logging
 
 ### 2. Makefile Integration
+
 **File**: `Makefile` (updated)
 
 **New Targets**:
+
 ```makefile
 make test-ps1              # Run all PowerShell tests
 make test-ps1-quick        # Quick smoke tests (~1 min)
@@ -37,25 +41,32 @@ make test-full             # All tests (Rust + PowerShell)
 ```
 
 ### 3. Documentation
+
 **Files Created**:
+
 - `tests/README.md` - Comprehensive usage guide
 - `tests/TEST_RUNNER_IMPLEMENTATION.md` - This file
 - Inline documentation in scripts
 
 ### 4. Sample Test Scripts
+
 **Integration Tests**:
+
 - `tests/integration/test-binary-health.ps1` - Binary validation
 
 **MCP Tests**:
+
 - `tests/mcp/test-mcp-config.ps1` - Configuration validation
 
 ### 5. Validation Script
+
 **File**: `tests/validate-test-runner.ps1`
 **Purpose**: Validate master test runner setup
 
 ## Architecture
 
 ### Test Discovery Flow
+
 ```
 run-all-tests.ps1
     ↓
@@ -74,6 +85,7 @@ Return test list
 ```
 
 ### Test Execution Flow
+
 ```
 Pre-flight Checks
     ↓ (verify environment)
@@ -93,6 +105,7 @@ Exit with appropriate code
 ```
 
 ### MCP Server Lifecycle
+
 ```powershell
 Start-MCPServers
     ↓
@@ -120,10 +133,13 @@ Complete
 ## Parameters
 
 ### Suite Selection
+
 ```powershell
 -Suite <value>
 ```
+
 Options:
+
 - `all` (default): Run all tests
 - `quick`: Fast compilation check (~1 min)
 - `integration`: Integration tests (~5-10 min)
@@ -131,16 +147,20 @@ Options:
 - `build`: Build system tests (~10-15 min)
 
 ### Output Format
+
 ```powershell
 -OutputFormat <value>
 ```
+
 Options:
+
 - `console` (default): Colored terminal output
 - `json`: Machine-readable structured data
 - `markdown`: GitHub-compatible report
 - `html`: Interactive web report
 
 ### Advanced Options
+
 ```powershell
 -Verbose          # Detailed output
 -FailFast         # Stop on first failure
@@ -153,6 +173,7 @@ Options:
 ## Usage Examples
 
 ### Quick Development Workflow
+
 ```bash
 # Pre-commit check (1 minute)
 make test-ps1-quick
@@ -162,6 +183,7 @@ make test-ps1-quick
 ```
 
 ### Full Local Validation
+
 ```bash
 # Run everything (15-20 minutes)
 make test-full
@@ -171,6 +193,7 @@ make test-ps1
 ```
 
 ### CI/CD Pipeline
+
 ```bash
 # Strict mode with JSON output
 make test-ps1-ci
@@ -180,6 +203,7 @@ make test-ps1-ci
 ```
 
 ### Specific Suite Testing
+
 ```bash
 # Integration tests only
 make test-ps1-integration
@@ -189,12 +213,14 @@ make test-ps1-mcp
 ```
 
 ### Debugging Mode
+
 ```powershell
 # Verbose output with fail-fast
 .\tests\run-all-tests.ps1 -Suite integration -Verbose -FailFast
 ```
 
 ### Generate Reports
+
 ```powershell
 # HTML report with auto-open
 .\tests\run-all-tests.ps1 -Suite all -OutputFormat html
@@ -206,6 +232,7 @@ make test-ps1-mcp
 ## Result Structure
 
 ### JSON Output Schema
+
 ```json
 {
   "Tests": [
@@ -243,6 +270,7 @@ make test-ps1-mcp
 ```
 
 ### Console Output Example
+
 ```
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                   mistral.rs Master Test Runner                           ║
@@ -296,15 +324,17 @@ Pass Rate: 100.0%
 ## Performance Characteristics
 
 ### Suite Durations (Estimates)
-| Suite | Duration | Use Case |
-|-------|----------|----------|
-| quick | ~1 min | Pre-commit checks |
-| integration | 5-10 min | Feature validation |
-| mcp | 5-10 min | MCP integration |
-| build | 10-15 min | Build system validation |
-| all | 15-20 min | Full validation |
+
+| Suite       | Duration  | Use Case                |
+| ----------- | --------- | ----------------------- |
+| quick       | ~1 min    | Pre-commit checks       |
+| integration | 5-10 min  | Feature validation      |
+| mcp         | 5-10 min  | MCP integration         |
+| build       | 10-15 min | Build system validation |
+| all         | 15-20 min | Full validation         |
 
 ### Resource Usage
+
 - **Memory**: ~500 MB (runner + MCP servers)
 - **CPU**: Variable (depends on parallel mode)
 - **Disk**: ~100 MB for logs/results
@@ -313,15 +343,17 @@ Pass Rate: 100.0%
 ## Pre-Flight Checks
 
 The runner validates:
+
 1. ✅ Makefile exists in current directory
-2. ✅ Binary exists at `target/release/mistralrs-server.exe`
-3. ✅ Tests directory exists
-4. ✅ Results directory exists (creates if missing)
-5. ⚠️ Warns about running MCP servers (offers to stop)
+1. ✅ Binary exists at `target/release/mistralrs-server.exe`
+1. ✅ Tests directory exists
+1. ✅ Results directory exists (creates if missing)
+1. ⚠️ Warns about running MCP servers (offers to stop)
 
 ## MCP Server Management
 
 ### Supported Servers (from MCP_CONFIG.json)
+
 - memory - Session state
 - filesystem - File operations
 - sequential-thinking - Multi-step reasoning
@@ -331,13 +363,15 @@ The runner validates:
 - rag-redis - RAG with Redis backend (requires Redis)
 
 ### Lifecycle Management
+
 1. **Startup**: Servers started before MCP tests
-2. **Health**: 500ms grace period for initialization
-3. **Testing**: Tests executed while servers run
-4. **Shutdown**: Graceful close with 3s timeout
-5. **Force Kill**: If graceful shutdown fails
+1. **Health**: 500ms grace period for initialization
+1. **Testing**: Tests executed while servers run
+1. **Shutdown**: Graceful close with 3s timeout
+1. **Force Kill**: If graceful shutdown fails
 
 ### Logging
+
 - **stdout**: `tests/results/mcp-<server>.out`
 - **stderr**: `tests/results/mcp-<server>.err`
 - Logs preserved for debugging
@@ -345,17 +379,20 @@ The runner validates:
 ## Error Handling
 
 ### Fatal Errors (Exit 1)
+
 - Pre-flight checks fail in CI mode
 - Script syntax errors
 - No tests discovered (when expected)
 - All tests fail
 
 ### Recoverable Errors (Continue)
+
 - Individual test failures (unless -FailFast)
 - MCP server startup failures (warn, skip MCP tests)
 - Non-critical resource issues
 
 ### Warnings (No Exit)
+
 - MCP servers already running
 - Optional tools not found (ruff, clang-format)
 - Test scripts with non-zero warnings
@@ -363,6 +400,7 @@ The runner validates:
 ## CI/CD Integration
 
 ### GitHub Actions Example
+
 ```yaml
 name: Test Suite
 on: [push, pull_request]
@@ -388,20 +426,23 @@ jobs:
 ```
 
 ### Exit Codes
-| Code | Meaning | CI Action |
-|------|---------|-----------|
-| 0 | All passed | ✓ Continue |
-| 1 | Tests failed | ✗ Fail build |
-| Other | Fatal error | ✗ Fail build |
+
+| Code  | Meaning      | CI Action    |
+| ----- | ------------ | ------------ |
+| 0     | All passed   | ✓ Continue   |
+| 1     | Tests failed | ✗ Fail build |
+| Other | Fatal error  | ✗ Fail build |
 
 ## Adding New Tests
 
 ### Step 1: Choose Category
+
 - `tests/integration/` - End-to-end integration tests
 - `tests/mcp/` - MCP server integration tests
 - `scripts/build/` - Build system tests
 
 ### Step 2: Create Script
+
 ```powershell
 # tests/integration/test-my-feature.ps1
 
@@ -421,6 +462,7 @@ try {
 ```
 
 ### Step 3: (Optional) Output JSON
+
 ```powershell
 $result = @{
     test_name = "my-feature"
@@ -433,6 +475,7 @@ $result | ConvertTo-Json | Set-Content "tests/results/test-my-feature-results.js
 ```
 
 ### Step 4: Test
+
 ```bash
 # Verify script is discovered
 .\tests\run-all-tests.ps1 -Suite integration -Verbose
@@ -444,42 +487,51 @@ make test-ps1-integration
 ## Troubleshooting
 
 ### Issue: Tests Not Found
+
 **Symptoms**: "No tests found for suite: X"
 
 **Solutions**:
+
 1. Verify script location matches expected paths
-2. Check file naming pattern (*.ps1 for integration, test-*.ps1 for MCP)
-3. Ensure scripts are not in subdirectories
-4. Run validation: `.\tests\validate-test-runner.ps1`
+1. Check file naming pattern (*.ps1 for integration, test-*.ps1 for MCP)
+1. Ensure scripts are not in subdirectories
+1. Run validation: `.\tests\validate-test-runner.ps1`
 
 ### Issue: MCP Servers Won't Start
+
 **Symptoms**: MCP tests fail with "server not available"
 
 **Solutions**:
+
 1. Check Node.js installed: `node --version`
-2. Verify MCP_CONFIG.json exists and is valid
-3. Check for conflicting processes: `Get-Process -Name "node"`
-4. Review server logs: `tests/results/mcp-*.err`
+1. Verify MCP_CONFIG.json exists and is valid
+1. Check for conflicting processes: `Get-Process -Name "node"`
+1. Review server logs: `tests/results/mcp-*.err`
 
 ### Issue: Permission Denied
+
 **Symptoms**: "execution policy" or "access denied" errors
 
 **Solutions**:
+
 1. Run as Administrator
-2. Set execution policy: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
-3. Use bypass flag: `powershell -ExecutionPolicy Bypass -File ...`
+1. Set execution policy: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
+1. Use bypass flag: `powershell -ExecutionPolicy Bypass -File ...`
 
 ### Issue: Binary Not Found
+
 **Symptoms**: "Binary not found: target/release/mistralrs-server.exe"
 
 **Solutions**:
+
 1. Build binary: `make build-cuda-full`
-2. Verify build succeeded: `ls target/release/`
-3. Check for build errors: `cat .logs/build.log`
+1. Verify build succeeded: `ls target/release/`
+1. Check for build errors: `cat .logs/build.log`
 
 ## Future Enhancements
 
 ### Planned Features
+
 - [ ] True parallel test execution
 - [ ] Test result history tracking
 - [ ] Flaky test detection
@@ -492,6 +544,7 @@ make test-ps1-integration
 - [ ] Integration with VS Code Test Explorer
 
 ### Optimization Opportunities
+
 - [ ] Cache test discovery results
 - [ ] Smart test ordering (failures first on retry)
 - [ ] Incremental testing (only affected tests)
@@ -501,6 +554,7 @@ make test-ps1-integration
 ## Best Practices
 
 ### Development Workflow
+
 ```bash
 # 1. Pre-commit (always)
 make test-ps1-quick
@@ -516,6 +570,7 @@ make test-full             # Comprehensive validation
 ```
 
 ### CI/CD Pipeline
+
 ```bash
 # Pull Request validation
 make test-ps1-ci
@@ -528,6 +583,7 @@ make test-full
 ```
 
 ### Debugging Tests
+
 ```powershell
 # Run specific test with verbose output
 & tests\integration\test-binary-health.ps1
@@ -555,6 +611,7 @@ Before committing test runner changes:
 ## Summary
 
 The master test runner provides:
+
 - ✅ **Single Entry Point**: One command for all testing
 - ✅ **Flexibility**: Multiple suites, formats, and options
 - ✅ **Automation**: MCP lifecycle, result aggregation, reporting
@@ -565,6 +622,7 @@ The master test runner provides:
 - ✅ **Performance**: Quick tests for fast feedback
 
 **Quick Reference**:
+
 ```bash
 make test-ps1-quick    # Fastest (1 min)
 make test-ps1          # Comprehensive (15-20 min)
@@ -572,6 +630,7 @@ make test-full         # Everything (Rust + PowerShell)
 ```
 
 **Direct Execution**:
+
 ```powershell
 .\tests\run-all-tests.ps1                    # All tests
 .\tests\run-all-tests.ps1 -Suite quick       # Fast
@@ -580,19 +639,19 @@ make test-full         # Everything (Rust + PowerShell)
 
 ## Files Summary
 
-| File | Purpose | Lines | Status |
-|------|---------|-------|--------|
-| tests/run-all-tests.ps1 | Master test runner | ~750 | ✅ Complete |
-| tests/README.md | Usage documentation | ~500 | ✅ Complete |
-| tests/TEST_RUNNER_IMPLEMENTATION.md | This file | ~600 | ✅ Complete |
-| tests/validate-test-runner.ps1 | Validation script | ~150 | ✅ Complete |
-| tests/integration/test-binary-health.ps1 | Sample integration test | ~100 | ✅ Complete |
-| tests/mcp/test-mcp-config.ps1 | Sample MCP test | ~150 | ✅ Complete |
-| Makefile | Updated with new targets | ~10 | ✅ Complete |
+| File                                     | Purpose                  | Lines | Status      |
+| ---------------------------------------- | ------------------------ | ----- | ----------- |
+| tests/run-all-tests.ps1                  | Master test runner       | ~750  | ✅ Complete |
+| tests/README.md                          | Usage documentation      | ~500  | ✅ Complete |
+| tests/TEST_RUNNER_IMPLEMENTATION.md      | This file                | ~600  | ✅ Complete |
+| tests/validate-test-runner.ps1           | Validation script        | ~150  | ✅ Complete |
+| tests/integration/test-binary-health.ps1 | Sample integration test  | ~100  | ✅ Complete |
+| tests/mcp/test-mcp-config.ps1            | Sample MCP test          | ~150  | ✅ Complete |
+| Makefile                                 | Updated with new targets | ~10   | ✅ Complete |
 
 **Total**: 7 files, ~2,260 lines of code and documentation
 
----
+______________________________________________________________________
 
 **Implementation Date**: 2025-10-03
 **Author**: Claude Code

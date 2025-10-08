@@ -49,7 +49,7 @@
         {%- set ns.is_first = false %}
         {%- set ns.is_tool = false -%}
         {%- set ns.is_output_first = true %}
-        
+
         {%- for tool in message['tool_calls'] %}
             {%- if not ns.is_first %}
                 {%- if message['content'] is none %}

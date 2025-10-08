@@ -16,9 +16,9 @@ function Test-McpServer {
         [string[]]$Args,
         [int]$TimeoutSec = 15
     )
-    
+
     Write-Host "Testing: $Name" -ForegroundColor Yellow
-    
+
     $job = Start-Job -ScriptBlock {
         param($cmd, $arglist)
         try {
@@ -27,13 +27,13 @@ function Test-McpServer {
             "ERROR: $($_.Exception.Message)"
         }
     } -ArgumentList $Command, $Args
-    
+
     $completed = Wait-Job $job -Timeout $TimeoutSec
-    
+
     if ($completed) {
         $output = Receive-Job $job -ErrorAction SilentlyContinue
         $hasError = ($job.State -eq 'Failed') -or ($output -match 'error|ERROR|exception')
-        
+
         if (-not $hasError) {
             Write-Host "  ✓ $Name responded" -ForegroundColor Green
             $status = 'OK'
@@ -45,10 +45,10 @@ function Test-McpServer {
         Write-Host "  ⏱ $Name timeout" -ForegroundColor Yellow
         $status = 'TIMEOUT'
     }
-    
+
     Stop-Job $job -ErrorAction SilentlyContinue
     Remove-Job $job -Force -ErrorAction SilentlyContinue
-    
+
     return @{
         name = $Name
         status = $status

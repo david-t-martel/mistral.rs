@@ -1,5 +1,7 @@
 # Integration Summary: mistralrs-agent-tools → mistralrs-server
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before following this integration summary._
+
 ## What Was Done
 
 Successfully integrated the pure Rust `mistralrs-agent-tools` crate into the `mistralrs-server` agent mode to enable sandboxed filesystem operations.

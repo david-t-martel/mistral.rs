@@ -26,12 +26,22 @@ gguf = "gguf"
 xlora = "xlora"
 quantization = "quantization"
 kvcache = "kvcache"
+FBPase = "FBPase"
+G6Pase = "G6Pase"
+Katabios = "Katabios"
+alle = "alle"
+BA = "BA"
+Pase = "Pase"
+sie = "sie"
+Sie = "Sie"
+ist = "ist"
+ot = "ot"
 [files]
 extend-exclude = [
     ".git/",
-    "calibration_data/",
+    "calibration_data/**",
     "examples/server/phi3_duckduckgo_mistral.rs.ipynb",
-    "mistralrs-web-chat/static/"
+    "mistralrs-web-chat/static/**"
 ]
 ignore-hidden = false
 

@@ -24,23 +24,24 @@ These parameters do not translate to hard limits during runtime, they only contr
 > The maximum sequence length is also used to ensure that a KV cache will fit for with and without PagedAttention.
 
 ## Examples
-- Python
-    - Text models [text_auto_device_map.py](../examples/python/text_auto_device_map.py)
-    - Vision models [vision_auto_device_map.py](../examples/python/vision_auto_device_map.py)
-- Rust
-    - Text models [text_auto_device_map/main.rs](../mistralrs/examples/text_auto_device_map/main.rs)
-    - Vision models [vision_auto_device_map/main.rs](../mistralrs/examples/vision_auto_device_map/main.rs)
-- Server
-    - Text models: 
-    ```
-    ./mistralrs-server -i --isq 4 plain -m meta-llama/Llama-3.3-70B-Instruct --max-seq-len 4096 --max-batch-size 2
-    ```
-    - Vision models:
-    ```
-    ./mistralrs-server -i --isq 4 vision-plain -m meta-llama/Llama-3.2-11B-Vision-Instruct --max-seq-len 4096 --max-batch-size 2 --max-num-images 2 --max-image-length 1024
-    ```
 
----
+- Python
+  - Text models [text_auto_device_map.py](../examples/python/text_auto_device_map.py)
+  - Vision models [vision_auto_device_map.py](../examples/python/vision_auto_device_map.py)
+- Rust
+  - Text models [text_auto_device_map/main.rs](../mistralrs/examples/text_auto_device_map/main.rs)
+  - Vision models [vision_auto_device_map/main.rs](../mistralrs/examples/vision_auto_device_map/main.rs)
+- Server
+  - Text models:
+  ```
+  ./mistralrs-server -i --isq 4 plain -m meta-llama/Llama-3.3-70B-Instruct --max-seq-len 4096 --max-batch-size 2
+  ```
+  - Vision models:
+  ```
+  ./mistralrs-server -i --isq 4 vision-plain -m meta-llama/Llama-3.2-11B-Vision-Instruct --max-seq-len 4096 --max-batch-size 2 --max-num-images 2 --max-image-length 1024
+  ```
+
+______________________________________________________________________
 
 If you want to manually device map the model (not recommended), please continue reading.
 
@@ -50,14 +51,16 @@ If you want to manually device map the model (not recommended), please continue 
 ## Manual device mapping
 
 There are 2 ways to do device mapping:
-1) Specify the number of layers to put on the GPU - this uses the GPU with ordinal 0.
-2) Specify the ordinals and number of layers - this allows for cross-GPU device mapping.
+
+1. Specify the number of layers to put on the GPU - this uses the GPU with ordinal 0.
+1. Specify the ordinals and number of layers - this allows for cross-GPU device mapping.
 
 The format for the ordinals and number of layers is `ORD:NUM;...` where ORD is the unique ordinal and NUM is the number of layers for that GPU. This may be repeated as many times as necessary.
 
 > Note: We refer to GPU layers as "device layers" throughout mistral.rs.
 
 ## Example of specifying ordinals
+
 ```
 cargo run --release --features cuda -- -n "0:16;1:16" -i plain -m gradientai/Llama-3-8B-Instruct-262k
 ```
@@ -65,6 +68,7 @@ cargo run --release --features cuda -- -n "0:16;1:16" -i plain -m gradientai/Lla
 > Note: In the Python API, the "0:16;1:16" string is passed as the list `["0:16", "1:16"]`.
 
 ## Example of specifying the number of GPU layers
+
 ```
 cargo run --release --features cuda -- -n 16 -i plain -m gradientai/Llama-3-8B-Instruct-262k
 ```

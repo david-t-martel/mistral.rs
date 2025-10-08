@@ -26,7 +26,13 @@ mod tool_registry;
 use mistralrs_agent_tools::{AgentToolkit, SandboxConfig, SecurityLevel, SecurityPolicy};
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    about,
+    long_about = None,
+    disable_help_subcommand = true,
+    propagate_version = true
+)]
 struct Args {
     /// IP to serve on. Defaults to "0.0.0.0"
     #[arg(long)]

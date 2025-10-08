@@ -42,6 +42,8 @@ pub enum ExecutionEvent {
         call_id: Uuid,
         tool_name: String,
         error: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        result: Option<ToolCallResult>,
         timestamp: DateTime<Utc>,
     },
 }
@@ -97,11 +99,17 @@ impl ExecutionEvent {
     }
 
     /// Create a failed event
-    pub fn failed(call_id: Uuid, tool_name: impl Into<String>, error: impl Into<String>) -> Self {
+    pub fn failed(
+        call_id: Uuid,
+        tool_name: impl Into<String>,
+        error: impl Into<String>,
+        result: Option<ToolCallResult>,
+    ) -> Self {
         Self::Failed {
             call_id,
             tool_name: tool_name.into(),
             error: error.into(),
+            result,
             timestamp: Utc::now(),
         }
     }
@@ -206,6 +214,28 @@ mod tests {
         bus.emit(ExecutionEvent::completed(call_id, "test_tool", result));
         let event = rx.recv().await.unwrap();
         assert!(matches!(event, ExecutionEvent::Completed { .. }));
+
+        // Failed
+        let failure = ToolCallResult {
+            success: false,
+            output: serde_json::Value::Null,
+            error: Some("boom".to_string()),
+            duration: Duration::from_millis(25),
+        };
+        bus.emit(ExecutionEvent::failed(
+            call_id,
+            "test_tool",
+            "boom",
+            Some(failure.clone()),
+        ));
+        let event = rx.recv().await.unwrap();
+        match event {
+            ExecutionEvent::Failed { result, .. } => {
+                assert!(result.is_some());
+                assert_eq!(result.unwrap().error.as_deref(), Some("boom"));
+            }
+            _ => panic!("expected failed event"),
+        }
     }
 
     #[test]

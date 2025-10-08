@@ -5,12 +5,14 @@ The mistralrs-server supports loading and serving multiple models simultaneously
 ## Usage
 
 ### Single-Model Mode (Default)
+
 ```bash
 # Traditional usage - loads one model
 mistralrs-server --port 1234 plain -m meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ### Multi-Model Mode
+
 ```bash
 # Load multiple models from configuration file
 mistralrs-server --port 1234 multi-model --config config.json --default-model-id meta-llama/Llama-3.2-3B-Instruct
@@ -44,10 +46,11 @@ Create a JSON file with model configurations as object keys:
 - **Optional fields**:
   - `chat_template`: Custom chat template
   - `jinja_explicit`: JINJA template file
-  - `num_device_layers`: Device layer configuration  
+  - `num_device_layers`: Device layer configuration
   - `in_situ_quant`: In-situ quantization setting
 
 **How API identifiers work:**
+
 - ✅ Object keys are **organizational only** (for config readability)
 - ✅ **Real API identifiers** are derived from `model_id` field inside the model spec
 - ✅ Use the full model path in API requests (e.g., `"meta-llama/Llama-3.2-3B-Instruct"`)
@@ -87,8 +90,9 @@ curl http://localhost:1234/v1/chat/completions \
 ```
 
 The default model is either:
+
 1. The model specified with `--default-model-id` when starting the server
-2. The first model loaded (if no default is explicitly set)
+1. The first model loaded (if no default is explicitly set)
 
 ### List Available Models
 
@@ -97,6 +101,7 @@ curl http://localhost:1234/v1/models
 ```
 
 Returns:
+
 ```json
 {
   "object": "list",
@@ -133,11 +138,13 @@ Use the `multi-model` subcommand with these options:
 - `--default-model-id <ID>` (optional): Default model ID for requests that don't specify a model
 
 **New syntax:**
+
 ```bash
 mistralrs-server [GLOBAL_OPTIONS] multi-model --config <CONFIG> [--default-model-id <ID>]
 ```
 
 **Legacy syntax (deprecated):**
+
 ```bash
 mistralrs-server [OPTIONS] --multi-model --multi-model-config <CONFIG> [--default-model-id <ID>]
 ```
@@ -145,6 +152,7 @@ mistralrs-server [OPTIONS] --multi-model --multi-model-config <CONFIG> [--defaul
 ## Examples
 
 ### Example 1: Text Models
+
 ```json
 {
   "llama3-3b": {
@@ -162,6 +170,7 @@ mistralrs-server [OPTIONS] --multi-model --multi-model-config <CONFIG> [--defaul
 ```
 
 ### Example 2: Mixed Model Types
+
 ```json
 {
   "text-model": {
@@ -178,6 +187,7 @@ mistralrs-server [OPTIONS] --multi-model --multi-model-config <CONFIG> [--defaul
 ```
 
 ### Example 3: GGUF Models
+
 ```json
 {
   "llama-gguf": {

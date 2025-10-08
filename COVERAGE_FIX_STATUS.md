@@ -1,5 +1,7 @@
 # sccache and Coverage Build Fix - Final Status Report
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before extending this workflow._
+
 ## ✅ COMPLETED SUCCESSFULLY
 
 ### Problem Summary

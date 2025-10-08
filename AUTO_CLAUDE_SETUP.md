@@ -1,10 +1,12 @@
 # Auto-Claude Integration - mistral.rs
 
-**Date**: 2025-10-06  
-**Status**: ✅ COMPLETE AND OPERATIONAL  
-**Version**: 2.0.0  
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before following these automation steps._
 
----
+**Date**: 2025-10-06\
+**Status**: ✅ COMPLETE AND OPERATIONAL\
+**Version**: 2.0.0
+
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -12,24 +14,24 @@ Auto-Claude has been successfully integrated into the mistral.rs project to prov
 
 ### Key Capabilities Enabled
 
-✅ **Anti-Duplication Enforcement** - Prevents creation of `*_enhanced`, `*_simple`, `*_fixed`, etc.  
-✅ **TODO/FIXME Auto-Fixing** - Resolves or documents technical debt markers  
-✅ **Multi-Tool Integration** - Orchestrates clippy, ruff, ast-grep, biome  
-✅ **Pre-Commit Validation** - Blocks bad commits before they happen  
-✅ **Parallel Processing** - Fast analysis with 8 worker threads  
+✅ **Anti-Duplication Enforcement** - Prevents creation of `*_enhanced`, `*_simple`, `*_fixed`, etc.\
+✅ **TODO/FIXME Auto-Fixing** - Resolves or documents technical debt markers\
+✅ **Multi-Tool Integration** - Orchestrates clippy, ruff, ast-grep, biome\
+✅ **Pre-Commit Validation** - Blocks bad commits before they happen\
+✅ **Parallel Processing** - Fast analysis with 8 worker threads
 
----
+______________________________________________________________________
 
 ## Installation Verification
 
 ### ✅ Components Installed
 
-| Component | Location | Status | Version |
-|-----------|----------|--------|---------|
-| **auto-claude.exe** | `C:\Users\david\bin\auto-claude.exe` | ✅ Installed | 2.0.0 |
-| **ast-grep.exe** | `C:\Users\david\bin\ast-grep.exe` | ✅ Installed | Latest |
-| **Configuration** | `.auto-claude.yml` | ✅ Created | 1.0.0 |
-| **Pre-commit Hook** | `.pre-commit-config.yaml` | ✅ Updated | - |
+| Component           | Location                             | Status       | Version |
+| ------------------- | ------------------------------------ | ------------ | ------- |
+| **auto-claude.exe** | `C:\Users\david\bin\auto-claude.exe` | ✅ Installed | 2.0.0   |
+| **ast-grep.exe**    | `C:\Users\david\bin\ast-grep.exe`    | ✅ Installed | Latest  |
+| **Configuration**   | `.auto-claude.yml`                   | ✅ Created   | 1.0.0   |
+| **Pre-commit Hook** | `.pre-commit-config.yaml`            | ✅ Updated   | -       |
 
 ### Verification Commands
 
@@ -44,7 +46,7 @@ C:\Users\david\bin\ast-grep.exe --version
 pre-commit run --all-files --hook-stage manual
 ```
 
----
+______________________________________________________________________
 
 ## Configuration Overview
 
@@ -87,7 +89,7 @@ todo_fixme_handling:
   action: "fix_or_document"
 ```
 
----
+______________________________________________________________________
 
 ## Pre-Commit Integration
 
@@ -112,15 +114,15 @@ The `.pre-commit-config.yaml` now includes:
 ### How It Works
 
 1. **On Commit**: Git triggers pre-commit hooks
-2. **File Discovery**: Auto-claude scans staged files
-3. **Anti-Duplication Check**: Validates file naming conventions
-4. **Multi-Tool Analysis**: Runs clippy, ruff, ast-grep in parallel
-5. **TODO/FIXME Detection**: Finds and categorizes technical debt
-6. **Auto-Fixing**: Applies safe, automated fixes
-7. **Validation**: Ensures fixes don't break code
-8. **Commit Decision**: Allows commit if all checks pass
+1. **File Discovery**: Auto-claude scans staged files
+1. **Anti-Duplication Check**: Validates file naming conventions
+1. **Multi-Tool Analysis**: Runs clippy, ruff, ast-grep in parallel
+1. **TODO/FIXME Detection**: Finds and categorizes technical debt
+1. **Auto-Fixing**: Applies safe, automated fixes
+1. **Validation**: Ensures fixes don't break code
+1. **Commit Decision**: Allows commit if all checks pass
 
----
+______________________________________________________________________
 
 ## Initial Scan Results
 
@@ -159,7 +161,7 @@ The `.pre-commit-config.yaml` now includes:
 - **Medium Priority**: 50 (performance, maintainability)
 - **Low Priority**: 30+ (style, documentation)
 
----
+______________________________________________________________________
 
 ## Usage Guide
 
@@ -206,17 +208,17 @@ pre-commit run --all-files
 git commit --no-verify -m "Emergency fix"
 ```
 
----
+______________________________________________________________________
 
 ## Workflow Integration
 
 ### Development Workflow
 
 1. **Code Changes**: Make your changes to Rust/Python/TS files
-2. **Stage Changes**: `git add <files>`
-3. **Pre-Commit Auto-Runs**: Auto-claude validates and fixes
-4. **Review Fixes**: Check auto-applied fixes
-5. **Commit**: `git commit -m "Your message"`
+1. **Stage Changes**: `git add <files>`
+1. **Pre-Commit Auto-Runs**: Auto-claude validates and fixes
+1. **Review Fixes**: Check auto-applied fixes
+1. **Commit**: `git commit -m "Your message"`
 
 ### Handling Violations
 
@@ -245,17 +247,18 @@ C:\Users\david\bin\auto-claude.exe fix --priority todo --rust --root .
 # For complex TODOs: Review, implement fix, commit
 ```
 
----
+______________________________________________________________________
 
 ## Tool Integration Details
 
 ### 1. Clippy (Rust Linting)
 
-**What It Does**: Rust lint checks and auto-fixes  
-**Auto-Fix**: Yes (safe fixes only)  
-**Focus**: Unwrap usage, error handling, complexity  
+**What It Does**: Rust lint checks and auto-fixes\
+**Auto-Fix**: Yes (safe fixes only)\
+**Focus**: Unwrap usage, error handling, complexity
 
 **Enforced Lints**:
+
 - `clippy::todo` - Finds TODO items
 - `clippy::unwrap_used` - Detects unwrap() usage
 - `clippy::expect_used` - Detects expect() usage
@@ -263,39 +266,39 @@ C:\Users\david\bin\auto-claude.exe fix --priority todo --rust --root .
 
 ### 2. Ruff (Python Linting)
 
-**What It Does**: Python code quality checks  
-**Auto-Fix**: Yes (aggressive mode enabled)  
-**Focus**: PEP 8, imports, security  
+**What It Does**: Python code quality checks\
+**Auto-Fix**: Yes (aggressive mode enabled)\
+**Focus**: PEP 8, imports, security
 
 **Rule Set**: `+ALL` (all rules), `-E501` (line length exempted)
 
 ### 3. AST-Grep (Structural Analysis)
 
-**What It Does**: AST-level pattern matching  
-**Auto-Fix**: Yes (based on custom rules)  
-**Focus**: Anti-patterns, structural issues  
+**What It Does**: AST-level pattern matching\
+**Auto-Fix**: Yes (based on custom rules)\
+**Focus**: Anti-patterns, structural issues
 
 **Config**: `tools/ast-grep/sgconfig.yml`
 
 ### 4. Biome (JS/TS Formatting)
 
-**What It Does**: JavaScript/TypeScript formatting  
-**Auto-Fix**: Yes (auto mode)  
-**Focus**: Formatting, import organization  
+**What It Does**: JavaScript/TypeScript formatting\
+**Auto-Fix**: Yes (auto mode)\
+**Focus**: Formatting, import organization
 
----
+______________________________________________________________________
 
 ## Performance Characteristics
 
 ### Scan Performance
 
-| Metric | Value |
-|--------|-------|
+| Metric               | Value                              |
+| -------------------- | ---------------------------------- |
 | **Files Discovered** | 1,015 (690 Rust, 103 Python, 6 JS) |
-| **Discovery Time** | ~200ms |
-| **Analysis Time** | ~25s (cold), ~5s (cached) |
-| **Worker Threads** | 8 concurrent |
-| **Memory Usage** | ~500MB peak |
+| **Discovery Time**   | ~200ms                             |
+| **Analysis Time**    | ~25s (cold), ~5s (cached)          |
+| **Worker Threads**   | 8 concurrent                       |
+| **Memory Usage**     | ~500MB peak                        |
 
 ### Pre-Commit Performance
 
@@ -304,11 +307,12 @@ C:\Users\david\bin\auto-claude.exe fix --priority todo --rust --root .
 - **Staged Files Only**: ~2-5s (typical workflow)
 
 **Optimization Tips**:
+
 - Use `--staged` for faster pre-commit checks
 - Enable Redis caching for large projects (currently disabled)
 - Exclude large generated directories (already configured)
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -316,7 +320,7 @@ C:\Users\david\bin\auto-claude.exe fix --priority todo --rust --root .
 
 #### 1. Auto-Claude Not Found
 
-**Symptom**: `auto-claude.exe: command not found`  
+**Symptom**: `auto-claude.exe: command not found`\
 **Solution**: Verify PATH includes `C:\Users\david\bin`
 
 ```powershell
@@ -325,7 +329,7 @@ $env:PATH -split ';' | Select-String 'david\\bin'
 
 #### 2. Pre-Commit Hook Fails
 
-**Symptom**: Commit blocked by pre-commit  
+**Symptom**: Commit blocked by pre-commit\
 **Solution**: Review auto-claude output, fix issues, re-commit
 
 ```powershell
@@ -338,7 +342,7 @@ git commit --no-verify
 
 #### 3. False Positive Duplication Violation
 
-**Symptom**: File flagged as duplicate but it's intentional  
+**Symptom**: File flagged as duplicate but it's intentional\
 **Solution**: Add to exclude list in `.auto-claude.yml`
 
 ```yaml
@@ -349,25 +353,26 @@ discovery:
 
 #### 4. Too Slow
 
-**Symptom**: Pre-commit takes >30s  
+**Symptom**: Pre-commit takes >30s\
 **Solutions**:
+
 - Enable Redis caching (edit `.auto-claude.yml`)
 - Use `--staged` mode (already enabled)
 - Reduce `max_workers` if CPU constrained
 
----
+______________________________________________________________________
 
 ## Integration with Existing Tools
 
 ### Compatibility
 
-| Tool | Integration | Notes |
-|------|-------------|-------|
-| **Cargo** | ✅ Native | Clippy integration |
-| **Pre-commit** | ✅ Native | Hook configured |
+| Tool               | Integration   | Notes              |
+| ------------------ | ------------- | ------------------ |
+| **Cargo**          | ✅ Native     | Clippy integration |
+| **Pre-commit**     | ✅ Native     | Hook configured    |
 | **GitHub Actions** | ✅ Compatible | Add to CI workflow |
-| **sccache** | ✅ Compatible | Works alongside |
-| **Codecov** | ✅ Compatible | Independent |
+| **sccache**        | ✅ Compatible | Works alongside    |
+| **Codecov**        | ✅ Compatible | Independent        |
 
 ### GitHub Actions Integration (Future)
 
@@ -388,7 +393,7 @@ discovery:
     path: auto-claude-report.json
 ```
 
----
+______________________________________________________________________
 
 ## Customization Guide
 
@@ -431,23 +436,26 @@ tools:
     enabled: true   # Keep Python checks
 ```
 
----
+______________________________________________________________________
 
 ## Maintenance
 
 ### Regular Tasks
 
 #### Weekly
+
 - [ ] Review auto-claude reports
 - [ ] Address high-priority TODOs
 - [ ] Update custom rules as needed
 
 #### Monthly
+
 - [ ] Check for auto-claude updates
 - [ ] Review and adjust priorities
 - [ ] Analyze fix success rates
 
 #### Quarterly
+
 - [ ] Full codebase scan and cleanup
 - [ ] Update tool configurations
 - [ ] Review anti-duplication violations
@@ -462,19 +470,19 @@ C:\Users\david\bin\auto-claude.exe --version
 # (Manual process - check C:\Users\david\.claude\auto-claude\)
 ```
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
 ### Current Status (2025-10-06)
 
-| Metric | Value | Target | Status |
-|--------|-------|--------|--------|
-| **Anti-Duplication Violations** | 8 files | 0 | 🔴 Action needed |
-| **Pre-Commit Integration** | ✅ Working | ✅ Working | ✅ Complete |
-| **Tool Coverage** | 4 tools | 4+ tools | ✅ Complete |
-| **Auto-Fix Rate** | TBD | 80%+ | ⏳ Measuring |
-| **False Positive Rate** | TBD | <5% | ⏳ Monitoring |
+| Metric                          | Value      | Target     | Status           |
+| ------------------------------- | ---------- | ---------- | ---------------- |
+| **Anti-Duplication Violations** | 8 files    | 0          | 🔴 Action needed |
+| **Pre-Commit Integration**      | ✅ Working | ✅ Working | ✅ Complete      |
+| **Tool Coverage**               | 4 tools    | 4+ tools   | ✅ Complete      |
+| **Auto-Fix Rate**               | TBD        | 80%+       | ⏳ Measuring     |
+| **False Positive Rate**         | TBD        | \<5%       | ⏳ Monitoring    |
 
 ### Next 30 Days Goals
 
@@ -484,7 +492,7 @@ C:\Users\david\bin\auto-claude.exe --version
 - [ ] Zero pre-commit failures on valid code
 - [ ] Document all custom rules
 
----
+______________________________________________________________________
 
 ## Support & Resources
 
@@ -512,31 +520,32 @@ auto-claude.exe health --tools
 ### Getting Help
 
 1. **Check Logs**: Review auto-claude output
-2. **Verbose Mode**: Run with `--debug` flag
-3. **Configuration**: Verify `.auto-claude.yml`
-4. **Pre-Commit**: Check `.pre-commit-config.yaml`
+1. **Verbose Mode**: Run with `--debug` flag
+1. **Configuration**: Verify `.auto-claude.yml`
+1. **Pre-Commit**: Check `.pre-commit-config.yaml`
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 Auto-Claude is now fully integrated and operational for the mistral.rs project. The system will automatically:
 
-✅ Prevent duplicate file creation  
-✅ Detect and fix TODO/FIXME items  
-✅ Enforce code quality standards  
-✅ Block problematic commits  
-✅ Generate actionable reports  
+✅ Prevent duplicate file creation\
+✅ Detect and fix TODO/FIXME items\
+✅ Enforce code quality standards\
+✅ Block problematic commits\
+✅ Generate actionable reports
 
 **Next Steps**:
+
 1. Run `auto-claude fix` to resolve 8 duplication violations
-2. Review and fix high-priority TODOs
-3. Monitor pre-commit performance
-4. Adjust configuration based on team feedback
+1. Review and fix high-priority TODOs
+1. Monitor pre-commit performance
+1. Adjust configuration based on team feedback
 
----
+______________________________________________________________________
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-10-06  
-**Status**: Integration Complete  
+**Document Version**: 1.0\
+**Last Updated**: 2025-10-06\
+**Status**: Integration Complete\
 **Maintainer**: mistral.rs Development Team

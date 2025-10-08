@@ -2,21 +2,24 @@
 
 **🚧 We are preparing a collection of UQFF quantized models! 🚧**
 
----
+______________________________________________________________________
 
-The Llama 4 collection of models are natively multimodal AI models that enable text and multimodal experiences. 
+The Llama 4 collection of models are natively multimodal AI models that enable text and multimodal experiences.
 
 **Architecture:**
+
 - Efficient inference: 17B activated parameters
 - Very sparse: 1 activated expert for both Scout (of 16), and Maverick (of 128)
 - RoPE enhancement: iRoPE enables high context-length functionality
 
 **Integration in mistral.rs:**
+
 - Tool calling + [Automatic web search](WEB_SEARCH.md)
 - ISQ
 - Rust, Python and HTTP APIs
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -24,13 +27,14 @@ The Python and HTTP APIs support sending images as:
 The Rust API takes an image from the [image](https://docs.rs/image/latest/image/index.html) crate.
 
 ## HTTP server
+
 You can find this example [here](../examples/server/llama4.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 
@@ -38,11 +42,13 @@ We support an OpenAI compatible HTTP API for vision models. This example demonst
 <h6><a href = "https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg">Credit</a></h6>
 
 **Prompt:**
+
 ```
 Please describe this image in detail.
 ```
 
 **Output:**
+
 ```
 The image presents a breathtaking mountain landscape, with a snow-capped peak dominating the scene. The mountain's rugged terrain is characterized by numerous ridges and valleys, while its summit is adorned with several structures that appear to be communication towers or antennas.
 
@@ -58,9 +64,9 @@ The image presents a breathtaking mountain landscape, with a snow-capped peak do
 The image exudes a sense of serenity and majesty, capturing the beauty of nature in a dramatic and awe-inspiring way. The contrast between the snow-covered mountain and the bare trees in the valley creates a visually appealing scene that invites the viewer to appreciate the natural world.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -69,7 +75,7 @@ The image exudes a sense of serenity and majesty, capturing the beauty of nature
 cargo run --release --features ... -- --port 1234 --isq 4 vision-plain -m meta-llama/Llama-4-Scout-17B-16E-Instruct
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -113,9 +119,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/llama4/main.rs).
 
 This is a minimal example of running the Llama 4 model with a dummy image.
@@ -162,6 +169,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Python
+
 You can find this example [here](../examples/python/llama4.py).
 
 This example demonstrates loading and sending a chat completion request with an image.

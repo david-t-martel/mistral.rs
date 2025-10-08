@@ -1,0 +1,10 @@
+{
+  "servers_invalid": 0,
+  "warnings": 0,
+  "status": "passed",
+  "test_name": "mcp-config",
+  "servers_valid": 9,
+  "invalid_servers": [],
+  "servers_total": 9,
+  "duration": 1.5
+}

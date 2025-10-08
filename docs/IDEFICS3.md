@@ -5,6 +5,7 @@ Mistral.rs supports the Idefics 3 vision model, with examples in the Rust, Pytho
 UQFF quantizations are also available.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -14,6 +15,7 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 > Note: When using device mapping or model topology, only the text model and its layers will be managed. This is because it contains most of the model parameters. Check the Hugging Face text model config for more information or raise an issue.
 
 ## ToC
+
 - [Idefics 3 Vision: `HuggingFaceM4/Idefics3-8B-Llama3`](#idefics-3-vision-huggingfacem4idefics3-8b-llama3)
   - [ToC](#toc)
   - [Using the 🤗 Smol VLM models](#using-the--smol-vlm-models)
@@ -31,7 +33,7 @@ Simply substitute the Idefics 3 model ID (`HuggingFaceM4/Idefics3-8B-Llama3`) wi
 
 Mistral.rs supports interactive mode for vision models! It is an easy way to interact with the model.
 
-1) Start up interactive mode with the Idefics 3 model
+1. Start up interactive mode with the Idefics 3 model
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -40,7 +42,8 @@ Mistral.rs supports interactive mode for vision models! It is an easy way to int
 cargo run --features ... --release -- -i --isq 4 vision-plain -m HuggingFaceM4/Idefics3-8B-Llama3
 ```
 
-2) Ask a question
+2. Ask a question
+
 ```
 > \image https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Rosa_Precious_platinum.jpg/220px-Rosa_Precious_platinum.jpg What is this image?
 The image depicts a single, large, red rose in full bloom. The rose is positioned against a blurred background that suggests a natural setting, possibly outdoors. The petals of the rose are vividly red with a slight sheen, indicating that they are wet, likely from recent rainfall or dew. The petals are tightly packed and have a velvety texture, which is characteristic of roses. The edges of the petals are slightly curled and appear to be glistening with water droplets, enhancing the overall freshness and beauty of the flower.
@@ -54,7 +57,8 @@ The overall composition of the image focuses on the rose, making it the central 
 In summary, this image captures a single red rose in full bloom with wet petals against a blurred natural background. The rose is the focal point, with its vibrant red color and glistening petals drawing attention. The natural lighting and out-of-focus background enhance the beauty and freshness of the flower.
 ```
 
-4) Continue the chat by passing another image.
+4. Continue the chat by passing another image.
+
 ```
 > \image https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Rosa_Precious_platinum.jpg/220px-Rosa_Precious_platinum.jpg What is this image?
 The image depicts a single, large, red rose in full bloom. The rose is positioned against a blurred background that suggests a natural setting, possibly outdoors. The petals of the rose are vividly red with a slight sheen, indicating that they are wet, likely from recent rainfall or dew. The petals are tightly packed and have a velvety texture, which is characteristic of roses. The edges of the petals are slightly curled and appear to be glistening with water droplets, enhancing the overall freshness and beauty of the flower.
@@ -71,24 +75,28 @@ The mountain is Mount Washington.
 ```
 
 ## HTTP server
+
 You can find this example [here](../examples/server/idefics3.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 What is shown in this image? Write a detailed response analyzing the scene.
 ```
 
 **Output:**
+
 ```
 The image depicts a majestic mountain landscape under a partly cloudy sky, characterized by its rugged and snow-covered peaks. The mountain is prominently featured in the center of the image, showcasing its expansive and undulating terrain. The summit of the mountain is capped with snow, indicating that it might be winter or early springtime.
 
@@ -101,9 +109,9 @@ The sky above is mostly overcast with clouds covering most parts but allowing so
 On closer inspection near one side of this grandeur scene stands tall trees without leaves; their bare branches starkly contrasting against both white snow and blue sky create an interesting... (cut off)
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -112,7 +120,7 @@ On closer inspection near one side of this grandeur scene stands tall trees with
 cargo run --release --features ... -- --port 1234 --isq 4 vision-plain -m HuggingFaceM4/Idefics3-8B-Llama3
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -150,9 +158,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/idefics3/main.rs).
 
 ```rust
@@ -196,9 +205,10 @@ async fn main() -> Result<()> {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Python
+
 You can find this example [here](../examples/python/idefics3.py).
 
 This example demonstrates loading and sending a chat completion request with an image.
@@ -250,4 +260,5 @@ print(res.usage)
 - You can find an example of loading an [image locally here](../examples/python/phi3v_local_img.py).
 
 ## UQFF models
+
 Coming soon!

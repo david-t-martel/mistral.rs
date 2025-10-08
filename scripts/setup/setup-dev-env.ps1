@@ -19,22 +19,22 @@ Write-Host "[1/6] Setting up Python via UV..." -ForegroundColor Green
 $uvPath = "C:\users\david\.local\bin\uv.exe"
 if (Test-Path $uvPath) {
     Write-Host "  ✓ UV found at: $uvPath" -ForegroundColor Gray
-    
+
     # Get the default Python installation
     $pythonVersions = & $uvPath python list 2>&1 | Select-String "cpython-3\.(1[23])\.\d+" | Where-Object { $_ -match "C:\\" }
-    
+
     if ($pythonVersions) {
         $latestPython = $pythonVersions | Select-Object -First 1
         if ($latestPython -match "(C:\\[^\\s]+python\.exe)") {
             $pythonExe = $matches[1]
             Write-Host "  ✓ Latest Python: $pythonExe" -ForegroundColor Gray
-            
+
             # Create symlinks in .local\bin
             $symlinkTargets = @{
                 "C:\users\david\.local\bin\python.exe" = $pythonExe
                 "C:\users\david\.local\bin\python3.exe" = $pythonExe
             }
-            
+
             foreach ($link in $symlinkTargets.Keys) {
                 $target = $symlinkTargets[$link]
                 if (Test-Path $link) {
@@ -53,7 +53,7 @@ if (Test-Path $uvPath) {
                     }
                 }
             }
-            
+
             # Also create in C:\users\david\bin
             $binDir = "C:\users\david\bin"
             if (Test-Path $binDir) {
@@ -61,7 +61,7 @@ if (Test-Path $uvPath) {
                     "$binDir\python.exe" = $pythonExe
                     "$binDir\python3.exe" = $pythonExe
                 }
-                
+
                 foreach ($link in $symlinkTargets2.Keys) {
                     $target = $symlinkTargets2[$link]
                     if (-not (Test-Path $link)) {
@@ -89,21 +89,21 @@ $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe
 
 if (Test-Path $vsPath) {
     Write-Host "  ✓ VS 2022 Build Tools found at: $vsPath" -ForegroundColor Gray
-    
+
     # Find MSVC version
     $msvcVersions = Get-ChildItem "$vsPath\VC\Tools\MSVC" | Sort-Object Name -Descending
     if ($msvcVersions) {
         $latestMSVC = $msvcVersions[0].Name
         $clPath = "$vsPath\VC\Tools\MSVC\$latestMSVC\bin\Hostx64\x64\cl.exe"
-        
+
         if (Test-Path $clPath) {
             Write-Host "  ✓ MSVC compiler: $latestMSVC" -ForegroundColor Gray
             Write-Host "  ✓ cl.exe at: $clPath" -ForegroundColor Gray
-            
+
             # Set environment variable for this session
             $env:NVCC_CCBIN = $clPath
             Write-Host "  ✓ Set NVCC_CCBIN=$clPath" -ForegroundColor Green
-            
+
             # Create symlink to vswhere in .local\bin
             $vswhereLink = "C:\users\david\.local\bin\vswhere.exe"
             if (-not (Test-Path $vswhereLink) -and (Test-Path $vswhere)) {
@@ -132,7 +132,7 @@ if (Test-Path $cudaPath) {
     if (Test-Path $nvccPath) {
         Write-Host "  ✓ nvcc.exe found" -ForegroundColor Gray
     }
-    
+
     # Set CUDA_PATH for this session
     $env:CUDA_PATH = $cudaPath
     Write-Host "  ✓ Set CUDA_PATH=$cudaPath" -ForegroundColor Green
@@ -149,7 +149,7 @@ Write-Host "[4/6] Verifying cuDNN installation..." -ForegroundColor Green
 $cudnnPath = "C:\Program Files\NVIDIA\CUDNN"
 if (Test-Path $cudnnPath) {
     Write-Host "  ✓ cuDNN found at: $cudnnPath" -ForegroundColor Gray
-    
+
     # Check for cuda subdirectory structure
     $cudnnBin = "$cudnnPath\cuda\bin"
     if (Test-Path $cudnnBin) {
@@ -163,7 +163,7 @@ if (Test-Path $cudnnPath) {
             $cudnnBin = "$($latestCudnn.FullName)\bin"
         }
     }
-    
+
     $env:CUDNN_PATH = $cudnnPath
     Write-Host "  ✓ Set CUDNN_PATH=$cudnnPath" -ForegroundColor Green
 } else {

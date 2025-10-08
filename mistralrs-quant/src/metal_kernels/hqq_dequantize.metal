@@ -21,7 +21,7 @@ template <typename T>
                         const device type *scale [[buffer(1)]],                \
                         const device type *zero [[buffer(2)]],                 \
                         device type *output [[buffer(3)]],                     \
-                        device const uint &h, device const uint &w,                                           \            
+                        device const uint &h, device const uint &w,                                           \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_dequantize_8bit(float)
@@ -55,7 +55,7 @@ instantiate_dequantize_8bit(float)
                         const device type *scale [[buffer(1)]],                \
                         const device type *zero [[buffer(2)]],                 \
                         device type *output [[buffer(3)]],                     \
-                        device const uint &h, device const uint &w,                                           \            
+                        device const uint &h, device const uint &w,                                           \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_dequantize_4bit(float)
@@ -93,7 +93,7 @@ instantiate_dequantize_4bit(float)
                         const device type *scale [[buffer(1)]],                \
                         const device type *zero [[buffer(2)]],                 \
                         device type *output [[buffer(3)]],                     \
-                        device const uint &h, device const uint &w,                                           \            
+                        device const uint &h, device const uint &w,                                           \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_dequantize_2bit(float)
@@ -139,7 +139,7 @@ instantiate_dequantize_2bit(float)
                         const device type *scale [[buffer(1)]],                \
                         const device type *zero [[buffer(2)]],                 \
                         device type *output [[buffer(3)]],                     \
-                        device const uint &h, device const uint &w,                                           \            
+                        device const uint &h, device const uint &w,                                           \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_dequantize_1bit(float)
@@ -189,7 +189,7 @@ instantiate_dequantize_1bit(float)
                         const device type *scale [[buffer(1)]],                \
                         const device type *zero [[buffer(2)]],                 \
                         device type *output [[buffer(3)]],                     \
-                        device const uint &h, device const uint &w,                                           \            
+                        device const uint &h, device const uint &w,                                           \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_dequantize_3bit(float)

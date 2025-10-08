@@ -30,6 +30,7 @@ repos:
       - id: typos
         args: [--write-changes]
         stages: [pre-commit]
+        exclude: ^(calibration_data/|mistralrs-web-chat/static/|examples/server/phi3_duckduckgo_mistral\.rs\.ipynb$)
 
   # Ruff for Python linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -94,10 +95,9 @@ repos:
       # auto-claude for automated code fixing (TODO/FIXME/HACK resolution)
       - id: auto-claude-fix
         name: auto-claude (code quality + TODO/FIXME fixes)
-        entry: C:\Users\david\bin\auto-claude.exe
-        args: [analyze, --fix, --fail-on-errors, --target-files]
+        entry: pwsh -NoLogo -NoProfile -File scripts/hooks/auto-claude.ps1
         language: system
-        types_or: [rust, python, typescript, javascript, toml, yaml]
+        types_or: [rust, python, ts, javascript, toml, yaml]
         exclude: ^(target/|node_modules/|dist/|\.venv/|__pycache__/)
         pass_filenames: true
         stages: [pre-commit]
@@ -105,7 +105,7 @@ repos:
       # semantic_index for code analysis
       - id: semantic-index
         name: semantic_index
-        entry: uv run --python 3.12 python C:\Users\david\.claude\semantic_index\semantic_index_cli.py --staged
+        entry: pwsh -NoLogo -NoProfile -File scripts/hooks/semantic-index.ps1
         language: system
         pass_filenames: false
         stages: [pre-commit]
@@ -114,9 +114,9 @@ repos:
       # ast-grep for AST-level linting
       - id: ast-grep
         name: ast-grep
-        entry: ast-grep scan -c tools/ast-grep/sgconfig.yml
+        entry: pwsh -NoLogo -NoProfile -File scripts/hooks/ast-grep.ps1
         language: system
-        types_or: [rust, toml, python, javascript, ts]
+        types_or: [rust, python, javascript, ts]
         exclude: ^(target/|node_modules/|dist/|\.venv/)
         stages: [pre-commit]
         pass_filenames: false

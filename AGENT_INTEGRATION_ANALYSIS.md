@@ -1,5 +1,7 @@
 # Mistral.rs Agent Functionality Integration Analysis
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before applying these recommendations._
+
 **Date**: 2025-10-05\
 **Status**: Comprehensive Review
 

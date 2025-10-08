@@ -14,15 +14,15 @@ $wheelDir = Join-Path $projectRoot 'target\wheels'
 
 if (Test-Path $pyo3Cargo) {
     Write-Host "✓ PyO3 crate exists" -ForegroundColor Green
-    
+
     # Extract features from Cargo.toml
     $cargoContent = Get-Content $pyo3Cargo -Raw
     $featureLines = $cargoContent -split "`n" | Where-Object { $_ -match 'features|cuda|cudnn|mkl|flash-attn' }
-    
+
     Write-Host ""
     Write-Host "Features found in Cargo.toml:" -ForegroundColor Yellow
     $featureLines | ForEach-Object { Write-Host "  $_" }
-    
+
     # Check if wheel exists
     Write-Host ""
     if (Test-Path $wheelDir) {
@@ -37,7 +37,7 @@ if (Test-Path $pyo3Cargo) {
     } else {
         Write-Host "⚠ Wheel directory doesn't exist: $wheelDir" -ForegroundColor Yellow
     }
-    
+
     # Check for .pyd in release
     Write-Host ""
     $pydFiles = Get-ChildItem (Join-Path $projectRoot 'target\release') -Filter "mistralrs*.pyd" -ErrorAction SilentlyContinue
@@ -47,14 +47,14 @@ if (Test-Path $pyo3Cargo) {
     } else {
         Write-Host "⚠ No .pyd files found in target\release" -ForegroundColor Yellow
     }
-    
+
     # Test Python import
     Write-Host ""
     Write-Host "Testing Python import..." -ForegroundColor Yellow
     $importTest = python -c "import sys; sys.path.insert(0, r'$projectRoot\target\release'); import mistralrs; print('✓ Import successful')" 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host $importTest -ForegroundColor Green
-        
+
         # Get version info
         $versionInfo = python -c "import sys; sys.path.insert(0, r'$projectRoot\target\release'); import mistralrs; print(f'Version: {getattr(mistralrs, '__version__', 'unknown')}')" 2>&1
         Write-Host $versionInfo -ForegroundColor Gray
@@ -62,7 +62,7 @@ if (Test-Path $pyo3Cargo) {
         Write-Host "✗ Import failed:" -ForegroundColor Red
         Write-Host $importTest -ForegroundColor Red
     }
-    
+
 } else {
     Write-Host "✗ PyO3 crate not found at $pyo3Cargo" -ForegroundColor Red
 }
@@ -73,8 +73,8 @@ Write-Host "Creating status report..." -ForegroundColor Gray
 $status = @{
     pyo3_crate_present = (Test-Path $pyo3Cargo)
     wheel_directory_exists = (Test-Path $wheelDir)
-    wheels_built = if (Test-Path $wheelDir) { 
-        (Get-ChildItem $wheelDir -Filter "*.whl" -ErrorAction SilentlyContinue).Count 
+    wheels_built = if (Test-Path $wheelDir) {
+        (Get-ChildItem $wheelDir -Filter "*.whl" -ErrorAction SilentlyContinue).Count
     } else { 0 }
     pyd_files = if (Test-Path (Join-Path $projectRoot 'target\release')) {
         (Get-ChildItem (Join-Path $projectRoot 'target\release') -Filter "mistralrs*.pyd" -ErrorAction SilentlyContinue).Count

@@ -19,6 +19,7 @@ The DeepSeek V3 is a mixture of expert (MoE) model.
 ## Running the distill models
 
 The various [distillation](https://huggingface.co/collections/deepseek-ai/deepseek-r1-678e1e131c0169c0bc89728d) models can be run out of the box.
+
 ```
 ./mistralrs-server -i --isq 4 plain -m deepseek-ai/DeepSeek-R1-Distill-Llama-8B
 ./mistralrs-server -i --isq 4 plain -m deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
@@ -57,6 +58,7 @@ while True:
 ```
 
 ## Python API
+
 ```py
 from mistralrs import Runner, Which, ChatCompletionRequest, Architecture
 
@@ -84,6 +86,7 @@ print(res.usage)
 ```
 
 ## Rust API
+
 You can find this example [here](../mistralrs/examples/deepseekr1/main.rs).
 
 ```rust

@@ -5,6 +5,7 @@ Mistral.rs supports the Llama 3.2 vision model, with examples in the Rust, Pytho
 UQFF quantizations are also available.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -16,6 +17,7 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 > Note: When using device mapping or model topology, only the text model and its layers will be managed. This is because it contains most of the model parameters. *The text model has 40 layers*.
 
 ## ToC
+
 - [Llama 3.2 Vision Model: `meta-llama/Llama-3.2-11B-Vision-Instruct`](#llama-32-vision-model-meta-llamallama-32-11b-vision-instruct)
   - [ToC](#toc)
   - [Interactive mode](#interactive-mode)
@@ -30,7 +32,7 @@ Mistral.rs supports interactive mode for vision models! It is an easy way to int
 
 https://github.com/user-attachments/assets/4d11c35c-9ea2-42b8-8cab-5f7e8e2ee9ff
 
-1) Start up interactive mode with the Llama 3.2 model
+1. Start up interactive mode with the Llama 3.2 model
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -39,13 +41,14 @@ https://github.com/user-attachments/assets/4d11c35c-9ea2-42b8-8cab-5f7e8e2ee9ff
 cargo run --features ... --release -- -i --isq 4 vision-plain -m lamm-mit/Cephalo-Llama-3.2-11B-Vision-Instruct-128k
 ```
 
-2) Say hello!
+2. Say hello!
+
 ```
 > Hello!
 How can I assist you today?
 ```
 
-3) Pass the model an image and ask a question.
+3. Pass the model an image and ask a question.
 
 ```
 > Hello!
@@ -54,7 +57,8 @@ How can I assist you today?
 The image shows a close-up view of a rose flower with dew drops on its petals. The rose is in full bloom, with its petals unfolding and displaying vibrant pink coloration. The dew drops on the petals create a delicate, glistening effect, adding to the overall visual appeal of the flower. The background is blurred, focusing attention on the intricate details of the rose.
 ```
 
-4) Continue the chat by passing another image.
+4. Continue the chat by passing another image.
+
 ```
 > Hello!
 How can I assist you today?
@@ -65,24 +69,28 @@ The image appears to be of Mount Washington, which is the highest peak in the No
 ```
 
 ## HTTP server
+
 You can find this example [here](../examples/server/llama_vision.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 What is shown in this image? Write a detailed response analyzing the scene.
 ```
 
 **Output:**
+
 ```
 The image shows Mount Washington, the highest peak in the Northeastern United States, located in the White Mountains of New Hampshire. The scene captures the mountain's rugged terrain and varied landscape features. 
 
@@ -99,9 +107,9 @@ The image also captures the atmospheric conditions on Mount Washington, with clo
 Overall, the image showcases the diverse geological and ecological features of Mount Washington, highlighting its role as a significant natural landmark in the Northeastern United States.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -110,7 +118,7 @@ Overall, the image showcases the diverse geological and ecological features of M
 cargo run --release --features ... -- --port 1234 --isq 4 vision-plain -m lamm-mit/Cephalo-Llama-3.2-11B-Vision-Instruct-128k
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -149,9 +157,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/llama_vision/main.rs).
 
 ```rust
@@ -195,9 +204,10 @@ async fn main() -> Result<()> {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Python
+
 You can find this example [here](../examples/python/llama_vision.py).
 
 This example demonstrates loading and sending a chat completion request with an image.
@@ -250,6 +260,7 @@ print(res.usage)
 - You can find an example of loading an [image locally here](../examples/python/phi3v_local_img.py).
 
 ## UQFF models
+
 [UQFF](UQFF.md) is a quantized file format similar to GGUF based on ISQ. It removes the memory and compute requirements that come with ISQ by providing ready-made quantizations! The key advantage over GGUF is the flexibility to store multiple quantizations in one file.
 
 We provide UQFF files ([EricB/Llama-3.2-11B-Vision-Instruct-UQFF](https://huggingface.co/EricB/Llama-3.2-11B-Vision-Instruct-UQFF)) for this Llama 3.2 Vision model.
@@ -257,6 +268,7 @@ We provide UQFF files ([EricB/Llama-3.2-11B-Vision-Instruct-UQFF](https://huggin
 You can use these UQFF files to easily use quantized versions of Llama 3.2 Vision.
 
 For example:
+
 ```
 ./mistralrs-server -i vision-plain -m meta-llama/Llama-3.2-11B-Vision-Instruct --from-uqff EricB/Llama-3.2-11B-Vision-Instruct-UQFF/llama-3.2-11b-vision-q4k.uqff
 ```

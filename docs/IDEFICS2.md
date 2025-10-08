@@ -1,10 +1,11 @@
 # Idefics 2 Model: [`HuggingFaceM4/idefics2-8b-chatty`](https://huggingface.co/HuggingFaceM4/idefics2-8b-chatty)
 
-The Idefics 2 Model has support in the Rust, Python, and HTTP APIs. The Idefics 2 Model also supports ISQ for increased performance. 
+The Idefics 2 Model has support in the Rust, Python, and HTTP APIs. The Idefics 2 Model also supports ISQ for increased performance.
 
 > Note: Some of examples use our [Cephalo model series](https://huggingface.co/collections/lamm-mit/cephalo-664f3342267c4890d2f46b33) but could be used with any model ID.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -18,30 +19,33 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 > It should be added to messages manually, and is of the format `<image>`.
 
 ## HTTP server
+
 You can find this example [here](../examples/server/idefics2.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://cdn.britannica.com/45/5645-050-B9EC0205/head-treasure-flower-disk-flowers-inflorescence-ray.jpg" width = "1000" height = "666">
 
 **Prompt:**
+
 ```
 What is shown in this image?
 ```
 
 **Output:**
+
 ```
 The image depicts a group of orange ants climbing over a black pole. The ants are moving in the same direction, forming a line as they ascend the pole.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -50,7 +54,7 @@ The image depicts a group of orange ants climbing over a black pole. The ants ar
 cargo run --release --features ... -- --port 1234 --isq 4 vision-plain -m HuggingFaceM4/idefics2-8b-chatty
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -88,9 +92,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/idefics2/main.rs).
 
 This is a minimal example of running the Idefics 2 model with a dummy image.
@@ -137,6 +142,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Python
+
 You can find this example [here](../examples/python/phi3v.py).
 
 This example demonstrates loading and sending a chat completion request with an image.

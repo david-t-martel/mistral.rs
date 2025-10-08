@@ -13,7 +13,7 @@ use std::{
 ///
 /// *Purpose*: lets us pass raw byte buffers to
 /// `safetensors::serialize_to_file` without cloning them into a `Vec<u8>` or
-/// converting to a higher‑level tensor type.  
+/// converting to a higher‑level tensor type.
 /// We expose the buffer as a 1‑D `u8` tensor of shape `[len]`.
 #[derive(Clone)]
 pub struct CowBytesView<'a> {

@@ -8,6 +8,7 @@ This file provides **mandatory** build and development practices for the mistral
 **✅ ALWAYS use `make` targets**
 
 This ensures:
+
 - Consistent build flags across all developers
 - Proper environment variable setup (NVCC_CCBIN, CUDA paths)
 - Dependency caching and incremental compilation
@@ -17,6 +18,7 @@ This ensures:
 ### Why This Matters
 
 Rust compilation is **complex** and **time-consuming**. Direct cargo usage leads to:
+
 - ❌ Inconsistent builds (missing feature flags)
 - ❌ Wasted compilation time (no caching strategy)
 - ❌ Platform-specific errors (missing env vars)
@@ -40,10 +42,10 @@ Compiled binaries in target/release/
 ### Key Principles
 
 1. **Single Source of Truth**: Makefile defines ALL build commands
-2. **Fail Fast**: Environment validation before compilation
-3. **Incremental Builds**: Smart caching with sccache
-4. **Platform Awareness**: Automatic Windows/Linux/macOS detection
-5. **Feature Safety**: No accidental feature omissions
+1. **Fail Fast**: Environment validation before compilation
+1. **Incremental Builds**: Smart caching with sccache
+1. **Platform Awareness**: Automatic Windows/Linux/macOS detection
+1. **Feature Safety**: No accidental feature omissions
 
 ## Common Make Targets
 
@@ -182,6 +184,7 @@ make run-with-mcp
 **Problem**: Rust compiles slowly, especially with many dependencies (660+ packages)
 
 **Solutions** (already in Makefile):
+
 - ✅ Use `sccache` for caching compiled artifacts
 - ✅ Link with `lld` (faster linker)
 - ✅ Incremental compilation enabled
@@ -189,6 +192,7 @@ make run-with-mcp
 - ✅ Only rebuild changed crates
 
 **What this means for you**:
+
 ```bash
 # First build: 30-45 minutes
 make build
@@ -202,11 +206,13 @@ make build
 **Problem**: mistral.rs has many conditional features (cuda, flash-attn, cudnn, mkl, metal)
 
 **Solutions**:
+
 - ✅ Makefile targets specify correct feature combinations
 - ✅ Platform detection auto-selects appropriate features
 - ✅ Validation ensures incompatible features aren't mixed
 
 **What this means for you**:
+
 ```bash
 # ❌ WRONG - Missing features, build succeeds but CUDA won't work
 cargo build --release
@@ -220,11 +226,13 @@ make build-cuda-full
 **Problem**: NVCC requires MSVC compiler path, not always auto-detected
 
 **Solutions**:
+
 - ✅ Makefile sets `NVCC_CCBIN` automatically
 - ✅ Validates Visual Studio installation
 - ✅ Checks CUDA toolkit paths
 
 **What this means for you**:
+
 ```bash
 # ❌ WRONG - NVCC fails with "host compiler not found"
 cargo build --features cuda
@@ -238,11 +246,13 @@ make build-cuda
 **Problem**: 14 crates in workspace with complex dependencies
 
 **Solutions**:
+
 - ✅ Makefile builds packages in correct order
 - ✅ Skips PyO3 if Python not available
 - ✅ Only rebuilds affected packages
 
 **What this means for you**:
+
 ```bash
 # Build only the server (skips Python bindings)
 make build-server
@@ -256,11 +266,13 @@ make build-all
 **Problem**: Cryptic error messages, especially for linker/CUDA issues
 
 **Solutions**:
+
 - ✅ Pre-flight environment checks
 - ✅ Clear error messages for missing dependencies
 - ✅ Build logs saved to `.logs/build.log`
 
 **What this means for you**:
+
 ```bash
 # Check environment before building
 make check-env
@@ -345,11 +357,13 @@ make bloat-check
 ### Windows (Primary Development Platform)
 
 **Required**:
+
 - Visual Studio 2022 Build Tools
 - CUDA Toolkit 12.9 (or 12.1, 12.6, 12.8, 13.0)
 - cuDNN 9.8
 
 **Environment**:
+
 ```powershell
 # Makefile handles these automatically, but for reference:
 $env:NVCC_CCBIN = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64\cl.exe"
@@ -358,6 +372,7 @@ $env:CUDNN_PATH = "C:\Program Files\NVIDIA\CUDNN\v9.8"
 ```
 
 **Build**:
+
 ```bash
 make build-cuda-full  # Uses all features
 ```
@@ -365,11 +380,13 @@ make build-cuda-full  # Uses all features
 ### Linux
 
 **Required**:
+
 - GCC/Clang
 - CUDA Toolkit (if using GPU)
 - pkg-config, libssl-dev
 
 **Build**:
+
 ```bash
 # CPU only
 make build
@@ -381,10 +398,12 @@ make build-cuda-full
 ### macOS
 
 **Required**:
+
 - Xcode Command Line Tools
 - Metal (built-in)
 
 **Build**:
+
 ```bash
 make build-metal
 ```
@@ -457,6 +476,7 @@ make monitor-vram
 **Cause**: MSVC linker not in PATH
 
 **Solution**:
+
 ```bash
 # Makefile handles this, but if it fails:
 make check-env  # Validates Visual Studio installation
@@ -467,6 +487,7 @@ make check-env  # Validates Visual Studio installation
 **Cause**: NVCC can't find MSVC compiler
 
 **Solution**:
+
 ```bash
 # Makefile sets NVCC_CCBIN automatically
 make build-cuda
@@ -477,6 +498,7 @@ make build-cuda
 **Cause**: Python not available or wrong version
 
 **Solution**:
+
 ```bash
 # Build server only (skips PyO3)
 make build-server
@@ -487,6 +509,7 @@ make build-server
 **Cause**: sccache not configured
 
 **Solution**:
+
 ```bash
 # Install and configure sccache
 make setup-sccache
@@ -500,6 +523,7 @@ make check-sccache
 **Cause**: Building without required features
 
 **Solution**:
+
 ```bash
 # ❌ Don't use bare cargo
 cargo build
@@ -513,6 +537,7 @@ make build-cuda-full
 **Cause**: Parallel compilation using too much RAM
 
 **Solution**:
+
 ```bash
 # Limit parallel jobs
 make build JOBS=4
@@ -524,22 +549,26 @@ make build-low-memory
 ## Performance Expectations
 
 ### First Build (Cold Cache)
+
 - **Windows + CUDA**: 30-45 minutes
 - **Linux + CUDA**: 25-35 minutes
 - **macOS + Metal**: 20-30 minutes
 - **CPU only**: 15-25 minutes
 
 ### Incremental Build (Hot Cache)
+
 - **With sccache**: 2-5 minutes
 - **Without sccache**: 10-15 minutes
 - **Single crate change**: 30-90 seconds
 
 ### Binary Size
+
 - **mistralrs-server.exe**: ~380 MB (Windows)
 - **mistralrs-server**: ~320 MB (Linux)
 - **With LTO + strip**: ~280 MB
 
 ### VRAM Usage (Runtime)
+
 - **Qwen2.5-1.5B-Q4**: ~1.2 GB
 - **Gemma 2 2B-Q4**: ~2.0 GB
 - **Qwen2.5-7B-Q4**: ~5.5 GB
@@ -594,15 +623,15 @@ make slowest-deps
 
 Makefile automatically sets these, but for reference:
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `NVCC_CCBIN` | NVCC host compiler | `cl.exe` path |
-| `CUDA_PATH` | CUDA toolkit location | `C:\Program Files\...\CUDA\v12.9` |
-| `CUDNN_PATH` | cuDNN library location | `C:\Program Files\NVIDIA\CUDNN\v9.8` |
-| `RUSTC_WRAPPER` | Compilation cache | `sccache` |
-| `CARGO_INCREMENTAL` | Incremental compilation | `1` |
-| `CARGO_TARGET_DIR` | Build output directory | `target` |
-| `RUST_BACKTRACE` | Error stack traces | `1` or `full` |
+| Variable            | Purpose                 | Example                              |
+| ------------------- | ----------------------- | ------------------------------------ |
+| `NVCC_CCBIN`        | NVCC host compiler      | `cl.exe` path                        |
+| `CUDA_PATH`         | CUDA toolkit location   | `C:\Program Files\...\CUDA\v12.9`    |
+| `CUDNN_PATH`        | cuDNN library location  | `C:\Program Files\NVIDIA\CUDNN\v9.8` |
+| `RUSTC_WRAPPER`     | Compilation cache       | `sccache`                            |
+| `CARGO_INCREMENTAL` | Incremental compilation | `1`                                  |
+| `CARGO_TARGET_DIR`  | Build output directory  | `target`                             |
+| `RUST_BACKTRACE`    | Error stack traces      | `1` or `full`                        |
 
 ## Pre-Commit Checklist
 
@@ -665,21 +694,23 @@ make test
 If build issues persist:
 
 1. Check `.logs/build.log` for detailed errors
-2. Run `make check-env` to validate environment
-3. Try `make clean-all && make build`
-4. Check GitHub issues: https://github.com/EricLBuehler/mistral.rs/issues
-5. Review recent commits for breaking changes
+1. Run `make check-env` to validate environment
+1. Try `make clean-all && make build`
+1. Check GitHub issues: https://github.com/EricLBuehler/mistral.rs/issues
+1. Review recent commits for breaking changes
 
 ## Summary
 
 **Golden Rules**:
+
 1. ✅ **Always use `make`, never use `cargo` directly**
-2. ✅ **Run `make check` before committing**
-3. ✅ **Use `make ci` before creating pull requests**
-4. ✅ **Check `.logs/build.log` when builds fail**
-5. ✅ **Use appropriate make target for your platform**
+1. ✅ **Run `make check` before committing**
+1. ✅ **Use `make ci` before creating pull requests**
+1. ✅ **Check `.logs/build.log` when builds fail**
+1. ✅ **Use appropriate make target for your platform**
 
 **Most Common Commands**:
+
 ```bash
 make dev          # Quick development build
 make check        # Verify code compiles
@@ -689,6 +720,6 @@ make build        # Release build
 make ci           # Full validation
 ```
 
----
+______________________________________________________________________
 
 **Remember**: The Makefile is your friend. It handles all the complexity of Rust + CUDA + cross-platform builds so you don't have to.

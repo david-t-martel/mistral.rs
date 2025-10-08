@@ -34,11 +34,11 @@ mod feature_detection;
 mod lora;
 mod model_loader;
 mod ops;
-pub use model_loader::{
-    get_auto_device_map_params, get_model_dtype, get_tgt_non_granular_index, LoaderBuilder,
-};
 pub use feature_detection::{
     log_feature_info, quantization_support, require_feature, FeatureSet, QuantSupport,
+};
+pub use model_loader::{
+    get_auto_device_map_params, get_model_dtype, get_tgt_non_granular_index, LoaderBuilder,
 };
 mod kv_cache;
 mod search;

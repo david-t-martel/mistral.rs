@@ -6,13 +6,13 @@
 //! - Session state management
 //! - Event notifications for UI updates
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use mistralrs_agent_tools::{
-    AgentToolkit, CatOptions, CommandOptions, GrepOptions, HeadOptions, LsOptions, SortOptions,
-    TailOptions, UniqOptions, WcOptions,
+    AgentToolkit, CatOptions, CommandOptions, GrepOptions, HeadOptions, LsOptions, ShellType,
+    SortOptions, TailOptions, UniqOptions, WcOptions,
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use tokio::time::timeout;
 use uuid::Uuid;
@@ -77,10 +77,11 @@ impl ToolExecutor {
     ) -> Result<ToolCallResult> {
         let call_id = Uuid::new_v4();
         let start = Instant::now();
+        let tool_name_owned = tool_name.to_string();
 
         // Emit started event
         if let Some(ref bus) = self.event_bus {
-            bus.emit(ExecutionEvent::started(call_id, tool_name));
+            bus.emit(ExecutionEvent::started(call_id, tool_name_owned.clone()));
         }
 
         // Determine timeout
@@ -88,9 +89,12 @@ impl ToolExecutor {
         let timeout_duration = Duration::from_secs(timeout_secs);
 
         // Execute with timeout
-        let result = timeout(timeout_duration, self.execute_tool(tool_name, arguments))
-            .await
-            .context("Tool execution timeout")?;
+        let result = timeout(
+            timeout_duration,
+            self.execute_tool(&tool_name_owned, arguments),
+        )
+        .await
+        .context("Tool execution timeout")?;
 
         let duration = start.elapsed();
 
@@ -108,7 +112,7 @@ impl ToolExecutor {
                 if let Some(ref bus) = self.event_bus {
                     bus.emit(ExecutionEvent::completed(
                         call_id,
-                        tool_name,
+                        tool_name_owned.clone(),
                         tool_result.clone(),
                     ));
                 }
@@ -119,16 +123,23 @@ impl ToolExecutor {
                 let error_msg = e.to_string();
 
                 // Emit failed event
-                if let Some(ref bus) = self.event_bus {
-                    bus.emit(ExecutionEvent::failed(call_id, tool_name, &error_msg));
-                }
-
-                ToolCallResult {
+                let failure_result = ToolCallResult {
                     success: false,
                     output: serde_json::Value::Null,
-                    error: Some(error_msg),
+                    error: Some(error_msg.clone()),
                     duration,
+                };
+
+                if let Some(ref bus) = self.event_bus {
+                    bus.emit(ExecutionEvent::failed(
+                        call_id,
+                        tool_name_owned.clone(),
+                        error_msg,
+                        Some(failure_result.clone()),
+                    ));
                 }
+
+                failure_result
             }
         };
 
@@ -574,19 +585,52 @@ fn parse_uniq_options(args: &serde_json::Value) -> Result<UniqOptions> {
 
 fn parse_command_options(args: &serde_json::Value) -> Result<CommandOptions> {
     let timeout = args.get("timeout").and_then(|v| v.as_u64());
+    let shell = match args.get("shell").and_then(|v| v.as_str()) {
+        Some(value) => match value.to_ascii_lowercase().as_str() {
+            "bash" => ShellType::Bash,
+            "pwsh" | "powershell" => ShellType::PowerShell,
+            "cmd" => ShellType::Cmd,
+            other => return Err(anyhow!("Unsupported shell '{other}'")),
+        },
+        None => ShellType::default(),
+    };
 
-    Ok(CommandOptions {
-        timeout,
-        capture_stdout: args
-            .get("capture_stdout")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        capture_stderr: args
-            .get("capture_stderr")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        ..Default::default()
-    })
+    let working_dir = args
+        .get("working_dir")
+        .and_then(|v| v.as_str())
+        .map(PathBuf::from);
+
+    let env_pairs = if let Some(map) = args.get("env").and_then(|v| v.as_object()) {
+        let mut pairs = Vec::with_capacity(map.len());
+        for (key, value) in map {
+            let env_value = value
+                .as_str()
+                .ok_or_else(|| anyhow!("Environment variable '{key}' must be a string"))?;
+            pairs.push((key.clone(), env_value.to_string()));
+        }
+        pairs
+    } else {
+        Vec::new()
+    };
+
+    let capture_stdout = args
+        .get("capture_stdout")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let capture_stderr = args
+        .get("capture_stderr")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    let mut options = CommandOptions::default();
+    options.timeout = timeout;
+    options.shell = shell;
+    options.working_dir = working_dir;
+    options.env = env_pairs;
+    options.capture_stdout = capture_stdout;
+    options.capture_stderr = capture_stderr;
+
+    Ok(options)
 }
 
 #[cfg(test)]

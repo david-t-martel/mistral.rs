@@ -6,18 +6,19 @@ This guide helps developers migrate from the old testing structure to the new co
 
 ## Migration Timeline
 
-| Phase | Date | Status | Description |
-|-------|------|--------|-------------|
-| Phase 1 | 2025 Q1 | ✅ Complete | New structure created |
-| Phase 2 | 2025 Q1 | 🔄 In Progress | Migration of existing tests |
-| Phase 3 | 2025 Q2 | ⏳ Planned | Deprecation of old structure |
-| Phase 4 | 2025 Q3 | ⏳ Planned | Complete removal of legacy code |
+| Phase   | Date    | Status         | Description                     |
+| ------- | ------- | -------------- | ------------------------------- |
+| Phase 1 | 2025 Q1 | ✅ Complete    | New structure created           |
+| Phase 2 | 2025 Q1 | 🔄 In Progress | Migration of existing tests     |
+| Phase 3 | 2025 Q2 | ⏳ Planned     | Deprecation of old structure    |
+| Phase 4 | 2025 Q3 | ⏳ Planned     | Complete removal of legacy code |
 
 ## Old vs New Structure
 
 ### Directory Changes
 
 #### Old Structure (Deprecated)
+
 ```
 mistral.rs/
 ├── test-*.ps1                    # Scattered test scripts in root
@@ -31,6 +32,7 @@ mistral.rs/
 ```
 
 #### New Structure (Current)
+
 ```
 mistral.rs/
 ├── tests/                         # All test code centralized
@@ -80,14 +82,14 @@ $oldTests | ForEach-Object { Write-Host "  - $($_.Name)" }
 
 Determine where each test belongs in the new structure:
 
-| Old Location | Test Type | New Location |
-|--------------|-----------|--------------|
-| `test-mistralrs.ps1` | Integration | `tests/integration/test-mistralrs.ps1` |
-| `test-mcp-servers.ps1` | MCP | `tests/mcp/test-mcp-servers.ps1` |
+| Old Location                 | Test Type   | New Location                                   |
+| ---------------------------- | ----------- | ---------------------------------------------- |
+| `test-mistralrs.ps1`         | Integration | `tests/integration/test-mistralrs.ps1`         |
+| `test-mcp-servers.ps1`       | MCP         | `tests/mcp/test-mcp-servers.ps1`               |
 | `test-phase1-completion.ps1` | Integration | `tests/integration/test-phase1-completion.ps1` |
-| `run-tui-test.ps1` | Integration | `tests/integration/run-tui-test.ps1` |
-| `test-optimized-build.ps1` | Build | `scripts/build/test-optimized-build.ps1` |
-| `check-binary.ps1` | Integration | `tests/integration/test-binary-health.ps1` |
+| `run-tui-test.ps1`           | Integration | `tests/integration/run-tui-test.ps1`           |
+| `test-optimized-build.ps1`   | Build       | `scripts/build/test-optimized-build.ps1`       |
+| `check-binary.ps1`           | Integration | `tests/integration/test-binary-health.ps1`     |
 
 ### Step 3: Update Test Scripts
 
@@ -110,12 +112,14 @@ $results = "tests\results\test-name.json"        # Centralized results
 #### Update Result Output
 
 Old result handling:
+
 ```powershell
 # Old: Results scattered in root
 $results | ConvertTo-Json | Out-File "TEST_RESULTS.json"
 ```
 
 New result handling:
+
 ```powershell
 # New: Results in tests/results with timestamp
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -154,8 +158,8 @@ Add proper documentation headers:
 Register tests with the master test runner:
 
 1. **Ensure proper naming**: Test scripts should follow `test-*.ps1` pattern
-2. **Place in correct directory**: Based on categorization
-3. **Test discovery**: The runner auto-discovers based on location
+1. **Place in correct directory**: Based on categorization
+1. **Test discovery**: The runner auto-discovers based on location
 
 ```powershell
 # The master runner will automatically find:
@@ -169,12 +173,14 @@ Register tests with the master test runner:
 Update any CI/CD workflows that reference old test locations:
 
 #### Old GitHub Actions
+
 ```yaml
 # Old reference
 - run: pwsh -File test-mistralrs.ps1
 ```
 
 #### New GitHub Actions
+
 ```yaml
 # New reference using master runner
 - run: pwsh -File tests/run-all-tests.ps1 -Suite all -CI
@@ -204,6 +210,7 @@ Move-Item ".testlogs\*" "tests\results\" -Force
 During migration, maintain backward compatibility with shims:
 
 **File**: `test-mistralrs.ps1` (root - temporary shim)
+
 ```powershell
 <#
 .SYNOPSIS
@@ -236,31 +243,32 @@ if ($env:MODEL_PATH) {
 
 ### Old Testing Features
 
-| Feature | Implementation | Limitations |
-|---------|---------------|-------------|
-| Test execution | Individual script runs | No unified execution |
-| Result collection | Manual JSON files | Scattered locations |
-| CI integration | Direct script calls | No abstraction layer |
-| MCP testing | Standalone scripts | No lifecycle management |
-| Reporting | Basic console output | No HTML/Markdown reports |
+| Feature           | Implementation         | Limitations              |
+| ----------------- | ---------------------- | ------------------------ |
+| Test execution    | Individual script runs | No unified execution     |
+| Result collection | Manual JSON files      | Scattered locations      |
+| CI integration    | Direct script calls    | No abstraction layer     |
+| MCP testing       | Standalone scripts     | No lifecycle management  |
+| Reporting         | Basic console output   | No HTML/Markdown reports |
 
 ### New Testing Features
 
-| Feature | Implementation | Benefits |
-|---------|---------------|----------|
-| Test execution | Master runner orchestration | Single entry point |
-| Result collection | Centralized in tests/results | Easy artifact management |
-| CI integration | Suite-based execution | Flexible CI pipelines |
-| MCP testing | Integrated lifecycle | Automatic start/stop |
-| Reporting | Multiple formats | HTML, JSON, Markdown |
-| Parallel execution | Job-based parallelization | Faster test runs |
-| Test discovery | Auto-discovery by location | No registration needed |
+| Feature            | Implementation               | Benefits                 |
+| ------------------ | ---------------------------- | ------------------------ |
+| Test execution     | Master runner orchestration  | Single entry point       |
+| Result collection  | Centralized in tests/results | Easy artifact management |
+| CI integration     | Suite-based execution        | Flexible CI pipelines    |
+| MCP testing        | Integrated lifecycle         | Automatic start/stop     |
+| Reporting          | Multiple formats             | HTML, JSON, Markdown     |
+| Parallel execution | Job-based parallelization    | Faster test runs         |
+| Test discovery     | Auto-discovery by location   | No registration needed   |
 
 ## Migration Examples
 
 ### Example 1: Simple Test Migration
 
 #### Old Test
+
 ```powershell
 # check-binary.ps1 (in root)
 $binary = ".\target\release\mistralrs-server.exe"
@@ -275,6 +283,7 @@ if (Test-Path $binary) {
 ```
 
 #### Migrated Test
+
 ```powershell
 # tests/integration/test-binary-health.ps1
 <#
@@ -319,6 +328,7 @@ exit 0
 ### Example 2: MCP Test Migration
 
 #### Old Test
+
 ```powershell
 # run-mcp-tests.ps1 (in root)
 Write-Host "Starting MCP tests"
@@ -334,6 +344,7 @@ Stop-Process -Id $memory.Id
 ```
 
 #### Migrated Test
+
 ```powershell
 # tests/mcp/test-mcp-servers.ps1
 <#
@@ -377,6 +388,7 @@ exit 0
 Replace multiple test script calls with suite execution:
 
 #### Old Approach
+
 ```powershell
 # Manual test execution
 .\test-mistralrs.ps1
@@ -386,6 +398,7 @@ Replace multiple test script calls with suite execution:
 ```
 
 #### New Approach
+
 ```powershell
 # Single command runs all tests
 .\tests\run-all-tests.ps1 -Suite all
@@ -405,9 +418,9 @@ Replace multiple test script calls with suite execution:
 The following will be removed in v0.7.0:
 
 1. **Root-level test scripts**: All `test-*.ps1`, `run-*.ps1`, `check-*.ps1` in root
-2. **Old result locations**: JSON/MD files in root directory
-3. **`.testlogs/` directory**: Replaced by `tests/results/`
-4. **Individual test runners**: Replaced by master runner
+1. **Old result locations**: JSON/MD files in root directory
+1. **`.testlogs/` directory**: Replaced by `tests/results/`
+1. **Individual test runners**: Replaced by master runner
 
 ### Migration Warnings
 
@@ -436,6 +449,7 @@ Please update your scripts to use the new location or the master runner:
 **Cause**: Test not in expected location or wrong naming
 
 **Solution**:
+
 ```powershell
 # Ensure test follows naming convention
 Rename-Item "my-test.ps1" "test-my-functionality.ps1"
@@ -449,6 +463,7 @@ Move-Item "test-my-functionality.ps1" "tests\integration\"
 **Cause**: Relative paths changed with new structure
 
 **Solution**:
+
 ```powershell
 # Update relative paths
 # Old: .\target\release\mistralrs-server.exe
@@ -464,6 +479,7 @@ $binary = Join-Path $projectRoot "target\release\mistralrs-server.exe"
 **Cause**: Output going to old locations
 
 **Solution**:
+
 ```powershell
 # Update result output paths
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -478,6 +494,7 @@ New-Item -ItemType Directory -Path "tests\results" -Force
 **Cause**: Workflows using old test locations
 
 **Solution**:
+
 ```yaml
 # Update GitHub Actions workflow
 - name: Run tests
@@ -492,43 +509,43 @@ New-Item -ItemType Directory -Path "tests\results" -Force
 ### For Developers
 
 1. **Single entry point**: No need to remember multiple test scripts
-2. **Consistent structure**: Easy to find and add tests
-3. **Better reporting**: Multiple output formats
-4. **Faster execution**: Parallel test support
+1. **Consistent structure**: Easy to find and add tests
+1. **Better reporting**: Multiple output formats
+1. **Faster execution**: Parallel test support
 
 ### For CI/CD
 
 1. **Simplified pipelines**: One command for all tests
-2. **Better artifacts**: Centralized result collection
-3. **Flexible suites**: Run specific test categories
-4. **Improved caching**: Structured output paths
+1. **Better artifacts**: Centralized result collection
+1. **Flexible suites**: Run specific test categories
+1. **Improved caching**: Structured output paths
 
 ### For Maintenance
 
 1. **Clear organization**: Tests grouped by type
-2. **Easy discovery**: Auto-discovery by location
-3. **Version control**: Better git history tracking
-4. **Documentation**: Comprehensive guides
+1. **Easy discovery**: Auto-discovery by location
+1. **Version control**: Better git history tracking
+1. **Documentation**: Comprehensive guides
 
 ## Next Steps
 
 After migration:
 
 1. **Remove deprecated scripts**: Clean up root directory
-2. **Update documentation**: Reference new locations
-3. **Update team workflows**: Train on new structure
-4. **Monitor CI/CD**: Ensure pipelines work correctly
-5. **Optimize test execution**: Leverage parallel execution
+1. **Update documentation**: Reference new locations
+1. **Update team workflows**: Train on new structure
+1. **Monitor CI/CD**: Ensure pipelines work correctly
+1. **Optimize test execution**: Leverage parallel execution
 
 ## Getting Help
 
 If you encounter issues during migration:
 
 1. **Check existing examples**: Review migrated tests in `tests/`
-2. **Run validation**: `.\tests\validate-test-runner.ps1`
-3. **Review logs**: Check `tests/results/` for error details
-4. **Consult documentation**: See testing guides in `docs/testing/`
-5. **Open an issue**: Report problems with migration
+1. **Run validation**: `.\tests\validate-test-runner.ps1`
+1. **Review logs**: Check `tests/results/` for error details
+1. **Consult documentation**: See testing guides in `docs/testing/`
+1. **Open an issue**: Report problems with migration
 
 ## Summary
 
@@ -544,7 +561,7 @@ The new testing structure provides:
 
 Migrate your tests today to take advantage of these improvements!
 
----
+______________________________________________________________________
 
 *Last Updated: 2025*
 *Version: 1.0.0*

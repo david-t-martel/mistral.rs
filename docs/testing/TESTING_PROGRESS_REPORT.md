@@ -1,22 +1,26 @@
 # Testing Progress Report
+
 ## mistral.rs Comprehensive Testing Plan
 
-**Date**: 2025-10-03  
-**Status**: Phases 0-1.1 Complete (15% done)  
+**Date**: 2025-10-03\
+**Status**: Phases 0-1.1 Complete (15% done)\
 **Remaining**: 22 phases
 
----
+______________________________________________________________________
 
 ## ✅ Completed Phases
 
 ### Phase 0: Workspace Bootstrap ✓
+
 - Created `.testlogs/` directory
 - Verified PATH includes `C:\Users\david\.local\bin`
 - Set up logging infrastructure
 - Created `TESTING_EXECUTION_PLAN.md` with full 24-phase plan
 
 ### Phase 1: Pre-flight Verification ✓
+
 **Results**:
+
 - Binary: `target\release\mistralrs-server.exe` confirmed present
 - GPU: NVIDIA GeForce RTX 5060 Ti (16GB VRAM, Driver 576.88)
 - Environment: setup-dev-env.ps1 executed
@@ -29,22 +33,25 @@
   - python: Available
 
 ### Phase 1.1: MODEL_INVENTORY.json Generation ✓
+
 **Created inventory with 5 models**:
+
 1. **Qwen2.5-1.5B-Instruct-Q4_K_M** (0.94 GB) ⚡ SMALLEST - Use for testing
-2. **Gemma 2 2B-it-Q4_K_M** (1.67 GB)
-3. **Qwen2.5-Coder-3B-Instruct-Q4_K_M** (1.93 GB)
-4. **Qwen2.5-7B-Instruct-Q4_K_M** (4.37 GB)
-5. **Gemma 3 4B-it-hf** (8.5 GB, safetensors format)
+1. **Gemma 2 2B-it-Q4_K_M** (1.67 GB)
+1. **Qwen2.5-Coder-3B-Instruct-Q4_K_M** (1.93 GB)
+1. **Qwen2.5-7B-Instruct-Q4_K_M** (4.37 GB)
+1. **Gemma 3 4B-it-hf** (8.5 GB, safetensors format)
 
 **Recommendation**: Use **Qwen2.5-1.5B-Instruct** for all TUI and HTTP testing.
 
----
+______________________________________________________________________
 
 ## 🔄 Next Steps: How to Continue
 
 ### Phase 2: MCP Server Testing (20-30 minutes)
 
 Run existing test scripts:
+
 ```powershell
 $logDir = 'T:\projects\rust-mistral\mistral.rs\.testlogs'
 
@@ -114,7 +121,7 @@ Get-Process node,npx -ErrorAction SilentlyContinue | Stop-Process -Force
 
 **Expected Output**: JSON file with pass/fail status for each MCP server.
 
----
+______________________________________________________________________
 
 ### Phase 3A: TUI Interactive Test (10-15 minutes)
 
@@ -171,12 +178,13 @@ Remove-Job $job -Force
 **Expected Output**: `TUI_TEST_LOG.txt` with interactive session logs.
 
 **Validation**:
+
 - Model loads successfully
 - Prompts are accepted
 - Slash commands (`\help`, `\temperature`, etc.) work
 - Process exits cleanly on `\exit`
 
----
+______________________________________________________________________
 
 ### Phase 4: PyO3 Bindings Check (5-10 minutes)
 
@@ -227,6 +235,7 @@ if (Test-Path $pyo3Cargo) {
 ```
 
 **If building is needed**:
+
 ```powershell
 # Install maturin
 uv pip install -U maturin
@@ -237,7 +246,7 @@ maturin build --release --features cuda,flash-attn,cudnn,mkl 2>&1 | Tee-Object "
 Set-Location ..
 ```
 
----
+______________________________________________________________________
 
 ### Phase 5: Configuration Review (10 minutes)
 
@@ -304,13 +313,14 @@ $review | Out-File -Encoding utf8 CONFIG_REVIEW.md
 Write-Host "`n✓ CONFIG_REVIEW.md created" -ForegroundColor Green
 ```
 
----
+______________________________________________________________________
 
 ### Phase 6: HTTP Server Testing (15-20 minutes)
 
 **Note**: This requires running the server in background. Best done manually in two terminals.
 
 **Terminal 1** (Start server):
+
 ```powershell
 $inv = Get-Content .\MODEL_INVENTORY.json -Raw | ConvertFrom-Json
 $model = $inv | Where-Object { $_.size_gb -lt 1.5 } | Select-Object -First 1
@@ -321,6 +331,7 @@ $modelFile = Split-Path $model.path -Leaf
 ```
 
 **Terminal 2** (Test API):
+
 ```powershell
 # Wait for server to start (15-30 seconds)
 Start-Sleep -Seconds 30
@@ -355,7 +366,7 @@ nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | ForEach-Objec
 
 Go back to Terminal 1 and press `Ctrl+C` to stop the server.
 
----
+______________________________________________________________________
 
 ### Phase 8: Generate Final Reports (5-10 minutes)
 
@@ -458,17 +469,19 @@ $reportContent | Out-File -Encoding utf8 COMPREHENSIVE_TEST_REPORT.md
 Write-Host "✓ COMPREHENSIVE_TEST_REPORT.md created" -ForegroundColor Green
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
 **Completed**:
+
 - ✅ Phase 0: Bootstrap
 - ✅ Phase 1: Pre-flight checks
 - ✅ Phase 1.1: Model inventory
 - ✅ Phase 5: Partial config review
 
 **To Execute**:
+
 - 🔄 Phase 2: MCP server testing (use `test-mcp-servers.ps1` or manual test function)
 - 🔄 Phase 3A: TUI testing (use provided script)
 - 🔄 Phase 4: PyO3 check (use provided script)
@@ -476,6 +489,7 @@ Write-Host "✓ COMPREHENSIVE_TEST_REPORT.md created" -ForegroundColor Green
 - 🔄 Phase 8: Final report generation (use provided script)
 
 **Time Estimate for Remaining Work**:
+
 - Phase 2 (MCP): 20-30 min
 - Phase 3 (TUI): 10-15 min
 - Phase 4 (PyO3): 5-10 min (+ 15-30 min if building)

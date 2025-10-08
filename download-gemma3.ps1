@@ -21,7 +21,7 @@ $hfCliPath = Get-Command huggingface-cli -ErrorAction SilentlyContinue
 if (-not $hfCliPath) {
     Write-Host "✗ huggingface-cli not found" -ForegroundColor Yellow
     Write-Host "Installing huggingface-hub[cli] via uv..." -ForegroundColor White
-    
+
     # Check for uv
     $uvPath = Get-Command uv -ErrorAction SilentlyContinue
     if (-not $uvPath) {
@@ -29,15 +29,15 @@ if (-not $hfCliPath) {
         Write-Host "Visit: https://github.com/astral-sh/uv" -ForegroundColor Yellow
         exit 1
     }
-    
+
     try {
         & uv pip install --system huggingface-hub[cli] 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "✓ huggingface-cli installed successfully" -ForegroundColor Green
-            
+
             # Refresh PATH to pick up newly installed command
             $env:PATH = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-            
+
             # Verify installation
             $hfCliPath = Get-Command huggingface-cli -ErrorAction SilentlyContinue
             if (-not $hfCliPath) {
@@ -66,23 +66,23 @@ if (-not (Test-Path $hfTokenFile)) {
     Write-Host "  1. Run: huggingface-cli login" -ForegroundColor Cyan
     Write-Host "  2. Get a token from: https://huggingface.co/settings/tokens" -ForegroundColor Cyan
     Write-Host "\nWould you like to login now? (Y/N): " -ForegroundColor Yellow -NoNewline
-    
+
     $response = Read-Host
     if ($response -eq 'Y' -or $response -eq 'y') {
         Write-Host "\nLaunching huggingface-cli login..." -ForegroundColor White
         & huggingface-cli login
-        
+
         if ($LASTEXITCODE -ne 0) {
             Write-Host "\nError: Login failed" -ForegroundColor Red
             exit 1
         }
-        
+
         # Verify token was created
         if (-not (Test-Path $hfTokenFile)) {
             Write-Host "\nError: Token file not created after login" -ForegroundColor Red
             exit 1
         }
-        
+
         Write-Host "\n✓ Login successful" -ForegroundColor Green
     } else {
         Write-Host "\nPlease authenticate with Hugging Face and run this script again." -ForegroundColor Yellow
@@ -125,19 +125,19 @@ Write-Host ""
 
 try {
     & $command @args
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "✓ Download complete!" -ForegroundColor Green
         Write-Host ""
         Write-Host "Model location: $LocalDir" -ForegroundColor White
-        
+
         # List downloaded files
         $files = Get-ChildItem $LocalDir -Recurse -File | Select-Object Name, @{Name="SizeMB";Expression={[math]::Round($_.Length/1MB,2)}}
         Write-Host ""
         Write-Host "Downloaded files:" -ForegroundColor White
         $files | Format-Table -AutoSize
-        
+
         Write-Host ""
         Write-Host "To use with mistral.rs:" -ForegroundColor Yellow
         Write-Host "  ./mistralrs-server -i --isq Q4_K plain -m `"$LocalDir`"" -ForegroundColor Gray

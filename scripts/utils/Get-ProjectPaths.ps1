@@ -26,22 +26,34 @@ function Get-MistralRSBinary {
     $projectRoot = Get-ProjectRoot
     $exeExt = if ($IsWindows -or $env:OS -eq "Windows_NT") { ".exe" } else { "" }
 
-    $possiblePaths = @(
-        (Join-Path $projectRoot "target" "release" "mistralrs-server$exeExt"),
-        (Join-Path $env:USERPROFILE ".cargo" "shared-target" "release" "mistralrs-server$exeExt"),
-        (Join-Path $env:HOME ".cargo" "shared-target" "release" "mistralrs-server$exeExt")
+    $searchRoots = @()
+    $searchRoots += Join-Path $projectRoot "target" "debug"
+    $searchRoots += Join-Path $projectRoot "target" "release"
+    if ($env:USERPROFILE) {
+        $searchRoots += Join-Path $env:USERPROFILE ".cargo" "shared-target" "release"
+    }
+    if ($env:HOME) {
+        $searchRoots += Join-Path $env:HOME ".cargo" "shared-target" "release"
+    }
+
+    $binaryNames = @(
+        "mistral-rs$exeExt",
+        "mistralrs-server$exeExt"
     )
 
-    foreach ($path in $possiblePaths) {
-        if (Test-Path $path) {
-            return $path
+    foreach ($root in $searchRoots) {
+        foreach ($name in $binaryNames) {
+            $candidate = Join-Path $root $name
+            if (Test-Path $candidate) {
+                return $candidate
+            }
         }
     }
 
     throw @"
-mistralrs-server binary not found.
+mistral-rs binary not found.
 Build it with: make build-cuda-full
-Or set environment variable: MISTRALRS_BINARY=path\to\binary
+Or set environment variable: MISTRALRS_BINARY=path\to\mistral-rs.exe
 "@
 }
 
@@ -166,7 +178,8 @@ function Get-RAGRedisBinary {
     return $null
 }
 
-function Ensure-PyO3Python {
+# PSScriptAnalyzer: Disable PSAvoidUsingUnapprovedVerbs
+function Set-PyO3Python {
     # Ensure PYO3_PYTHON is set for PyO3 compilation
     if ($env:PYO3_PYTHON -and (Test-Path $env:PYO3_PYTHON)) {
         Write-Verbose "PYO3_PYTHON already set: $env:PYO3_PYTHON"
@@ -181,36 +194,41 @@ function Ensure-PyO3Python {
             Write-Verbose "PYO3_PYTHON set to: $pyPath"
             return $pyPath
         }
-    } catch {
+    }
+    catch {
         Write-Warning "Failed to find Python 3.12 via uv. Install with: uv python install 3.12"
         throw "PYO3_PYTHON not configured. PyO3 compilation will fail."
     }
 }
+# PSScriptAnalyzer: Enable PSAvoidUsingUnapprovedVerbs
 
-function Ensure-PathContainsLocalBin {
+# PSScriptAnalyzer: Disable PSAvoidUsingUnapprovedVerbs
+function Add-LocalBinToPath {
     $localBin = "C:\Users\david\.local\bin"
     if (-not ($env:PATH -split ';' | Where-Object { $_ -ieq $localBin })) {
         Write-Verbose "Adding $localBin to PATH"
         $env:PATH = "$env:PATH;$localBin"
         [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, 'User')
-    } else {
+    }
+    else {
         Write-Verbose "$localBin already in PATH"
     }
 }
+# PSScriptAnalyzer: Enable PSAvoidUsingUnapprovedVerbs
 
 # Export all resolved paths as a hashtable
 function Get-AllProjectPaths {
-    Ensure-PathContainsLocalBin
+    Add-LocalBinToPath
     @{
-        ProjectRoot = Get-ProjectRoot
-        Binary = Get-MistralRSBinary
-        UVPath = Get-UVPath
-        HFTokenFile = Get-HFTokenFile
-        HasHFToken = Test-HFToken
-        GitHubToken = if (Get-GitHubToken) { "[REDACTED]" } else { $null }
+        ProjectRoot    = Get-ProjectRoot
+        Binary         = Get-MistralRSBinary
+        UVPath         = Get-UVPath
+        HFTokenFile    = Get-HFTokenFile
+        HasHFToken     = Test-HFToken
+        GitHubToken    = if (Get-GitHubToken) { "[REDACTED]" } else { $null }
         ModelDirectory = Get-ModelDirectory
         RAGRedisBinary = Get-RAGRedisBinary
-        PyO3Python = try { Ensure-PyO3Python } catch { $null }
+        PyO3Python     = try { Set-PyO3Python } catch { $null }
     }
 }
 

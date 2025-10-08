@@ -3,6 +3,7 @@
 Mistral.rs provides a TCP-based ring backend for distributed tensor-parallel inference. This backend is enabled by compiling with the `ring` feature and implements collective operations over a ring topology using TCP sockets.
 
 ## Prerequisites
+
 - Build with the `ring` feature enable, **in addition to any others**:
   ```bash
   cargo build --release --features ring
@@ -11,19 +12,18 @@ Mistral.rs provides a TCP-based ring backend for distributed tensor-parallel inf
 - The `world_size` must be a power of 2 (2, 4, 8, 16, etc.) for correct operation.
 
 ## Configuration
+
 Create one JSON configuration file per process with the following fields:
 
-| Field         | Type     | Description                                                                            |
-|---------------|----------|----------------------------------------------------------------------------------------|
-| `master_ip`   | string   | Optional. IP address for master node.                         |
-| `master_port` | integer  | Optional. Port for master node.                               |
-| `port`        | integer  | Local port to bind for incoming connections from the left neighbor.                    |
-| `right_port`  | integer  | Port on which the right neighbor is listening (used to connect outgoing to the right). |
-| `right_ip`    | string   | Optional. IP address of the right neighbor (defaults to `0.0.0.0`).                     |
-| `rank`        | integer  | Rank of this process in `[0..world_size)`.                                            |
-| `world_size`  | integer  | Total number of processes in the ring. **Must be a power of 2** (e.g., 2, 4, 8, 16, etc.). |
-
-
+| Field         | Type    | Description                                                                                |
+| ------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `master_ip`   | string  | Optional. IP address for master node.                                                      |
+| `master_port` | integer | Optional. Port for master node.                                                            |
+| `port`        | integer | Local port to bind for incoming connections from the left neighbor.                        |
+| `right_port`  | integer | Port on which the right neighbor is listening (used to connect outgoing to the right).     |
+| `right_ip`    | string  | Optional. IP address of the right neighbor (defaults to `0.0.0.0`).                        |
+| `rank`        | integer | Rank of this process in `[0..world_size)`.                                                 |
+| `world_size`  | integer | Total number of processes in the ring. **Must be a power of 2** (e.g., 2, 4, 8, 16, etc.). |
 
 **This address and port should form a ring topology for each of the nodes.** For example, the last node should point to the first node as its right neighbor.
 
@@ -51,6 +51,7 @@ Each node connects to its right neighbor by IP and port, and the last node wraps
 Example for two processes:
 
 - [`ring_0.json`](../../ring_configs/ring_0.json):
+
   ```json
   {
     "master_ip": "0.0.0.0",
@@ -63,6 +64,7 @@ Example for two processes:
   ```
 
 - [`ring_0.json`](../../ring_configs/ring_1.json):
+
   ```json
   {
     "master_ip": "0.0.0.0",
@@ -79,6 +81,7 @@ Example for two processes:
 To run on different machines, update the `right_ip` field in each config to the actual IP address of the neighbor process. For example, if you have two machines with IPs `192.168.1.10` and `192.168.1.11`:
 
 - `ring_0.json` on Machine A (192.168.1.10):
+
   ```json
   {
     "port": 12345,
@@ -90,6 +93,7 @@ To run on different machines, update the `right_ip` field in each config to the 
   ```
 
 - `ring_1.json` on Machine B (192.168.1.11):
+
   ```json
   {
     "port": 12346,
@@ -103,6 +107,7 @@ To run on different machines, update the `right_ip` field in each config to the 
 Make sure that the specified ports are open and that each machine can reach the other via TCP on those ports.
 
 ## Usage
+
 Set the `RING_CONFIG` environment variable to point to the JSON file for each process, then run your application built with the `ring` feature:
 
 ```bash
