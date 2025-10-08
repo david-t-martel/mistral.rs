@@ -64,7 +64,7 @@ impl GgufXLoraModelBuilder {
             !self.gguf_model.with_logging,
             self.gguf_model
                 .device_mapping
-                .unwrap_or(DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
+                .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
             None,
             self.gguf_model.paged_attn_cfg,
         )?;
@@ -75,9 +75,7 @@ impl GgufXLoraModelBuilder {
                     .lock()
                     .await
                     .get_metadata()
-                    .cache_config
-                    .as_ref()
-                    .unwrap()
+                    .cache_config.as_ref().expect("PagedAttention enabled but cache config not initialized")
                     .clone();
 
                 SchedulerConfig::PagedAttentionMeta {

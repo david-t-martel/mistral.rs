@@ -404,10 +404,10 @@ impl TextModelBuilder {
             self.hf_revision,
             self.token_source,
             &self.dtype,
-            &self.device.unwrap_or(best_device(self.force_cpu).unwrap()),
+            &self.device.clone().unwrap_or_else(|| best_device(self.force_cpu).expect("Failed to initialize device - no suitable GPU or CPU found")),
             !self.with_logging,
             self.device_mapping
-                .unwrap_or(DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
+                .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
             self.isq,
             self.paged_attn_cfg,
         )?;

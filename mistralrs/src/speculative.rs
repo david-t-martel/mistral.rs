@@ -74,7 +74,7 @@ impl TextSpeculativeBuilder {
             !builder.with_logging,
             builder
                 .device_mapping
-                .unwrap_or(DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
+                .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
             builder.isq,
             builder.paged_attn_cfg,
         )?;

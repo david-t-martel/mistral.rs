@@ -12,6 +12,7 @@
 //! - **Type-safe API**: Rich types with comprehensive error handling
 
 // Module declarations
+pub mod catalog;
 pub mod pathlib;
 pub mod tools;
 pub mod types;
@@ -29,6 +30,7 @@ pub mod test_utils;
 
 // Re-exports for convenience
 use std::path::PathBuf;
+pub use catalog::{ToolCatalog, ToolDefinition, ToolExample};
 pub use tools::file::{cat, ls};
 pub use tools::sandbox::Sandbox;
 pub use tools::shell::execute;

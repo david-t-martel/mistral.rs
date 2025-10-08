@@ -73,15 +73,21 @@ fn read_line(editor: &mut DefaultEditor) -> String {
     let r = editor.readline("> ");
     match r {
         Err(ReadlineError::Interrupted) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             std::process::exit(0);
         }
         Err(ReadlineError::Eof) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             std::process::exit(0);
         }
         Err(e) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             eprintln!("Error reading input: {e:?}");
             std::process::exit(1);
         }
@@ -155,7 +161,7 @@ fn handle_sampling_command(prompt: &str, sampling_params: &mut SamplingParams) -
 // via tool callbacks registered through tool_registry
 
 pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
-    let sender = mistralrs.get_sender(None).unwrap();
+    let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
 
     let mut sampling_params = agent_sample_parameters();
@@ -179,16 +185,16 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     info!("Starting agent mode with sampling params: {sampling_params:?}");
     println!("{}{}{}", "=".repeat(20), AGENT_MODE_HELP, "=".repeat(20));
 
-    *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+    *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().unwrap()())
+    ctrlc::set_handler(move || CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned")())
         .expect("Failed to set CTRL-C handler for agent mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
 
     'outer: loop {
-        *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &exit_handler;
 
         let prompt = read_line(&mut rl);
         let prompt_trimmed = prompt.as_str().trim();
@@ -227,7 +233,7 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
             }
         }
 
-        *CTRLC_HANDLER.lock().unwrap() = &terminate_handler;
+        *CTRLC_HANDLER.lock().expect("Control-C handler mutex poisoned") = &terminate_handler;
 
         println!("\n{}", "=".repeat(60));
         println!("Processing query...");
@@ -256,7 +262,7 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
             model_id: None,
         }));
 
-        sender.send(req).await.unwrap();
+        sender.send(req).await.expect("Failed to send request to model");
         let start_ttft = Instant::now();
         let mut first_token_duration: Option<std::time::Duration> = None;
 
@@ -287,7 +293,7 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
 
                         assistant_output.push_str(content);
                         print!("{}", content);
-                        io::stdout().flush().unwrap();
+                        let _ = io::stdout().flush();
 
                         // Detect if tools were called
                         if tool_calls_opt.is_some() {
