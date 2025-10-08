@@ -18,11 +18,15 @@ use std::path::Path;
 /// # Example
 /// ```no_run
 /// use mistralrs_agent_tools::tools::winutils::text::cut;
-/// use mistralrs_agent_tools::{Sandbox, SandboxConfig};
+/// use mistralrs_agent_tools::tools::sandbox::Sandbox;
+/// use mistralrs_agent_tools::types::{AgentResult, SandboxConfig};
 /// use std::path::Path;
 ///
-/// let sandbox = Sandbox::new(SandboxConfig::default())?;
-/// let output = cut(&sandbox, &[Path::new("data.csv")], "1,3,5", Some(','))?;
+/// fn main() -> AgentResult<()> {
+///     let sandbox = Sandbox::new(SandboxConfig::default());
+///     let output = cut(&sandbox, &[Path::new("data.csv")], "1,3,5", Some(','))?;
+///     Ok(())
+/// }
 /// ```
 pub fn cut(
     sandbox: &Sandbox,
@@ -67,7 +71,16 @@ pub fn cut(
 ///
 /// # Example
 /// ```no_run
-/// let output = tr(&sandbox, &[Path::new("file.txt")], "a-z", Some("A-Z"))?;
+/// use mistralrs_agent_tools::tools::winutils::text::tr;
+/// use mistralrs_agent_tools::tools::sandbox::Sandbox;
+/// use mistralrs_agent_tools::types::{AgentResult, SandboxConfig};
+/// use std::path::Path;
+///
+/// fn main() -> AgentResult<()> {
+///     let sandbox = Sandbox::new(SandboxConfig::default());
+///     let output = tr(&sandbox, &[Path::new("file.txt")], "a-z", Some("A-Z"))?;
+///     Ok(())
+/// }
 /// ```
 pub fn tr(
     sandbox: &Sandbox,
@@ -111,7 +124,16 @@ pub fn tr(
 ///
 /// # Example
 /// ```no_run
-/// let output = expand(&sandbox, &[Path::new("file.txt")], Some(4))?;
+/// use mistralrs_agent_tools::tools::winutils::text::expand;
+/// use mistralrs_agent_tools::tools::sandbox::Sandbox;
+/// use mistralrs_agent_tools::types::{AgentResult, SandboxConfig};
+/// use std::path::Path;
+///
+/// fn main() -> AgentResult<()> {
+///     let sandbox = Sandbox::new(SandboxConfig::default());
+///     let output = expand(&sandbox, &[Path::new("file.txt")], Some(4))?;
+///     Ok(())
+/// }
 /// ```
 pub fn expand(sandbox: &Sandbox, paths: &[&Path], tab_stops: Option<usize>) -> AgentResult<String> {
     if paths.is_empty() {

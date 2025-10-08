@@ -4,7 +4,7 @@ A minimal, fast, and modern web chat interface for [mistral.rs](https://github.c
 
 <img src="../res/chat.gif" alt="Demonstration" />
 
----
+______________________________________________________________________
 
 ## Features
 
@@ -20,11 +20,11 @@ A minimal, fast, and modern web chat interface for [mistral.rs](https://github.c
   - `Ctrl+Enter` (or `Cmd+Enter` on Mac) to send messages.
   - Button click also sends.
 
----
+______________________________________________________________________
 
 ## Quickstart
 
-1) Build the app.
+1. Build the app.
 
 > Note: choose the features based on [this guide](../README.md#supported-accelerators).
 
@@ -39,20 +39,22 @@ cargo run --release --features <specify feature(s) here> --bin mistralrs-web-cha
 - Multiple `--text-model`, `--vision-model`, or `--speech-model` can be specified.
 - `--port` is optional (defaults to 8080).
 
----
+______________________________________________________________________
 
-2) Access the app!
+2. Access the app!
 
 - Open http://localhost:8080 (or your chosen port).
 
----
+______________________________________________________________________
 
 ## Development
 
 ### Frontend
+
 - Edit static/index.html and supporting JS/CSS.
 - Uses marked.js for markdown rendering.
 
 ### Backend
+
 - See main.rs for server and model loading logic.
 - Models are managed via CLI arguments; hot reloading is not supported.

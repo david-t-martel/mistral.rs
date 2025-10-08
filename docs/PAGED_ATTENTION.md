@@ -1,6 +1,7 @@
 # PagedAttention in mistral.rs
 
 Mistral.rs supports PagedAttention ([paper here](https://arxiv.org/abs/2309.06180)) to accelerate both normal inference and batched inference on:
+
 - CUDA (Unix-like platforms such as WSL, Linux)
 - Metal
 
@@ -11,6 +12,7 @@ Our PagedAttention implementation has 2 inputs: GPU KV cache memory size, and bl
 PagedAttention now supports KV cache quantization to reduce memory usage and potentially improve performance. The KV cache can be quantized to FP8 (F8E4M3 format) instead of using the model's native dtype, significantly reducing memory requirements while maintaining model quality.
 
 **Available cache types:**
+
 - `auto` (default): Uses the model's native dtype for KV cache
 - `f8e4m3`: Quantizes KV cache to 8-bit floating point (E4M3 format)
 
@@ -25,6 +27,7 @@ When using FP8 quantization, the memory usage for KV cache is approximately halv
 > Note: In the CLI and Python API, Paged Attention is disabled by default for Metal. It can be enabled with the `--paged-attn`/`paged_attn` flags.
 
 **There are more features being added to this:**
+
 - GGML model support
 - Adapter model support
 - Speculative decoding
@@ -32,11 +35,13 @@ When using FP8 quantization, the memory usage for KV cache is approximately halv
 **Prefix caching is now supported with PagedAttention.** PagedAttention can leverage the prefix cacher to cache KV prefix states across iterations for faster multi-turn inference.
 
 **Supported models:**
+
 - Normal models
 - GGUF models
 - Vision models
 
 > Note: Prefix caching is supported when using PagedAttention. Configure the number of sequences to cache on the device with:
+>
 > - CLI: `--prefix-cache-n <N>` (default 16)
 > - Python API: `prefix_cache_n=<N>` (default 16)
 > - Rust API: `.with_prefix_cache_n(Some(N))` (default 16)
@@ -61,11 +66,13 @@ cargo run --release --features cuda -- -i --pa-gpu-mem-usage .95 --pa-blk-size 3
 ```
 
 Example with FP8 KV cache quantization:
+
 ```
 cargo run --release --features metal -- -i --pa-gpu-mem 4096 --pa-blk-size 32 --pa-cache-type f8e4m3 plain -m microsoft/Phi-3-mini-128k-instruct
 ```
 
 ## Using the Rust API
+
 You can find this example [here](../mistralrs/examples/paged_attn/main.rs).
 
 ```rust
@@ -112,6 +119,7 @@ async fn main() -> Result<()> {
 ```
 
 Example with FP8 KV cache quantization:
+
 ```rust
 use anyhow::Result;
 use mistralrs::{
@@ -139,6 +147,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Using the Python API
+
 ```py
 from mistralrs import Runner, Which, ChatCompletionRequest, Architecture
 
@@ -168,6 +177,7 @@ print(res.usage)
 ```
 
 Example with FP8 KV cache quantization:
+
 ```py
 from mistralrs import Runner, Which, ChatCompletionRequest, Architecture, PagedCacheType
 

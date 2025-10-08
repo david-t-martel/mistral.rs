@@ -11,7 +11,7 @@ program: (function_def)*
 
 function_def: type IDENTIFIER "(" params ")" "{" stmt* "}"
 params: param ("," param)*
-      | 
+      |
 param: type IDENTIFIER
 type: "int" | "float" | "char" | "void"
 

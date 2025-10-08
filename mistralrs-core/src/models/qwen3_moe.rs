@@ -1021,8 +1021,9 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement MoE-aware xlora_forward (expert routing + adapter scaling) for Qwen3 MoE
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this Qwen3 MoE model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &EitherCache {
         &self.cache

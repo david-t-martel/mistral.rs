@@ -61,9 +61,9 @@ function Test-ServerStartup {
         [object]$Source,
         [int]$TimeoutSeconds = 10
     )
-    
+
     Write-Host "Testing: $Name" -ForegroundColor Yellow
-    
+
     $result = @{
         name = $Name
         command = $Source.command
@@ -73,7 +73,7 @@ function Test-ServerStartup {
         warnings = @()
         info = @()
     }
-    
+
     # Check if command exists
     if (-not (Test-CommandAvailable $Source.command)) {
         $result.status = "command_not_found"
@@ -81,14 +81,14 @@ function Test-ServerStartup {
         Write-Host "  [ERROR] Command not found: $($Source.command)" -ForegroundColor Red
         return $result
     }
-    
+
     $result.info += "Command available: $($Source.command)"
     Write-Host "  [OK] Command available" -ForegroundColor Green
-    
+
     # Try to start the server
     try {
         Write-Host "  [INFO] Testing server startup..." -ForegroundColor Gray
-        
+
         # Prepare environment variables
         $envVars = @{}
         if ($Source.env) {
@@ -96,7 +96,7 @@ function Test-ServerStartup {
                 $envVars[$_.Name] = $_.Value
             }
         }
-        
+
         # Create process start info
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = $Source.command
@@ -105,7 +105,7 @@ function Test-ServerStartup {
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.CreateNoWindow = $true
-        
+
         # Add environment variables
         foreach ($key in $envVars.Keys) {
             $value = $envVars[$key]
@@ -113,65 +113,65 @@ function Test-ServerStartup {
             $value = [System.Environment]::ExpandEnvironmentVariables($value)
             $psi.EnvironmentVariables[$key] = $value
         }
-        
+
         # Set working directory if specified
         if ($Source.work_dir) {
             $psi.WorkingDirectory = $Source.work_dir
         }
-        
+
         # Start process
         $process = New-Object System.Diagnostics.Process
         $process.StartInfo = $psi
-        
+
         $stdout = New-Object System.Text.StringBuilder
         $stderr = New-Object System.Text.StringBuilder
-        
+
         $process.add_OutputDataReceived({
             param($sender, $e)
             if ($e.Data) {
                 [void]$stdout.AppendLine($e.Data)
             }
         })
-        
+
         $process.add_ErrorDataReceived({
             param($sender, $e)
             if ($e.Data) {
                 [void]$stderr.AppendLine($e.Data)
             }
         })
-        
+
         $started = $process.Start()
         $process.BeginOutputReadLine()
         $process.BeginErrorReadLine()
-        
+
         if (-not $started) {
             $result.status = "failed_to_start"
             $result.errors += "Process failed to start"
             Write-Host "  [ERROR] Failed to start process" -ForegroundColor Red
             return $result
         }
-        
+
         $result.info += "Process started with PID: $($process.Id)"
         Write-Host "  [OK] Process started (PID: $($process.Id))" -ForegroundColor Green
-        
+
         # Wait a bit for initialization
         Start-Sleep -Milliseconds 2000
-        
+
         # Check if still running
         if ($process.HasExited) {
             $result.status = "crashed"
             $result.errors += "Process exited with code: $($process.ExitCode)"
-            
+
             $stdoutText = $stdout.ToString()
             $stderrText = $stderr.ToString()
-            
+
             if ($stdoutText) {
                 $result.info += "STDOUT: $stdoutText"
             }
             if ($stderrText) {
                 $result.errors += "STDERR: $stderrText"
             }
-            
+
             Write-Host "  [ERROR] Process crashed (exit code: $($process.ExitCode))" -ForegroundColor Red
             if ($Verbose -and $stderrText) {
                 Write-Host "  [DEBUG] Error output:" -ForegroundColor Gray
@@ -181,19 +181,19 @@ function Test-ServerStartup {
             $result.status = "running"
             $result.info += "Server is running"
             Write-Host "  [OK] Server is running" -ForegroundColor Green
-            
+
             # Kill the process
             $process.Kill()
             $process.WaitForExit(5000)
             Write-Host "  [INFO] Server stopped cleanly" -ForegroundColor Gray
         }
-        
+
     } catch {
         $result.status = "error"
         $result.errors += "Exception: $_"
         Write-Host "  [ERROR] Exception: $_" -ForegroundColor Red
     }
-    
+
     Write-Host ""
     return $result
 }
@@ -202,16 +202,16 @@ function Test-ServerStartup {
 $serverIndex = 1
 foreach ($server in $servers) {
     Write-Host "[$serverIndex/$($servers.Count)] " -NoNewline -ForegroundColor Cyan
-    
+
     # Skip if specific server requested and this isn't it
     if ($ServerName -and $server.name -ne $ServerName) {
         $serverIndex++
         continue
     }
-    
+
     $result = Test-ServerStartup -Name $server.name -Source $server.source
     $testResults.servers[$server.name] = $result
-    
+
     $serverIndex++
 }
 
@@ -233,7 +233,7 @@ $statusCounts = @{
 foreach ($result in $testResults.servers.Values) {
     $status = $result.status
     $statusCounts[$status]++
-    
+
     $statusIcon = switch ($status) {
         "running" { "[OK]" }
         "crashed" { "[CRASH]" }
@@ -242,7 +242,7 @@ foreach ($result in $testResults.servers.Values) {
         "error" { "[ERROR]" }
         default { "[?]" }
     }
-    
+
     $color = switch ($status) {
         "running" { "Green" }
         "crashed" { "Red" }
@@ -251,9 +251,9 @@ foreach ($result in $testResults.servers.Values) {
         "error" { "Red" }
         default { "Gray" }
     }
-    
+
     Write-Host "$statusIcon $($result.name) - $status" -ForegroundColor $color
-    
+
     if ($Verbose -and $result.errors.Count -gt 0) {
         foreach ($error in $result.errors) {
             Write-Host "    Error: $error" -ForegroundColor Gray
@@ -270,8 +270,8 @@ Write-Host "  Failed: $($statusCounts.failed_to_start)" -ForegroundColor Red
 Write-Host "  Errors: $($statusCounts.error)" -ForegroundColor Red
 
 $totalTested = $testResults.servers.Count
-$successRate = if ($totalTested -gt 0) { 
-    [math]::Round(($statusCounts.running / $totalTested) * 100, 1) 
+$successRate = if ($totalTested -gt 0) {
+    [math]::Round(($statusCounts.running / $totalTested) * 100, 1)
 } else { 0 }
 
 Write-Host ""

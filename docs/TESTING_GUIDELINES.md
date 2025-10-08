@@ -3,19 +3,19 @@
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Testing Philosophy](#testing-philosophy)
-3. [Test Organization](#test-organization)
-4. [Test Types](#test-types)
-5. [Writing Tests](#writing-tests)
-6. [Test Naming Conventions](#test-naming-conventions)
-7. [Test Utilities and Helpers](#test-utilities-and-helpers)
-8. [Running Tests](#running-tests)
-9. [CI/CD Integration](#cicd-integration)
-10. [Troubleshooting](#troubleshooting)
-11. [Best Practices](#best-practices)
-12. [Examples](#examples)
+1. [Testing Philosophy](#testing-philosophy)
+1. [Test Organization](#test-organization)
+1. [Test Types](#test-types)
+1. [Writing Tests](#writing-tests)
+1. [Test Naming Conventions](#test-naming-conventions)
+1. [Test Utilities and Helpers](#test-utilities-and-helpers)
+1. [Running Tests](#running-tests)
+1. [CI/CD Integration](#cicd-integration)
+1. [Troubleshooting](#troubleshooting)
+1. [Best Practices](#best-practices)
+1. [Examples](#examples)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -24,10 +24,10 @@ This document outlines the testing strategy, guidelines, and best practices for 
 ### Testing Goals
 
 1. **Correctness**: Ensure all code behaves as expected
-2. **Regression Prevention**: Catch bugs before they reach production
-3. **Documentation**: Tests serve as executable documentation
-4. **Refactoring Confidence**: Enable safe code changes
-5. **Performance**: Detect performance regressions early
+1. **Regression Prevention**: Catch bugs before they reach production
+1. **Documentation**: Tests serve as executable documentation
+1. **Refactoring Confidence**: Enable safe code changes
+1. **Performance**: Detect performance regressions early
 
 ### Key Principles
 
@@ -37,7 +37,7 @@ This document outlines the testing strategy, guidelines, and best practices for 
 - **Tests should be readable** and self-documenting
 - **Test behavior, not implementation** details
 
----
+______________________________________________________________________
 
 ## Testing Philosophy
 
@@ -68,7 +68,7 @@ We follow the classic test pyramid:
 - **Overall Project**: 70%+ line coverage
 - **Public APIs**: 100% coverage of public functions
 
----
+______________________________________________________________________
 
 ## Test Organization
 
@@ -106,11 +106,11 @@ mistral.rs/
 ### Test Location Rules
 
 1. **Unit Tests**: Place in the same file as the code, in a `#[cfg(test)]` module
-2. **Integration Tests**: Place in the `tests/` directory at crate root
-3. **Benchmarks**: Place in the `benches/` directory at crate root
-4. **Test Fixtures**: Place in `tests/fixtures/` or near the test file
+1. **Integration Tests**: Place in the `tests/` directory at crate root
+1. **Benchmarks**: Place in the `benches/` directory at crate root
+1. **Test Fixtures**: Place in `tests/fixtures/` or near the test file
 
----
+______________________________________________________________________
 
 ## Test Types
 
@@ -119,12 +119,14 @@ mistral.rs/
 **Purpose**: Test individual functions, methods, or small units of code in isolation.
 
 **Characteristics**:
+
 - Fast execution (microseconds to milliseconds)
 - No external dependencies (filesystem, network, database)
 - Use mocks/stubs for dependencies
 - Test both happy path and error cases
 
 **Example**:
+
 ```rust
 #[cfg(test)]
 mod tests {
@@ -151,12 +153,14 @@ mod tests {
 **Purpose**: Test interactions between modules, crates, or components.
 
 **Characteristics**:
+
 - Slower than unit tests (milliseconds to seconds)
 - May use real dependencies (filesystem, test databases)
 - Test API contracts and module boundaries
 - Located in `tests/` directory
 
 **Example**:
+
 ```rust
 // tests/integration_test.rs
 use mistralrs_core::Engine;
@@ -174,12 +178,14 @@ fn test_engine_inference_pipeline() {
 **Purpose**: Test complete user workflows through the entire system.
 
 **Characteristics**:
+
 - Slowest tests (seconds to minutes)
 - Use real external services or mocked versions
 - Test from user's perspective
 - Located in `tests/e2e/` or similar
 
 **Example**:
+
 ```rust
 // tests/e2e/agent_workflow.rs
 #[tokio::test]
@@ -196,12 +202,14 @@ async fn test_agent_completes_task_end_to_end() {
 **Purpose**: Test properties that should hold for any input.
 
 **Characteristics**:
+
 - Uses `proptest` or `quickcheck`
 - Generates random inputs
 - Tests invariants and properties
 - Excellent for finding edge cases
 
 **Example**:
+
 ```rust
 use proptest::prelude::*;
 
@@ -220,11 +228,13 @@ proptest! {
 **Purpose**: Measure and track performance over time.
 
 **Characteristics**:
+
 - Uses `criterion` for statistical rigor
 - Detects performance regressions
 - Located in `benches/` directory
 
 **Example**:
+
 ```rust
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
@@ -238,7 +248,7 @@ criterion_group!(benches, benchmark_inference);
 criterion_main!(benches);
 ```
 
----
+______________________________________________________________________
 
 ## Writing Tests
 
@@ -331,16 +341,16 @@ mod tests {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Test Naming Conventions
 
 ### General Rules
 
 1. **Be descriptive**: Test names should describe what is being tested and the expected outcome
-2. **Use snake_case**: Follow Rust conventions
-3. **Start with `test_`**: Makes it easy to identify tests
-4. **Include scenario**: Describe the specific case being tested
+1. **Use snake_case**: Follow Rust conventions
+1. **Start with `test_`**: Makes it easy to identify tests
+1. **Include scenario**: Describe the specific case being tested
 
 ### Naming Templates
 
@@ -385,7 +395,7 @@ proptest! {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Test Utilities and Helpers
 
@@ -457,50 +467,58 @@ fn test_file_operations() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Running Tests
 
 ### Local Testing
 
 #### Run All Tests
+
 ```bash
 cargo test --workspace
 ```
 
 #### Run Tests for Specific Crate
+
 ```bash
 cargo test -p mistralrs-core
 cargo test -p mistralrs-agent-tools
 ```
 
 #### Run Specific Test
+
 ```bash
 cargo test test_parse_valid_input
 ```
 
 #### Run Tests Matching Pattern
+
 ```bash
 cargo test parse  # Runs all tests with "parse" in the name
 ```
 
 #### Run with Output
+
 ```bash
 cargo test -- --nocapture  # Show println! output
 cargo test -- --show-output # Show output even for passing tests
 ```
 
 #### Run Single-Threaded
+
 ```bash
 cargo test -- --test-threads=1
 ```
 
 #### Run Integration Tests Only
+
 ```bash
 cargo test --test '*'
 ```
 
 #### Run Doc Tests
+
 ```bash
 cargo test --doc
 ```
@@ -530,7 +548,7 @@ make test-winutils     # Test winutils
 make ci-full           # Run full CI pipeline locally
 ```
 
----
+______________________________________________________________________
 
 ## CI/CD Integration
 
@@ -541,25 +559,30 @@ The project uses GitHub Actions for CI/CD. See `.github/workflows/ci.yml` for th
 #### CI Stages
 
 1. **Quick Check** (Fail Fast)
+
    - Formatting check (`cargo fmt`)
    - Clippy linting (`cargo clippy`)
 
-2. **Build & Test** (Parallel)
+1. **Build & Test** (Parallel)
+
    - Cross-platform check (Linux, macOS, Windows)
    - Workspace tests with all features
    - Documentation tests
 
-3. **Coverage**
+1. **Coverage**
+
    - Code coverage collection (Linux only)
    - Upload to Codecov
 
-4. **Quality Checks**
+1. **Quality Checks**
+
    - Documentation build
    - Typo checking
    - MSRV verification
    - Security audit
 
-5. **Integration Tests**
+1. **Integration Tests**
+
    - Full integration test suite
 
 #### Running CI Locally
@@ -596,7 +619,7 @@ Pre-commit runs automatically on `git commit`. To run manually:
 pre-commit run --all-files
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -607,6 +630,7 @@ pre-commit run --all-files
 **Problem**: Some tests require environment variables (e.g., `TESTS_HF_TOKEN`).
 
 **Solution**:
+
 ```bash
 export TESTS_HF_TOKEN="your_token_here"
 cargo test
@@ -617,15 +641,16 @@ cargo test
 **Problem**: Tests take a long time to run.
 
 **Solutions**:
+
 1. Run tests in parallel (default):
    ```bash
    cargo test -- --test-threads=4
    ```
-2. Run only specific tests:
+1. Run only specific tests:
    ```bash
    cargo test test_name
    ```
-3. Use release mode for faster execution:
+1. Use release mode for faster execution:
    ```bash
    cargo test --release
    ```
@@ -635,10 +660,11 @@ cargo test
 **Problem**: Tests pass sometimes and fail other times.
 
 **Solutions**:
+
 1. Ensure tests are isolated (no shared state)
-2. Use explicit timeouts for async operations
-3. Avoid relying on timing-dependent behavior
-4. Use deterministic random seeds:
+1. Use explicit timeouts for async operations
+1. Avoid relying on timing-dependent behavior
+1. Use deterministic random seeds:
    ```rust
    use rand::SeedableRng;
    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
@@ -649,12 +675,14 @@ cargo test
 **Problem**: Tests fail on Windows but pass on Linux/macOS.
 
 **Common causes**:
+
 1. Path separator differences (`/` vs `\`)
-2. Line ending differences (`\n` vs `\r\n`)
-3. Case-sensitive filesystem assumptions
-4. Permission handling differences
+1. Line ending differences (`\n` vs `\r\n`)
+1. Case-sensitive filesystem assumptions
+1. Permission handling differences
 
 **Solutions**:
+
 - Use `std::path::Path` and `PathBuf` for paths
 - Normalize line endings in tests
 - Use platform-specific conditional compilation:
@@ -696,39 +724,45 @@ Run tests matching exact name:
 cargo test test_specific_function --exact
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
 ### DO
 
 ✅ **Write tests for bug fixes**
+
 - Add a failing test that reproduces the bug
 - Fix the bug
 - Verify the test now passes
 
 ✅ **Test edge cases**
+
 - Empty inputs
 - Boundary values (0, max, min)
 - Invalid inputs
 - Large inputs
 
 ✅ **Keep tests simple and focused**
+
 - One assertion per test (when possible)
 - Test one thing at a time
 - Avoid complex setup
 
 ✅ **Use descriptive assertion messages**
+
 ```rust
 assert_eq!(result, expected, "Expected greeting to contain name");
 ```
 
 ✅ **Make tests deterministic**
+
 - Avoid random values (or use seeded RNG)
 - Avoid timing-dependent behavior
 - Isolate tests from each other
 
 ✅ **Test public APIs thoroughly**
+
 - Every public function should have tests
 - Test all documented behavior
 - Test error conditions
@@ -736,30 +770,35 @@ assert_eq!(result, expected, "Expected greeting to contain name");
 ### DON'T
 
 ❌ **Don't test implementation details**
+
 - Test behavior, not internal structure
 - Refactoring shouldn't break tests
 
 ❌ **Don't write slow tests**
+
 - Unit tests should be fast (< 10ms)
 - Use mocks instead of real I/O
 - Run expensive tests separately
 
 ❌ **Don't use shared mutable state**
+
 - Tests should be independent
 - Avoid static mut, global state
 - Use test isolation techniques
 
 ❌ **Don't ignore test failures**
+
 - Fix failing tests immediately
 - Don't skip tests with `#[ignore]` permanently
 - Don't comment out failing tests
 
 ❌ **Don't test third-party code**
+
 - Assume libraries work correctly
 - Test your usage of libraries
 - Use integration tests for external dependencies
 
----
+______________________________________________________________________
 
 ## Examples
 
@@ -851,7 +890,7 @@ async fn test_engine_inference_flow() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -864,12 +903,13 @@ async fn test_engine_inference_flow() {
 - **Maintain test quality**: Tests should be as clean as production code
 
 **For more information**:
+
 - See `docs/CI_CD.md` for CI/CD pipeline details
 - See `docs/TESTING_ANALYSIS.md` for testing infrastructure analysis
 - See Rust Testing Book: https://doc.rust-lang.org/book/ch11-00-testing.html
 
----
+______________________________________________________________________
 
-*Document Version*: 1.0  
-*Last Updated*: 2025-01-05  
+*Document Version*: 1.0\
+*Last Updated*: 2025-01-05\
 *Maintained by*: Testing Infrastructure Team

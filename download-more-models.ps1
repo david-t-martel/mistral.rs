@@ -49,51 +49,51 @@ $models = @{
 
 function Download-Model {
     param($modelInfo, $modelType)
-    
+
     Write-Host "[$modelType] $($modelInfo.name)" -ForegroundColor Yellow
     Write-Host "  Size: $($modelInfo.size)" -ForegroundColor Gray
     Write-Host "  Use: $($modelInfo.use)" -ForegroundColor Gray
-    
+
     # Create directory
     $dir = Split-Path $modelInfo.path -Parent
     if (-not (Test-Path $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
         Write-Host "  Created directory: $dir" -ForegroundColor Gray
     }
-    
+
     # Check if exists
     if ((Test-Path $modelInfo.path) -and -not $SkipExisting) {
         $size = [math]::Round((Get-Item $modelInfo.path).Length / 1GB, 2)
         Write-Host "  [OK] Already exists ($size GB)" -ForegroundColor Green
         return $true
     }
-    
+
     if (Test-Path $modelInfo.path) {
         Write-Host "  [SKIP] Skipping existing file" -ForegroundColor Yellow
         return $true
     }
-    
+
     # Handle special cases
     if ($modelInfo.note) {
         Write-Host "  [WARN] $($modelInfo.note)" -ForegroundColor Yellow
         return $false
     }
-    
+
     # Download
     Write-Host "  Downloading..." -ForegroundColor Cyan
     $startTime = Get-Date
-    
+
     try {
         Invoke-WebRequest -Uri $modelInfo.url -OutFile $modelInfo.path -UseBasicParsing
-        
+
         $duration = ((Get-Date) - $startTime).TotalMinutes
         $size = [math]::Round((Get-Item $modelInfo.path).Length / 1GB, 2)
-        
+
         Write-Host "  [OK] Downloaded successfully ($size GB in $([math]::Round($duration, 1)) min)" -ForegroundColor Green
         return $true
     } catch {
         Write-Host "  [ERROR] Download failed: $_" -ForegroundColor Red
-        
+
         # Clean up partial download
         if (Test-Path $modelInfo.path) {
             Remove-Item $modelInfo.path -Force

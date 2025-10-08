@@ -7,6 +7,7 @@ Integration testing validates that mistral.rs components work together correctly
 ## What Qualifies as Integration Test
 
 An integration test in mistral.rs context:
+
 - Tests interaction between multiple crates/modules
 - Validates binary functionality end-to-end
 - Tests model loading and inference pipeline
@@ -23,6 +24,7 @@ An integration test in mistral.rs context:
 **Location**: `tests/integration/test-binary-health.ps1`
 
 **What it tests**:
+
 - Binary exists and is executable
 - Version information is correct
 - Help command works
@@ -30,6 +32,7 @@ An integration test in mistral.rs context:
 - Error handling for invalid arguments
 
 **Example Test**:
+
 ```powershell
 # Test binary exists and runs
 $binary = "target\release\mistralrs-server.exe"
@@ -60,11 +63,13 @@ if ($help -notmatch "mistral.rs inference engine") {
 **Location**: `tests/integration/test-mistralrs.ps1`
 
 **Supported formats**:
+
 - GGUF (quantized models)
 - SafeTensors (HuggingFace format)
 - GGML (legacy format)
 
 **Example Test**:
+
 ```powershell
 # Test GGUF model loading
 $modelPath = "C:\codedev\llm\.models\qwen2.5-1.5b-it-gguf"
@@ -97,12 +102,14 @@ if ($output -notmatch "Model loaded successfully") {
 **Location**: `tests/integration/test-api-endpoints.ps1`
 
 **Endpoints tested**:
+
 - `/v1/chat/completions` - Chat completion
 - `/v1/models` - List models
 - `/v1/health` - Health check
 - `/v1/completions` - Text completion
 
 **Example Test**:
+
 ```powershell
 # Start server in background
 $server = Start-Process -FilePath $binary -ArgumentList @(
@@ -158,6 +165,7 @@ try {
 **Location**: `tests/integration/run-tui-test.ps1`
 
 **What it tests**:
+
 - TUI launches correctly
 - Keyboard input handling
 - Model selection
@@ -165,6 +173,7 @@ try {
 - Error display
 
 **Example Test**:
+
 ```powershell
 # Create input script for automated TUI testing
 $inputScript = @"
@@ -207,12 +216,14 @@ if ($output -notmatch "Model loaded") {
 **Location**: `tests/integration/test-performance.ps1`
 
 **Metrics tested**:
+
 - Tokens per second
 - Time to first token
 - Memory usage
 - GPU utilization
 
 **Example Test**:
+
 ```powershell
 # Performance benchmark configuration
 $benchmarkConfig = @{
@@ -333,6 +344,7 @@ try {
 ### Best Practices
 
 #### 1. Isolation
+
 Each test should be independent and not rely on state from other tests:
 
 ```powershell
@@ -348,6 +360,7 @@ try {
 ```
 
 #### 2. Timeouts
+
 Always implement timeouts to prevent hanging tests:
 
 ```powershell
@@ -369,6 +382,7 @@ if ($timer.Elapsed.TotalSeconds -ge $timeout) {
 ```
 
 #### 3. Resource Cleanup
+
 Always clean up resources, even on failure:
 
 ```powershell
@@ -390,6 +404,7 @@ try {
 ```
 
 #### 4. Meaningful Assertions
+
 Make assertions specific and informative:
 
 ```powershell
@@ -405,6 +420,7 @@ if ($result.StatusCode -ne 200) {
 ```
 
 #### 5. Test Data Management
+
 Use consistent test data from known sources:
 
 ```powershell
@@ -455,6 +471,7 @@ The master test runner (`tests/run-all-tests.ps1`) provides unified execution fo
 ### Test Discovery
 
 The runner automatically discovers tests matching these patterns:
+
 - `tests/integration/*.ps1` - All PowerShell scripts
 - `tests/integration/test-*.ps1` - Preferred naming
 
@@ -468,11 +485,13 @@ Some integration tests can run in parallel:
 ```
 
 **Safe for parallel**:
+
 - Binary validation
 - Model format tests
 - Performance benchmarks
 
 **NOT safe for parallel**:
+
 - HTTP server tests (port conflicts)
 - TUI tests (terminal conflicts)
 - Resource-intensive tests
@@ -537,6 +556,7 @@ while ($true) {
 **Cause**: Binary hasn't been built
 
 **Solution**:
+
 ```bash
 # Build the binary first
 make build-cuda-full  # For CUDA systems
@@ -548,6 +568,7 @@ make build           # For CPU-only
 **Cause**: Test models not downloaded
 
 **Solution**:
+
 ```powershell
 # Download test models
 .\scripts\tools\download-test-models.ps1
@@ -562,6 +583,7 @@ $env:TEST_MODEL_FILE = "model.gguf"
 **Cause**: Previous test didn't clean up properly
 
 **Solution**:
+
 ```powershell
 # Find and kill process using port
 netstat -ano | findstr :8080
@@ -576,6 +598,7 @@ $env:TEST_PORT = "8081"
 **Cause**: Large model or insufficient VRAM
 
 **Solution**:
+
 ```powershell
 # Use smaller model
 $env:TEST_MODEL_FILE = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
@@ -589,6 +612,7 @@ $env:TEST_BATCH_SIZE = "1"
 **Cause**: CUDA/cuDNN not properly configured
 
 **Solution**:
+
 ```bash
 # Verify CUDA setup
 make check-cuda-env
@@ -604,13 +628,13 @@ make build-cuda-full
 
 Target execution times for integration tests:
 
-| Test Type | Target Time | Maximum Time |
-|-----------|------------|--------------|
-| Binary validation | < 5 seconds | 10 seconds |
-| Model loading | < 30 seconds | 60 seconds |
-| API endpoint | < 10 seconds | 20 seconds |
-| TUI test | < 20 seconds | 40 seconds |
-| Performance benchmark | < 2 minutes | 5 minutes |
+| Test Type             | Target Time  | Maximum Time |
+| --------------------- | ------------ | ------------ |
+| Binary validation     | < 5 seconds  | 10 seconds   |
+| Model loading         | < 30 seconds | 60 seconds   |
+| API endpoint          | < 10 seconds | 20 seconds   |
+| TUI test              | < 20 seconds | 40 seconds   |
+| Performance benchmark | < 2 minutes  | 5 minutes    |
 
 ### Resource Usage
 
@@ -729,6 +753,7 @@ make ci
 ### HTML Report
 
 Generated reports include:
+
 - Summary statistics
 - Test execution timeline
 - Failure details with stack traces
@@ -742,7 +767,7 @@ Generated reports include:
 - Review [CI/CD Testing Guide](ci-cd-testing.md) for automation setup
 - Check [Testing Migration Guide](../development/testing-migration.md) if migrating from old structure
 
----
+______________________________________________________________________
 
 *Last Updated: 2025*
 *Version: 1.0.0*

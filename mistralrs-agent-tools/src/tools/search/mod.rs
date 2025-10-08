@@ -315,8 +315,10 @@ mod tests {
         writeln!(f, "Hello world").unwrap();
         writeln!(f, "Find the TODO here").unwrap();
         let sandbox = Sandbox::new(SandboxConfig::new(dir.path().to_path_buf()));
-        let mut opts = GrepOptions::default();
-        opts.context = 1;
+        let opts = GrepOptions {
+            context: 1,
+            ..Default::default()
+        };
         let res = grep(&sandbox, dir.path(), "TODO", &opts).unwrap();
         assert_eq!(res.matches.len(), 1);
         let m = &res.matches[0];

@@ -36,21 +36,21 @@ if ($helpExitCode -eq 0) {
     ($helpOutput | Select-Object -First 20) -join "`n" | Write-Host
 } else {
     Write-Host "✗ Binary failed with exit code: $helpExitCode (0x$($helpExitCode.ToString('X')))" -ForegroundColor Red
-    
+
     # Decode common error codes
     switch ($helpExitCode) {
         3221225781 { Write-Host "  ERROR: 0xC0000135 - DLL dependency missing" -ForegroundColor Red }
         3221225501 { Write-Host "  ERROR: 0xC000007B - Architecture mismatch (32/64-bit)" -ForegroundColor Red }
         default { Write-Host "  Unknown error code" -ForegroundColor Red }
     }
-    
+
     Write-Host ""
     Write-Host "Common fixes:" -ForegroundColor Yellow
     Write-Host "  1. Ensure CUDA 12.9 is installed and on PATH" -ForegroundColor Gray
     Write-Host "  2. Check cuDNN 9.8 DLLs are accessible" -ForegroundColor Gray
     Write-Host "  3. Verify Visual C++ Redistributable is installed" -ForegroundColor Gray
     Write-Host "  4. Run 'setup-dev-env.ps1' to configure environment" -ForegroundColor Gray
-    
+
     Write-Host ""
     Write-Host "Error output:" -ForegroundColor Red
     $helpOutput | Write-Host

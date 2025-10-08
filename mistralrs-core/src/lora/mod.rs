@@ -129,8 +129,14 @@ impl LinearLayerLike for Linear {
         self.bias()
     }
     fn quant_inner(&mut self) -> &mut Arc<dyn QuantMethod> {
-        // TODO: Provide QuantMethod shim for plain Linear (avoid panic in generic adapter logic)
-        unimplemented!("Linear layer has no reasonable quant inner!")
+        // Plain Linear layers are not quantized and don't have a QuantMethod.
+        // This method should not be called on non-quantized layers.
+        // If you need quantization, use a quantized linear layer type (GGUF, HQQ, etc.)
+        panic!(
+            "quant_inner() called on plain Linear layer. \
+            Plain Linear layers are not quantized. \
+            Use a quantized layer type (GGUFMatMul, HqqLayer, etc.) for quantized operations."
+        )
     }
     fn weight(&self) -> &Tensor {
         self.weight()

@@ -56,9 +56,9 @@ body {
   gap: 0.8rem;
 }
 
-#sidebar h2 { 
+#sidebar h2 {
   font-size:1.2rem;
-  margin:0 0 0.5rem; 
+  margin:0 0 0.5rem;
 }
 
 #modelSelect, #clearBtn, #newChatBtn, #renameBtn, #deleteBtn {
@@ -110,8 +110,8 @@ body {
   user-select:none;
 }
 
-#chatList li:hover{ 
-  background: var(--main-bg); 
+#chatList li:hover{
+  background: var(--main-bg);
 }
 
 #chatList li.active {
@@ -215,8 +215,8 @@ body {
 }
 
 /* ----- file upload and previews ----- */
-#imageInput, #textInput { 
-  display:none; 
+#imageInput, #textInput {
+  display:none;
 }
 
 img.chat-preview {
@@ -348,46 +348,46 @@ img.chat-preview {
   outline-offset: -4px;
   cursor: copy;
 }
-  body { 
-    flex-direction: column; 
+  body {
+    flex-direction: column;
   }
-  
+
   #sidebar {
-    width: 100%; 
-    min-width: 0; 
-    max-width: none; 
+    width: 100%;
+    min-width: 0;
+    max-width: none;
     flex-direction: row;
-    gap:0.5rem; 
-    overflow-x:auto; 
-    border-right:none; 
+    gap:0.5rem;
+    overflow-x:auto;
+    border-right:none;
     border-bottom:1px solid var(--border-color);
     padding: 0.75rem 1rem;
   }
-  
-  #sidebar h2 { 
-    display:none; 
+
+  #sidebar h2 {
+    display:none;
   }
-  
-  #modelSelect, #newChatBtn, #clearBtn, #renameBtn, #deleteBtn { 
-    flex: 0 0 auto; 
+
+  #modelSelect, #newChatBtn, #clearBtn, #renameBtn, #deleteBtn {
+    flex: 0 0 auto;
   }
-  
-  #chatList { 
-    display:none; 
+
+  #chatList {
+    display:none;
   }
-  
-  #main { 
-    padding: 1rem; 
+
+  #main {
+    padding: 1rem;
   }
-  
-  .user,.assistant{ 
-    max-width:100%; 
+
+  .user,.assistant{
+    max-width:100%;
   }
 }
 
 /* ----- copy button style ----- */
-pre { 
-  position: relative; 
+pre {
+  position: relative;
 }
 
 .copy-btn {
@@ -405,8 +405,8 @@ pre {
   transition: opacity 0.2s;
 }
 
-pre:hover .copy-btn { 
-  opacity: 1; 
+pre:hover .copy-btn {
+  opacity: 1;
 }
 
 /* Spinner */

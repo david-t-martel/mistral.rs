@@ -1,5 +1,7 @@
 # mistral.rs Deployment Checklist - Validated & Production-Ready
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before using this checklist._
+
 **Version**: 1.0.0
 **Date**: 2025-10-03
 **Status**: ✅ Validated with Actual Testing

@@ -52,7 +52,7 @@ pub fn sort(sandbox: &Sandbox, paths: &[&Path], options: &SortOptions) -> AgentR
 }
 
 /// Sort lines according to options
-fn sort_lines(lines: &mut Vec<String>, options: &SortOptions) {
+fn sort_lines(lines: &mut [String], options: &SortOptions) {
     if options.numeric {
         // Numeric sort
         lines.sort_by(|a, b| compare_numeric(a, b, options));

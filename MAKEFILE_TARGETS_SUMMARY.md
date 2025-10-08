@@ -1,5 +1,7 @@
 # Makefile Targets Implementation Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before executing these targets._
+
 **Date:** 2025-10-03
 **Status:** ✅ Complete
 **Total Targets Added:** 35 new deployment & validation targets

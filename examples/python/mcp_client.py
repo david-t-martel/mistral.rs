@@ -63,7 +63,7 @@ async def main():
     mcp_config_simple = mistralrs.McpClientConfigPy(servers=[filesystem_server_simple])
 
     # Alternative: Full MCP client configuration with multiple servers
-    mcp_config_full = mistralrs.McpClientConfigPy(
+    _mcp_config_full = mistralrs.McpClientConfigPy(
         servers=[
             filesystem_server_simple,
             hf_server,

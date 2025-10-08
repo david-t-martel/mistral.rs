@@ -8,8 +8,8 @@
 
 // #define CHECK(cond, ...) \
 //   assert(cond); \
-  
-#define CHECK(cond, ...) 
+
+#define CHECK(cond, ...)
 
 namespace marlin {
 

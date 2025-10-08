@@ -22,7 +22,7 @@ impl Sandbox {
         if let Ok(canonical) = config.root.canonicalize() {
             config.root = canonical;
         }
-        Self { 
+        Self {
             config,
             override_enabled: false,
         }
@@ -55,14 +55,16 @@ impl Sandbox {
 
         // Validate against security policy if present
         if let Some(policy) = &self.config.security_policy {
-            policy.validate_path(&normalized)
-                .map_err(|e| AgentError::SandboxViolation(e))?;
-            
+            policy
+                .validate_path(&normalized)
+                .map_err(AgentError::SandboxViolation)?;
+
             // Check file extension if policy requires it
             if let Some(ext) = normalized.extension() {
                 if let Some(ext_str) = ext.to_str() {
-                    policy.validate_file_extension(ext_str)
-                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                    policy
+                        .validate_file_extension(ext_str)
+                        .map_err(AgentError::SandboxViolation)?;
                 }
             }
         }
@@ -100,26 +102,26 @@ impl Sandbox {
 
         // Validate against security policy if present
         if let Some(policy) = &self.config.security_policy {
-            policy.validate_path(&normalized)
-                .map_err(|e| AgentError::SandboxViolation(e))?;
-            
+            policy
+                .validate_path(&normalized)
+                .map_err(AgentError::SandboxViolation)?;
+
             // Check file extension if policy requires it
             if let Some(ext) = normalized.extension() {
                 if let Some(ext_str) = ext.to_str() {
-                    policy.validate_file_extension(ext_str)
-                        .map_err(|e| AgentError::SandboxViolation(e))?;
+                    policy
+                        .validate_file_extension(ext_str)
+                        .map_err(AgentError::SandboxViolation)?;
                 }
             }
         }
 
         // Write operations MUST be within sandbox unless policy allows
-        if !self.is_within_sandbox(&normalized) {
-            if !self.config.effective_allow_write_outside() {
-                return Err(AgentError::SandboxViolation(format!(
-                    "Write operation outside sandbox: {}",
-                    normalized.display()
-                )));
-            }
+        if !self.is_within_sandbox(&normalized) && !self.config.effective_allow_write_outside() {
+            return Err(AgentError::SandboxViolation(format!(
+                "Write operation outside sandbox: {}",
+                normalized.display()
+            )));
         }
 
         Ok(normalized)
@@ -143,8 +145,9 @@ impl Sandbox {
 
         // Validate batch size against security policy
         if let Some(policy) = &self.config.security_policy {
-            policy.validate_batch_size(paths.len())
-                .map_err(|e| AgentError::InvalidInput(e))?;
+            policy
+                .validate_batch_size(paths.len())
+                .map_err(AgentError::InvalidInput)?;
         }
 
         paths.iter().map(|p| self.validate_read(p)).collect()
@@ -171,8 +174,9 @@ impl Sandbox {
 
         // Validate against security policy
         if let Some(policy) = &self.config.security_policy {
-            policy.validate_file_size(size)
-                .map_err(|e| AgentError::InvalidInput(e))?;
+            policy
+                .validate_file_size(size)
+                .map_err(AgentError::InvalidInput)?;
         }
 
         Ok(size)
@@ -341,11 +345,11 @@ mod tests {
     #[test]
     fn test_relative_path_handling() {
         let sandbox = create_test_sandbox();
-        
+
         // Create a subdirectory for the test
         let subdir = sandbox.root().join("relative");
         std::fs::create_dir_all(&subdir).unwrap();
-        
+
         let relative_path = Path::new("relative/file.txt");
 
         // Relative paths should be resolved relative to sandbox root
@@ -355,7 +359,7 @@ mod tests {
         if let Ok(path) = resolved {
             assert!(path.starts_with(sandbox.root()));
         }
-        
+
         // Clean up
         std::fs::remove_dir_all(&subdir).ok();
     }

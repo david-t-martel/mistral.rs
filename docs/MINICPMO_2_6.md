@@ -8,6 +8,7 @@ UQFF quantizations are coming soon.
 > Only the vision portion of this model has been implemented. No audio features are supported yet.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -15,6 +16,7 @@ The Python and HTTP APIs support sending images as:
 The Rust API takes an image from the [image](https://docs.rs/image/latest/image/index.html) crate.
 
 ## ToC
+
 - [MiniCPM-O 2.6 Model: `openbmb/MiniCPM-o-2_6`](#minicpm-o-26-model-openbmbminicpm-o-2_6)
   - [ToC](#toc)
   - [Interactive mode](#interactive-mode)
@@ -26,7 +28,7 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 
 Mistral.rs supports interactive mode for vision models! It is an easy way to interact with the model.
 
-1) Start up interactive mode with the MiniCPM-O 2.6 Model model
+1. Start up interactive mode with the MiniCPM-O 2.6 Model model
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -35,13 +37,14 @@ Mistral.rs supports interactive mode for vision models! It is an easy way to int
 cargo run --features ... --release -- -i --isq 4 vision-plain -m openbmb/MiniCPM-o-2_6
 ```
 
-2) Say hello!
+2. Say hello!
+
 ```
 > Hello!
 How can I assist you today?
 ```
 
-3) Pass the model an image and ask a question.
+3. Pass the model an image and ask a question.
 
 ```
 > Hello!
@@ -50,26 +53,29 @@ How can I assist you today?
 The image shows a close-up view of a rose flower with dew drops on its petals. The rose is in full bloom, with its petals unfolding and displaying vibrant pink coloration. The dew drops on the petals create a delicate, glistening effect, adding to the overall visual appeal of the flower. The background is blurred, focusing attention on the intricate details of the rose.
 ```
 
-
 ## HTTP server
+
 You can find this example [here](../examples/server/minicpmo_2_6.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 What is shown in this image? Write a detailed response analyzing the scene.
 ```
 
 **Output:**
+
 ```
 The image shows Mount Washington, the highest peak in the Northeastern United States, located in the White Mountains of New Hampshire. The scene captures the mountain's rugged terrain and varied landscape features. 
 
@@ -86,9 +92,9 @@ The image also captures the atmospheric conditions on Mount Washington, with clo
 Overall, the image showcases the diverse geological and ecological features of Mount Washington, highlighting its role as a significant natural landmark in the Northeastern United States.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -97,7 +103,7 @@ Overall, the image showcases the diverse geological and ecological features of M
 cargo run --release --features ... -- --port 1234 --isq 4 vision-plain -m openbmb/MiniCPM-o-2_6
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -136,9 +142,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/minicpmo_2_6/main.rs).
 
 ```rust
@@ -182,9 +189,10 @@ async fn main() -> Result<()> {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Python
+
 You can find this example [here](../examples/python/minicpmo_2_6.py).
 
 This example demonstrates loading and sending a chat completion request with an image.

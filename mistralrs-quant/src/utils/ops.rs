@@ -741,7 +741,7 @@ impl CustomOp1 for BitWiseUnary {
 
     #[cfg(feature = "cuda")]
     fn cuda_fwd(&self, _s1: &CudaStorage, _l1: &Layout) -> Result<(CudaStorage, Shape)> {
-        todo!()
+        candle_core::bail!("CUDA backend for BitWiseUnary operation is not yet implemented. Use CPU for this operation.")
     }
 
     #[cfg(feature = "metal")]
@@ -1426,7 +1426,9 @@ impl CustomOp1 for CumSum {
 
     #[cfg(feature = "cuda")]
     fn cuda_fwd(&self, _s1: &CudaStorage, _l1: &Layout) -> Result<(CudaStorage, Shape)> {
-        todo!()
+        candle_core::bail!(
+            "CUDA backend for CumSum operation is not yet implemented. Use CPU for this operation."
+        )
     }
 
     #[cfg(feature = "metal")]

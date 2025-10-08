@@ -63,5 +63,3 @@ jobs:
                 platforms: 'linux/amd64'
                 tags: ${{ steps.meta-cpu.outputs.tags }}
                 labels: ${{ steps.meta-cpu.outputs.labels }}
-            
-            

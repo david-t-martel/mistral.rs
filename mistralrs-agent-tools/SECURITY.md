@@ -264,9 +264,9 @@ When override is enabled:
 Override should **ONLY** be used in these specific scenarios:
 
 1. **Emergency Access**: Recovery operations requiring temporary elevated permissions
-2. **Administrative Tasks**: Maintenance operations by trusted administrators
-3. **Testing**: Controlled testing environments where security is explicitly disabled
-4. **Migration**: Temporary bypass during system migrations
+1. **Administrative Tasks**: Maintenance operations by trusted administrators
+1. **Testing**: Controlled testing environments where security is explicitly disabled
+1. **Migration**: Temporary bypass during system migrations
 
 ### Best Practices for Override
 
@@ -364,9 +364,9 @@ Or keep your code unchanged - it will continue to work in legacy mode!
 You can adopt security policies gradually:
 
 1. **Phase 1**: Keep existing code, no changes needed
-2. **Phase 2**: Add security policies to new code only
-3. **Phase 3**: Migrate critical paths to security policies
-4. **Phase 4**: Complete migration, deprecate legacy API
+1. **Phase 2**: Add security policies to new code only
+1. **Phase 3**: Migrate critical paths to security policies
+1. **Phase 4**: Complete migration, deprecate legacy API
 
 ## Security Considerations
 
@@ -375,11 +375,11 @@ You can adopt security policies gradually:
 Security policies provide multiple layers of protection:
 
 1. **Sandbox boundary** - Path-based access control
-2. **File extension filtering** - Prevent access to sensitive file types
-3. **Blocked path list** - Explicitly deny critical system paths
-4. **Resource limits** - Prevent DoS attacks
-5. **Command filtering** - Prevent dangerous operations
-6. **Network restrictions** - Control external access
+1. **File extension filtering** - Prevent access to sensitive file types
+1. **Blocked path list** - Explicitly deny critical system paths
+1. **Resource limits** - Prevent DoS attacks
+1. **Command filtering** - Prevent dangerous operations
+1. **Network restrictions** - Control external access
 
 ### Audit and Logging
 
@@ -411,10 +411,10 @@ if sandbox.is_override_enabled() {
 For production environments:
 
 1. **Use Strict or Moderate** - Never use Disabled in production
-2. **Disable Override** - Never enable `allow_override` in production
-3. **Audit Regularly** - Review security logs for violations
-4. **Principle of Least Privilege** - Grant minimum necessary permissions
-5. **Update Blocklists** - Keep blocked paths current with system changes
+1. **Disable Override** - Never enable `allow_override` in production
+1. **Audit Regularly** - Review security logs for violations
+1. **Principle of Least Privilege** - Grant minimum necessary permissions
+1. **Update Blocklists** - Keep blocked paths current with system changes
 
 ## Examples
 
@@ -528,8 +528,8 @@ fn test_sandbox_with_policy() {
 For questions or issues related to the security policy system:
 
 1. Check this documentation
-2. Review the code in `src/types/security.rs` and `src/tools/sandbox.rs`
-3. Open an issue on GitHub with the `security` label
+1. Review the code in `src/types/security.rs` and `src/tools/sandbox.rs`
+1. Open an issue on GitHub with the `security` label
 
 ## Version History
 

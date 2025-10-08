@@ -702,8 +702,9 @@ impl NormalModel for Model {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement XLora forward for multimodal mistral variant (handle vision + text adapter fusion)
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this LLaVA Mistral model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &EitherCache {
         &self.cache

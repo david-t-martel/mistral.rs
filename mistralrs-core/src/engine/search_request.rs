@@ -398,9 +398,9 @@ async fn do_custom_tool(
 /// Drive one or more web-search / extraction rounds without recursion.
 ///
 /// Strategy:
-/// 1. Send a “probe” request that may call the search/extract tools.  
+/// 1. Send a “probe” request that may call the search/extract tools.
 /// 2. If such a tool is called, run it (`do_search` / `do_extraction`) to
-///    mutate the conversational context and build the next request.  
+///    mutate the conversational context and build the next request.
 /// 3. Repeat until no further tool call is made.
 /// 4. Forward every user-visible reply **except** the first, which is just the
 ///    probe that discovers whether a tool call is needed.

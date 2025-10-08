@@ -1,5 +1,7 @@
 # Deployment Targets - Quick Start Guide
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before executing these deployment tasks._
+
 **TL;DR:** 35 new Makefile targets for testing, deployment, and validation.
 
 ## Most Common Commands

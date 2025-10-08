@@ -12,7 +12,7 @@ template <typename T>
   template [[host_name("bitwise_or_" #type)]] [[kernel]] void                  \
   bitwise_or<type>(const device type *a [[buffer(0)]],                         \
                    const device type *b [[buffer(1)]],                         \
-                   device type *out [[buffer(2)]],                            \            
+                   device type *out [[buffer(2)]],                            \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_bitwise_or(uint8_t);
@@ -32,7 +32,7 @@ template <typename T>
   template [[host_name("bitwise_xor_" #type)]] [[kernel]] void                 \
   bitwise_xor<type>(const device type *a [[buffer(0)]],                        \
                     const device type *b [[buffer(1)]],                        \
-                    device type *out [[buffer(2)]],                            \            
+                    device type *out [[buffer(2)]],                            \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_bitwise_xor(uint8_t);
@@ -52,7 +52,7 @@ template <typename T>
   template [[host_name("bitwise_and_" #type)]] [[kernel]] void                 \
   bitwise_and<type>(const device type *a [[buffer(0)]],                        \
                     const device type *b [[buffer(1)]],                        \
-                    device type *out [[buffer(2)]],                            \            
+                    device type *out [[buffer(2)]],                            \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_bitwise_and(uint8_t);
@@ -89,7 +89,7 @@ template <typename T>
 #define instantiate_bitwise_not(type)                                          \
   template [[host_name("bitwise_not_" #type)]] [[kernel]] void                 \
   bitwise_not<type>(const device type *a [[buffer(0)]],                        \
-                    device type *out [[buffer(1)]],                            \            
+                    device type *out [[buffer(1)]],                            \
     uint tid [[thread_position_in_grid]]);
 
 instantiate_bitwise_not(uint8_t);

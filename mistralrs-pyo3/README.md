@@ -1,8 +1,9 @@
 # mistral.rs
 
-`mistralrs` is a Python package which provides an easy to use API for `mistral.rs`. 
+`mistralrs` is a Python package which provides an easy to use API for `mistral.rs`.
 
 ## Example
+
 More examples can be found [here](https://github.com/EricLBuehler/mistral.rs/tree/master/examples/python)!
 
 ```python

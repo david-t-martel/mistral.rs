@@ -24,7 +24,7 @@ pub fn tail(sandbox: &Sandbox, paths: &[&Path], options: &TailOptions) -> AgentR
         // Add header if needed
         if show_headers {
             if idx > 0 {
-                output.push_str("\n");
+                output.push('\n');
             }
             output.push_str(&format!("==> {} <==\n", path.display()));
         }

@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Refer to the [Repository Guidelines](AGENTS.md) for cross-agent expectations before applying these instructions.
 
 ## Project Overview
 

@@ -1,10 +1,13 @@
 # CI/CD Setup Complete - Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before acting on this CI/CD plan._
+
 ## ✅ What Was Created
 
 ### GitHub Actions Workflows (`.github/workflows/`)
 
 1. **rust-ci.yml** - Main Rust CI/CD Pipeline
+
    - Quick compilation checks
    - Format validation
    - Linting with clippy
@@ -13,14 +16,16 @@
    - Security auditing
    - Artifact uploads (30-day retention)
 
-2. **mcp-validation.yml** - MCP Server Testing
+1. **mcp-validation.yml** - MCP Server Testing
+
    - MCP config validation
    - Server availability testing (Linux & Windows)
    - Integration tests with mistralrs-server
    - Redis connectivity validation
    - Scheduled daily runs at 2am UTC
 
-3. **powershell-tests.yml** - PowerShell Test Suite
+1. **powershell-tests.yml** - PowerShell Test Suite
+
    - PSScriptAnalyzer validation
    - Comprehensive test execution
    - Model script testing
@@ -29,17 +34,20 @@
 ### Local Git Hooks (`.githooks/`)
 
 1. **pre-commit** (Bash & PowerShell versions)
+
    - Auto-format code (`make fmt`)
    - Quick compilation check (`make check`)
    - Auto-fix linting (`make lint-fix`)
    - Stages formatted files
 
-2. **pre-push** (Bash & PowerShell versions)
+1. **pre-push** (Bash & PowerShell versions)
+
    - Run full test suite (`make test`)
    - Run PowerShell tests
    - Check for uncommitted changes
 
-3. **commit-msg** (Bash version)
+1. **commit-msg** (Bash version)
+
    - Validates Conventional Commits format
    - Enforces type/scope/subject structure
    - Warns on long subject lines
@@ -183,28 +191,33 @@ git commit -m "fixed bugs"
 ## 🎯 Key Features
 
 ### Makefile Integration
+
 - **ALL workflows use Makefile targets** (never bare cargo)
 - Consistent build flags across local and CI
 - Automatic environment validation
 - Platform-specific optimizations
 
 ### Multi-Platform Support
+
 - **Windows**: CUDA builds with proper NVCC configuration
 - **Linux**: CPU and CUDA builds
 - **macOS**: Metal-accelerated builds
 
 ### Smart Caching
+
 - **sccache**: Build artifact caching (2-5 min rebuilds)
 - **Cargo registry**: Dependency caching
 - **Target directory**: Per-job compilation cache
 
 ### Comprehensive Testing
+
 - **Rust tests**: All workspace packages
 - **PowerShell tests**: Infrastructure validation
 - **MCP tests**: Server integration
 - **Security audit**: Dependency scanning
 
 ### Artifact Management
+
 - **Binary artifacts**: 30-day retention for all platforms
 - **Test results**: 7-day retention with JSON reports
 - **MCP reports**: Integration test results
@@ -212,11 +225,13 @@ git commit -m "fixed bugs"
 ## 📈 Performance Metrics
 
 ### Build Times (with sccache)
+
 - First build (cold): 30-45 minutes
 - Subsequent builds: 2-5 minutes
 - Quick check: 30 seconds - 2 minutes
 
 ### Workflow Durations
+
 - Quick Check: ~5 minutes
 - Format Check: ~2 minutes
 - Lint: ~10 minutes
@@ -226,6 +241,7 @@ git commit -m "fixed bugs"
 - PowerShell Tests: ~20 minutes
 
 ### Total Pipeline Time
+
 - **Parallel execution**: ~45-50 minutes (all jobs)
 - **Sequential (if forced)**: ~2 hours
 
@@ -268,32 +284,37 @@ git push --no-verify    # Skip pre-push
 ### Development Workflow
 
 1. **Start feature**:
+
    ```bash
    git checkout -b feature/my-feature
    make check  # Verify starting state
    ```
 
-2. **Make changes**:
+1. **Make changes**:
+
    ```bash
    # Edit code
    make check  # Frequent compilation checks
    make test   # Run affected tests
    ```
 
-3. **Commit changes**:
+1. **Commit changes**:
+
    ```bash
    git add .
    git commit -m "feat(component): description"
    # Hook auto-formats and validates
    ```
 
-4. **Push changes**:
+1. **Push changes**:
+
    ```bash
    git push origin feature/my-feature
    # Hook runs tests before push
    ```
 
-5. **Create PR**:
+1. **Create PR**:
+
    - CI runs automatically
    - Review workflow results
    - Address any failures
@@ -303,6 +324,7 @@ git push --no-verify    # Skip pre-push
 **Format**: `<type>(<scope>): <subject>`
 
 **Types**:
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation
@@ -315,6 +337,7 @@ git push --no-verify    # Skip pre-push
 - `build` - Build system
 
 **Examples**:
+
 ```
 feat(core): add support for Gemma 3 models
 fix(cuda): resolve memory leak in attention kernel
@@ -327,14 +350,14 @@ ci(workflows): add MCP validation pipeline
 ### Update Workflows
 
 1. Edit YAML files in `.github/workflows/`
-2. Test with manual dispatch
-3. Commit and monitor first run
+1. Test with manual dispatch
+1. Commit and monitor first run
 
 ### Update Hooks
 
 1. Edit scripts in `.githooks/`
-2. Run installation script
-3. Test with dummy commits
+1. Run installation script
+1. Test with dummy commits
 
 ### Update Dependencies
 
@@ -368,13 +391,13 @@ git commit -m "chore(deps): update Rust dependencies"
 ## 🎉 Next Steps
 
 1. **Install hooks**: `.\scripts\setup\install-git-hooks.ps1`
-2. **Test locally**: `make ci`
-3. **Make a commit**: Test pre-commit hook
-4. **Push changes**: Test pre-push hook
-5. **Monitor CI**: Check GitHub Actions tab
-6. **Review artifacts**: Download binaries from successful runs
+1. **Test locally**: `make ci`
+1. **Make a commit**: Test pre-commit hook
+1. **Push changes**: Test pre-push hook
+1. **Monitor CI**: Check GitHub Actions tab
+1. **Review artifacts**: Download binaries from successful runs
 
----
+______________________________________________________________________
 
 **Setup Date**: 2025-10-03
 **Status**: ✅ Complete and Ready for Use

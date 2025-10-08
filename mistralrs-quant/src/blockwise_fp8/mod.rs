@@ -108,8 +108,9 @@ impl QuantMethod for BlockwiseFP8Linear {
             Some(IsqType::HQQ4 | IsqType::HQQ8) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
-                    candle_core::bail!("HQQ does not support imatrix.");
+                    tracing::warn!(
+                        "HQQ does not support imatrix, continuing without importance matrix"
+                    );
                 }
 
                 n_quantized.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -142,8 +143,9 @@ impl QuantMethod for BlockwiseFP8Linear {
             Some(IsqType::AFQ2 | IsqType::AFQ3 | IsqType::AFQ4 | IsqType::AFQ6 | IsqType::AFQ8) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
-                    candle_core::bail!("AFQ does not support imatrix.");
+                    tracing::warn!(
+                        "AFQ does not support imatrix, continuing without importance matrix"
+                    );
                 }
 
                 n_quantized.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -194,8 +196,9 @@ impl QuantMethod for BlockwiseFP8Linear {
             Some(IsqType::F8E4M3) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
-                    candle_core::bail!("F8E4M3 does not support imatrix.");
+                    tracing::warn!(
+                        "F8E4M3 does not support imatrix, continuing without importance matrix"
+                    );
                 }
 
                 let w = weight.to_device(&device)?;

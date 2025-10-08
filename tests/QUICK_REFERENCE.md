@@ -3,6 +3,7 @@
 ## 🚀 Common Commands
 
 ### Via Make (Recommended)
+
 ```bash
 make test-ps1-quick        # Quick smoke tests (1 min)
 make test-ps1              # Full PowerShell suite (15-20 min)
@@ -13,6 +14,7 @@ make test-ps1-ci           # CI mode (strict, JSON)
 ```
 
 ### Direct PowerShell
+
 ```powershell
 .\tests\run-all-tests.ps1                               # All tests
 .\tests\run-all-tests.ps1 -Suite quick                  # Quick (1 min)
@@ -25,22 +27,22 @@ make test-ps1-ci           # CI mode (strict, JSON)
 
 ## 📊 Output Formats
 
-| Format | Command | Output | Use Case |
-|--------|---------|--------|----------|
-| Console | `-OutputFormat console` | Terminal | Development |
-| JSON | `-OutputFormat json` | .json file | CI/CD |
-| Markdown | `-OutputFormat markdown` | .md file | Documentation |
-| HTML | `-OutputFormat html` | .html file | Reports |
+| Format   | Command                  | Output     | Use Case      |
+| -------- | ------------------------ | ---------- | ------------- |
+| Console  | `-OutputFormat console`  | Terminal   | Development   |
+| JSON     | `-OutputFormat json`     | .json file | CI/CD         |
+| Markdown | `-OutputFormat markdown` | .md file   | Documentation |
+| HTML     | `-OutputFormat html`     | .html file | Reports       |
 
 ## ⏱️ Suite Durations
 
-| Suite | Duration | Tests | Use Case |
-|-------|----------|-------|----------|
-| quick | ~1 min | 1 | Pre-commit |
-| integration | 5-10 min | Variable | Feature validation |
-| mcp | 5-10 min | Variable | MCP integration |
-| build | 10-15 min | Variable | Build system |
-| all | 15-20 min | All | Full validation |
+| Suite       | Duration  | Tests    | Use Case           |
+| ----------- | --------- | -------- | ------------------ |
+| quick       | ~1 min    | 1        | Pre-commit         |
+| integration | 5-10 min  | Variable | Feature validation |
+| mcp         | 5-10 min  | Variable | MCP integration    |
+| build       | 10-15 min | Variable | Build system       |
+| all         | 15-20 min | All      | Full validation    |
 
 ## 🔧 Common Options
 
@@ -71,20 +73,20 @@ tests/
 
 ## 🛠️ Troubleshooting
 
-| Issue | Quick Fix |
-|-------|-----------|
-| Tests not found | Run `.\tests\validate-test-runner.ps1` |
-| MCP servers won't start | Check `node --version` |
-| Binary not found | Run `make build-cuda-full` |
-| Permission denied | Run as Administrator or adjust ExecutionPolicy |
-| Tests hang | Use `-FailFast -Verbose` to debug |
+| Issue                   | Quick Fix                                      |
+| ----------------------- | ---------------------------------------------- |
+| Tests not found         | Run `.\tests\validate-test-runner.ps1`         |
+| MCP servers won't start | Check `node --version`                         |
+| Binary not found        | Run `make build-cuda-full`                     |
+| Permission denied       | Run as Administrator or adjust ExecutionPolicy |
+| Tests hang              | Use `-FailFast -Verbose` to debug              |
 
 ## 📝 Adding New Tests
 
 1. **Create script**: `tests/<category>/test-<name>.ps1`
-2. **Exit codes**: 0 = pass, non-zero = fail
-3. **Optional JSON**: Output structured results
-4. **Test**: Run `.\tests\run-all-tests.ps1 -Suite <category>`
+1. **Exit codes**: 0 = pass, non-zero = fail
+1. **Optional JSON**: Output structured results
+1. **Test**: Run `.\tests\run-all-tests.ps1 -Suite <category>`
 
 ## 🎯 Development Workflow
 
@@ -105,6 +107,7 @@ make test-full
 ## 🚨 CI/CD Usage
 
 ### GitHub Actions
+
 ```yaml
 - name: Run Tests
   run: make test-ps1-ci
@@ -117,6 +120,7 @@ make test-full
 ```
 
 ### Exit Codes
+
 - `0` = All tests passed
 - `1` = Tests failed
 - Other = Fatal error
@@ -130,11 +134,11 @@ make test-full
 ## 💡 Tips
 
 1. ✅ Use `make test-ps1-quick` before every commit
-2. ✅ Generate HTML reports for visual review
-3. ✅ Use `-FailFast -Verbose` when debugging
-4. ✅ Check `tests/results/mcp-*.err` for MCP issues
-5. ✅ Archive old results regularly (done automatically)
+1. ✅ Generate HTML reports for visual review
+1. ✅ Use `-FailFast -Verbose` when debugging
+1. ✅ Check `tests/results/mcp-*.err` for MCP issues
+1. ✅ Archive old results regularly (done automatically)
 
----
+______________________________________________________________________
 
 **Quick Help**: `make help` or `.\tests\run-all-tests.ps1 -?`

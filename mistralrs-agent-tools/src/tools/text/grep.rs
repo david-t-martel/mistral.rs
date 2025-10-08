@@ -85,14 +85,13 @@ fn search_file(
     let reader = BufReader::new(file);
     let path_str = path.display().to_string();
 
-    let mut line_num = 0;
     let mut before_buffer: VecDeque<String> = VecDeque::new();
     let mut after_counter = 0;
     let mut pending_match: Option<GrepMatch> = None;
 
-    for line_result in reader.lines() {
+    for (line_num, line_result) in reader.lines().enumerate() {
         let line = line_result?;
-        line_num += 1;
+        let line_num = line_num + 1; // Convert to 1-based
 
         let is_match = matcher.is_match(&line) != options.invert_match;
 
@@ -171,7 +170,7 @@ fn search_directory(
         let entry_path = entry.path();
 
         // Validate each entry
-        if let Err(_) = sandbox.validate_read(&entry_path) {
+        if sandbox.validate_read(&entry_path).is_err() {
             continue; // Skip inaccessible paths
         }
 

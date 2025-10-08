@@ -11,16 +11,16 @@ async function refreshChatList() {
   const res = await fetch('/api/list_chats');
   const data = await res.json();
   const chatList = document.getElementById('chatList');
-  
+
   // Sort chats by creation timestamp, newest first
   data.chats.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   chatList.innerHTML = '';
-  
+
   data.chats.forEach((c, idx) => {
     const li = document.createElement('li');
     li.dataset.id = c.id;
     li.onclick = () => loadChat(c.id);
-    
+
     // Highlight active chat
     if (c.id === currentChatId) {
       li.classList.add('active');
@@ -56,7 +56,7 @@ async function findBlankChat(model) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: currentChatId })
     });
-    
+
     if (currentRes.ok) {
       const currentData = await currentRes.json();
       if (currentData.model === model && currentData.messages.length === 0) {
@@ -64,25 +64,25 @@ async function findBlankChat(model) {
       }
     }
   }
-  
+
   // Otherwise check all chats
   const res = await fetch('/api/list_chats');
   const data = await res.json();
-  
+
   // Sort by creation time, newest first
   data.chats.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  
+
   // Find the first chat that matches the model
   for (const chat of data.chats) {
     // Skip the current chat since we already checked it
     if (chat.id === currentChatId) continue;
-    
+
     const chatRes = await fetch('/api/load_chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: chat.id })
     });
-    
+
     if (chatRes.ok) {
       const chatData = await chatRes.json();
       // Check if it's the same model and has no messages
@@ -91,7 +91,7 @@ async function findBlankChat(model) {
       }
     }
   }
-  
+
   return null;
 }
 
@@ -100,38 +100,38 @@ async function findBlankChat(model) {
  */
 async function loadChat(id) {
   if (!maybeClearChat(true)) return;
-  
+
   const res = await fetch('/api/load_chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id })
   });
-  
-  if (!res.ok) { 
-    alert('Failed to load chat'); 
-    return; 
+
+  if (!res.ok) {
+    alert('Failed to load chat');
+    return;
   }
-  
+
   const data = await res.json();
   const log = document.getElementById('log');
   const modelSelect = document.getElementById('modelSelect');
   const chatList = document.getElementById('chatList');
-  
+
   currentChatId = data.id;
   document.querySelectorAll('#chatList li').forEach(li => li.classList.remove('active'));
   const activeLi = document.querySelector(`#chatList li[data-id="${id}"]`);
   if (activeLi) activeLi.classList.add('active');
-  
+
   if (data.model && models[data.model]) {
     modelSelect.value = data.model;
     prevModel = data.model;
     updateImageVisibility(models[data.model]);
   }
-  
+
   log.innerHTML = '';
   clearImagePreviews();
   clearTextFilePreviews();
-  
+
   data.messages.forEach(m => {
     // ---- render text ----
     const div = append(renderMarkdown(m.content),
@@ -164,7 +164,7 @@ async function loadChat(id) {
       }));
     }
   });
-  
+
   // No pending attachments to restore on chat load
   // Notify WebSocket of current chat ID
   if (ws.readyState === WebSocket.OPEN) {
@@ -177,7 +177,7 @@ async function loadChat(id) {
  */
 function maybeClearChat(skipConfirm = false) {
   const log = document.getElementById('log');
-  
+
   if (log.children.length === 0) return true;
   if (skipConfirm || confirm('Clear the current draft conversation?')) {
     pendingClear = true;
@@ -198,35 +198,35 @@ function initChatHandlers() {
   const deleteBtn = document.getElementById('deleteBtn');
 
   newChatBtn.addEventListener('click', async () => {
-    if (!prevModel) { 
-      alert('Select a model first'); 
-      return; 
+    if (!prevModel) {
+      alert('Select a model first');
+      return;
     }
-    
+
     // Check if there's already a blank chat with the same model
     const blankChatId = await findBlankChat(prevModel);
-    
+
     if (blankChatId) {
       // Clear current UI state before loading
       document.getElementById('log').innerHTML = '';
       clearImagePreviews();
       clearTextFilePreviews();
-      
+
       // Load the existing blank chat instead of creating a new one
       await loadChat(blankChatId);
       await refreshChatList();
       return;
     }
-    
+
     // No blank chat found, create a new one
     const res = await fetch('/api/new_chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: prevModel })
     });
-    if (!res.ok) { 
-      alert('Failed to create new chat'); 
-      return; 
+    if (!res.ok) {
+      alert('Failed to create new chat');
+      return;
     }
     const { id } = await res.json();
     // Load and activate the new chat
@@ -246,9 +246,9 @@ function initChatHandlers() {
   });
 
   renameBtn.addEventListener('click', async () => {
-    if (!currentChatId) { 
-      alert('No chat selected'); 
-      return; 
+    if (!currentChatId) {
+      alert('No chat selected');
+      return;
     }
     const newTitle = prompt('Enter new chat name:', '');
     if (newTitle && newTitle.trim()) {
@@ -266,9 +266,9 @@ function initChatHandlers() {
   });
 
   deleteBtn.addEventListener('click', async () => {
-    if (!currentChatId) { 
-      alert('No chat selected'); 
-      return; 
+    if (!currentChatId) {
+      alert('No chat selected');
+      return;
     }
     if (!confirm('Delete this chat permanently?')) return;
     const res = await fetch('/api/delete_chat', {
@@ -276,16 +276,16 @@ function initChatHandlers() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: currentChatId })
     });
-    if (!res.ok) { 
-      alert('Failed to delete chat'); 
-      return; 
+    if (!res.ok) {
+      alert('Failed to delete chat');
+      return;
     }
     currentChatId = null;
     document.getElementById('log').innerHTML = '';
     clearImagePreviews();
     clearTextFilePreviews();
     await refreshChatList();
-    
+
     // Move to newest chat if any, otherwise create a fresh one
     const chatList = document.getElementById('chatList');
     const firstLi = chatList.querySelector('li');

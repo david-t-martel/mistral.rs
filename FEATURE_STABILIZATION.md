@@ -1,5 +1,7 @@
 # Feature Stabilization Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before executing this stabilization work._
+
 **Date**: 2025-01-04
 **Task**: Stabilize optional Cargo features for PyO3, MCP, and agent mode
 **Status**: ✅ COMPLETE

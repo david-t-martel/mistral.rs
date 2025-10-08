@@ -104,31 +104,13 @@ fn convert_crossterm_code(code: crossterm::event::KeyCode) -> KeyCode {
 }
 
 #[cfg(feature = "gpu")]
-pub fn from_winit(event: &winit::event::WindowEvent) -> Option<InputEvent> {
-    use winit::event::{ElementState, KeyboardInput, WindowEvent};
+pub fn from_winit(event: &winit::event::WindowEvent, modifiers: Modifiers) -> Option<InputEvent> {
+    use winit::event::{ElementState, WindowEvent};
 
     match event {
-        WindowEvent::KeyboardInput {
-            input:
-                KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode,
-                    text,
-                    modifiers,
-                    ..
-                },
-            ..
-        } => {
-            let mods = Modifiers {
-                control: modifiers.control_key(),
-                alt: modifiers.alt_key(),
-                shift: modifiers.shift_key(),
-            };
-            let code = virtual_keycode
-                .map(convert_winit_code)
-                .or_else(|| text.and_then(|t| t.chars().next()).map(KeyCode::Char))
-                .unwrap_or(KeyCode::Unknown);
-            Some(InputEvent::Key(KeyEvent::new(code, mods)))
+        WindowEvent::KeyboardInput { event, .. } if event.state == ElementState::Pressed => {
+            let code = convert_winit_key(&event.logical_key, event.text.as_deref());
+            Some(InputEvent::Key(KeyEvent::new(code, modifiers)))
         }
         WindowEvent::Resized(size) => {
             Some(InputEvent::Resize(size.width as u16, size.height as u16))
@@ -138,37 +120,52 @@ pub fn from_winit(event: &winit::event::WindowEvent) -> Option<InputEvent> {
 }
 
 #[cfg(feature = "gpu")]
-fn convert_winit_code(code: winit::event::VirtualKeyCode) -> KeyCode {
-    use winit::event::VirtualKeyCode as Vk;
+fn convert_winit_key(key: &winit::keyboard::Key, text: Option<&str>) -> KeyCode {
+    use winit::keyboard::{Key, NamedKey};
 
-    match code {
-        Vk::Return => KeyCode::Enter,
-        Vk::Back => KeyCode::Backspace,
-        Vk::Tab => KeyCode::Tab,
-        Vk::Escape => KeyCode::Esc,
-        Vk::Up => KeyCode::Up,
-        Vk::Down => KeyCode::Down,
-        Vk::Left => KeyCode::Left,
-        Vk::Right => KeyCode::Right,
-        Vk::Home => KeyCode::Home,
-        Vk::End => KeyCode::End,
-        Vk::PageUp => KeyCode::PageUp,
-        Vk::PageDown => KeyCode::PageDown,
-        Vk::Delete => KeyCode::Delete,
-        Vk::Insert => KeyCode::Insert,
-        Vk::F1 => KeyCode::Function(1),
-        Vk::F2 => KeyCode::Function(2),
-        Vk::F3 => KeyCode::Function(3),
-        Vk::F4 => KeyCode::Function(4),
-        Vk::F5 => KeyCode::Function(5),
-        Vk::F6 => KeyCode::Function(6),
-        Vk::F7 => KeyCode::Function(7),
-        Vk::F8 => KeyCode::Function(8),
-        Vk::F9 => KeyCode::Function(9),
-        Vk::F10 => KeyCode::Function(10),
-        Vk::F11 => KeyCode::Function(11),
-        Vk::F12 => KeyCode::Function(12),
-        Vk::Space => KeyCode::Char(' '),
-        _ => KeyCode::Unknown,
+    match key {
+        Key::Character(value) => value
+            .chars()
+            .next()
+            .or_else(|| text.and_then(|t| t.chars().next()))
+            .map(KeyCode::Char)
+            .unwrap_or(KeyCode::Unknown),
+        Key::Named(named) => match named {
+            NamedKey::Enter => KeyCode::Enter,
+            NamedKey::Tab => KeyCode::Tab,
+            NamedKey::Space => KeyCode::Char(' '),
+            NamedKey::ArrowUp => KeyCode::Up,
+            NamedKey::ArrowDown => KeyCode::Down,
+            NamedKey::ArrowLeft => KeyCode::Left,
+            NamedKey::ArrowRight => KeyCode::Right,
+            NamedKey::Home => KeyCode::Home,
+            NamedKey::End => KeyCode::End,
+            NamedKey::PageUp => KeyCode::PageUp,
+            NamedKey::PageDown => KeyCode::PageDown,
+            NamedKey::Backspace => KeyCode::Backspace,
+            NamedKey::Delete => KeyCode::Delete,
+            NamedKey::Insert => KeyCode::Insert,
+            NamedKey::Escape => KeyCode::Esc,
+            NamedKey::F1 => KeyCode::Function(1),
+            NamedKey::F2 => KeyCode::Function(2),
+            NamedKey::F3 => KeyCode::Function(3),
+            NamedKey::F4 => KeyCode::Function(4),
+            NamedKey::F5 => KeyCode::Function(5),
+            NamedKey::F6 => KeyCode::Function(6),
+            NamedKey::F7 => KeyCode::Function(7),
+            NamedKey::F8 => KeyCode::Function(8),
+            NamedKey::F9 => KeyCode::Function(9),
+            NamedKey::F10 => KeyCode::Function(10),
+            NamedKey::F11 => KeyCode::Function(11),
+            NamedKey::F12 => KeyCode::Function(12),
+            _ => text
+                .and_then(|t| t.chars().next())
+                .map(KeyCode::Char)
+                .unwrap_or(KeyCode::Unknown),
+        },
+        _ => text
+            .and_then(|t| t.chars().next())
+            .map(KeyCode::Char)
+            .unwrap_or(KeyCode::Unknown),
     }
 }

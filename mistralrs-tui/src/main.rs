@@ -105,12 +105,22 @@ fn main() -> Result<()> {
     ));
     inventory.refresh()?;
 
+    #[cfg(feature = "tui-agent")]
+    let initialise_future = App::initialise(
+        session_store.clone(),
+        inventory.clone(),
+        config.default_model.clone(),
+        Some(config.agent.clone()),
+    );
+    #[cfg(not(feature = "tui-agent"))]
+    let initialise_future = App::initialise(
+        session_store.clone(),
+        inventory.clone(),
+        config.default_model.clone(),
+    );
+
     let mut app = runtime
-        .block_on(App::initialise(
-            session_store.clone(),
-            inventory.clone(),
-            config.default_model.clone(),
-        ))
+        .block_on(initialise_future)
         .context("initialising application state")?;
 
     let mut options = Options {

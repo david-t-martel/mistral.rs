@@ -1,5 +1,7 @@
 # mistral.rs Deployment Guide
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before following this deployment guide._
+
 Complete deployment infrastructure for production-grade mistral.rs server deployment.
 
 ## Quick Start

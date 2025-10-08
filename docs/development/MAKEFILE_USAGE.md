@@ -205,9 +205,9 @@ With `sccache` enabled:
 This automation system includes:
 
 1. **Makefile** - Main build automation (540+ lines)
-2. **.claude/CLAUDE.md** - Comprehensive Rust best practices guide
-3. **CLAUDE.md** (root) - Enhanced with Makefile references
-4. **MAKEFILE_USAGE.md** - This usage guide
+1. **.claude/CLAUDE.md** - Comprehensive Rust best practices guide
+1. **CLAUDE.md** (root) - Enhanced with Makefile references
+1. **MAKEFILE_USAGE.md** - This usage guide
 
 ## References
 
@@ -220,6 +220,7 @@ This automation system includes:
 **Golden Rule**: Always use `make`, never `cargo` directly.
 
 **Most Common**:
+
 ```bash
 make dev          # Development build
 make check        # Quick check

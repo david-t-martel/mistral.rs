@@ -4,6 +4,16 @@
 //! [`glyphon`]. Colour styling is intentionally coarse for now (default foreground on opaque
 //! background) but the event loop, redraw pipeline and adapter negotiation are in place so future
 //! visual upgrades can focus purely on richer painting logic.
+//!
+//! ### Follow-up work
+//! - Wire this backend into a palette-aware renderer so Ratatui colours and styling survive the
+//!   text-to-texture conversion.
+//! - Harden capability negotiation: the current `unwrap_or` fallbacks assume the adapter reports at
+//!   least one surface format/present mode/alpha mode.
+//! - Replace the raw pointer bridge between the winit loop and the [`App`] with a safe interior
+//!   mutability strategy (e.g. `Rc<RefCell<_>>` or a purpose-built channel).
+//! - Share glyph caches and staging buffers across window resizes to avoid stutter once richer
+//!   painting is added.
 
 #![cfg(feature = "gpu")]
 
@@ -57,6 +67,9 @@ pub fn run(runtime: &Runtime, app: &mut App, options: &Options) -> Result<()> {
 
     let runtime_ptr: *const Runtime = runtime;
     let app_ptr: *mut App = app;
+    // SAFETY: the raw pointer bridge is temporary; the event loop never outlives the runtime nor
+    // the app reference. A follow-up should wrap `App` inside a thread-safe container to avoid
+    // direct pointer manipulation here.
 
     let mut state = RenderState::new(instance, options.tick_rate);
 
@@ -76,6 +89,8 @@ struct RenderState {
     instance: Instance,
     tick_rate: Duration,
     last_tick: Instant,
+    needs_redraw: bool,
+    keyboard_modifiers: Modifiers,
     window: Option<Arc<Window>>,
     window_id: Option<WindowId>,
     renderer: Option<Renderer>,
@@ -88,6 +103,8 @@ impl RenderState {
             instance,
             tick_rate,
             last_tick: Instant::now(),
+            needs_redraw: false,
+            keyboard_modifiers: Modifiers::NONE,
             window: None,
             window_id: None,
             renderer: None,
@@ -106,9 +123,7 @@ impl RenderState {
             Event::Resumed => {
                 self.ensure_window(elwt)
                     .context("initialising GPU window and surface")?;
-                if let Some(window) = &self.window {
-                    window.request_redraw();
-                }
+                self.needs_redraw = true;
             }
             Event::Suspended => {
                 debug!("Event loop suspended");
@@ -117,9 +132,14 @@ impl RenderState {
                 self.handle_window_event(event, elwt, runtime, app)?;
             }
             Event::AboutToWait => {
-                self.maybe_tick(runtime, app)?;
-                if let Some(window) = &self.window {
-                    window.request_redraw();
+                if self.maybe_tick(runtime, app)? {
+                    self.needs_redraw = true;
+                }
+                if self.needs_redraw {
+                    if let Some(window) = &self.window {
+                        window.request_redraw();
+                    }
+                    self.needs_redraw = false;
                 }
                 if unsafe { (&*app).should_quit() } {
                     elwt.exit();
@@ -185,10 +205,12 @@ impl RenderState {
                     runtime,
                     app,
                 )?;
+                self.needs_redraw = true;
                 elwt.exit();
             }
             WindowEvent::Resized(size) => {
                 self.resize(size)?;
+                self.needs_redraw = true;
             }
             WindowEvent::ScaleFactorChanged {
                 mut inner_size_writer,
@@ -200,14 +222,19 @@ impl RenderState {
                         warn!(?err, "failed to commit new inner size after scale change");
                     }
                     self.resize(size)?;
+                    self.needs_redraw = true;
                 }
+            }
+            WindowEvent::ModifiersChanged(state) => {
+                self.keyboard_modifiers = map_modifiers(&state);
             }
             WindowEvent::RedrawRequested => {
                 self.render(app)?;
             }
             _ => {
-                if let Some(evt) = input::from_winit(&event) {
+                if let Some(evt) = input::from_winit(&event, self.keyboard_modifiers) {
                     self.dispatch_input(evt, runtime, app)?;
+                    self.needs_redraw = true;
                 }
             }
         }
@@ -234,7 +261,7 @@ impl RenderState {
         Ok(())
     }
 
-    fn maybe_tick(&mut self, runtime: *const Runtime, app: *mut App) -> Result<()> {
+    fn maybe_tick(&mut self, runtime: *const Runtime, app: *mut App) -> Result<bool> {
         if self.last_tick.elapsed() >= self.tick_rate {
             unsafe {
                 let runtime = &*runtime;
@@ -243,8 +270,9 @@ impl RenderState {
                     .context("processing tick in GPU backend")?;
             }
             self.last_tick = Instant::now();
+            return Ok(true);
         }
-        Ok(())
+        Ok(false)
     }
 
     fn resize(&mut self, size: PhysicalSize<u32>) -> Result<()> {
@@ -256,10 +284,6 @@ impl RenderState {
         if let Some(terminal) = self.terminal.as_mut() {
             let (cols, rows) = grid_from_size(size);
             terminal.backend_mut().resize(cols, rows);
-        }
-
-        if let Some(window) = &self.window {
-            window.request_redraw();
         }
 
         Ok(())
@@ -302,6 +326,14 @@ impl RenderState {
     }
 }
 
+fn map_modifiers(state: &winit::keyboard::ModifiersState) -> Modifiers {
+    Modifiers {
+        control: state.control_key(),
+        alt: state.alt_key(),
+        shift: state.shift_key(),
+    }
+}
+
 struct Renderer {
     surface: Surface<'static>,
     device: wgpu::Device,
@@ -338,6 +370,8 @@ impl Renderer {
         .context("requesting wgpu device")?;
 
         let surface_caps = surface.get_capabilities(&adapter);
+        // ROBUSTNESS: guard against drivers that expose zero capabilities and return a clear
+        // user-facing error instead of panicking via `unwrap_or` defaults below.
         let format = surface_caps
             .formats
             .iter()

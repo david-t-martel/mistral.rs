@@ -8,13 +8,14 @@ The Gemma 3n Model has support in the Rust, Python, and HTTP APIs. Additionally,
 
 - **🪆 mistral.rs supports dynamically resizing the Gemma 3n model with that MatFormer architecture!**
 
-    Gemma 3n implements the MatFormer architecture, which allows one model to be resized dynamically and tune performance on resource-constrained systems.
+  Gemma 3n implements the MatFormer architecture, which allows one model to be resized dynamically and tune performance on resource-constrained systems.
 
-    Mistral.rs supports this feature!
-    
-    You can access it using the `matformer_config_path` ([example config](../matformer_configs/gemma3n.csv)) and `matformer_slice_name` arguments throughout the APIs.
-    
+  Mistral.rs supports this feature!
+
+  You can access it using the `matformer_config_path` ([example config](../matformer_configs/gemma3n.csv)) and `matformer_slice_name` arguments throughout the APIs.
+
 - **Prequantized UQFF models:**
+
   - [Gemma 3n E4B](https://huggingface.co/EricB/gemma-3n-E4B-it-UQFF)
   - [Gemma 3n E2B](https://huggingface.co/EricB/gemma-3n-E2B-it-UQFF)
 
@@ -27,8 +28,9 @@ You can read more about MatFormer in mistral.rs [here](MATFORMER.md).
 ### Available Slices
 
 The default configuration file ([`matformer_configs/gemma3n.csv`](../matformer_configs/gemma3n.csv)) includes:
+
 - **Main model** (3.98B params, 35 layers) - Full model with best performance
-- **Config for official E2B Model** (1.91B params, 30 layers) - Balanced performance/efficiency  
+- **Config for official E2B Model** (1.91B params, 30 layers) - Balanced performance/efficiency
 - Various intermediate configurations from E1.96B to E3.79B with different layer and FFN configurations
 
 ### Command Line Example
@@ -134,29 +136,34 @@ async fn main() -> Result<()> {
 - **Maximum quality**: Use "Main model" (3.98B params) or omit MatFormer configuration entirely
 
 The slice selection allows you to:
+
 - Reduce memory usage proportionally to the parameter count
 - Speed up inference roughly linearly with the number of layers
 - Maintain acceptable quality for many use cases with smaller slices
 
 ## HTTP server
+
 You can find this example [here](../examples/server/gemma3n.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 Please describe this image in detail.
 ```
 
 **Output:**
+
 ```
 The image captures a breathtaking, wide-angle view of a majestic mountain covered in a blanket of snow. The mountain dominates the frame, its peak reaching towards a partly cloudy sky. The snow cover is uneven, with patches of exposed dark rock and textured snow formations creating a visually interesting surface. 
 
@@ -169,9 +176,9 @@ The sky above is a mix of pale blue and soft grey clouds, with some darker, more
 The overall impression is one of grandeur, tranquility, and the raw beauty of a winter landscape. The scale of the mountain is impressive, and the winding path invites a sense of exploration and adventure.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -185,7 +192,7 @@ cargo run --release --features ... -- --port 1234 run -m google/gemma-3n-E4B-it 
   --matformer-slice-name "Config for E2.49B (block-level)"
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -224,9 +231,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/gemma3n/main.rs).
 
 This is a minimal example of running the Gemma 3n model with a dummy image.
@@ -272,6 +280,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Python
+
 You can find this example [here](../examples/python/gemma3n.py).
 
 This example demonstrates loading and sending a chat completion request with an image.
@@ -317,7 +326,6 @@ res = runner.send_chat_completion_request(
 print(res.choices[0].message.content)
 print(res.usage)
 ```
-
 
 ### OpenAI HTTP API
 

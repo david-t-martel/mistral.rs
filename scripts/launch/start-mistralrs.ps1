@@ -76,7 +76,7 @@ try {
         "-p", $Port,
         "--serve-ip", $ServeIp
     )
-    
+
     if ($EnableMCP) {
         if (Test-Path $McpConfigPath) {
             Write-Host "MCP enabled with config: $McpConfigPath" -ForegroundColor Green
@@ -86,7 +86,7 @@ try {
             Write-Host "Warning: MCP config not found at $McpConfigPath" -ForegroundColor Yellow
         }
     }
-    
+
     & $BinaryPath @args
 } catch {
     Write-Host ""

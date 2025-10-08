@@ -3,6 +3,7 @@
 The Phi 4 Multimodal Model has support in the Rust, Python, and HTTP APIs. The Phi 4 Multimodal Model supports ISQ for increased performance.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -21,31 +22,35 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 [**Phi 4 multimodal supports audio inputs!**](#audio-input).
 
 ## HTTP server
+
 You can find this example [here](../examples/server/phi3v.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 <|image_1|>\nWhat is shown in this image? Write a detailed response analyzing the scene.
 ```
 
 **Output:**
+
 ```
 A mountain with snow on it.
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -54,7 +59,7 @@ A mountain with snow on it.
 cargo run --release --features ... -- --port 1234 vision-plain -m microsoft/Phi-4-multimodal-instruct
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -93,9 +98,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/phi3v/main.rs).
 
 This is a minimal example of running the Phi 4 Multimodal model with a dummy image.
@@ -141,6 +147,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Python
+
 You can find this example [here](../examples/python/phi3v.py).
 
 This example demonstrates loading and sending a chat completion request with an image.
@@ -189,7 +196,7 @@ print(res.usage)
 
 ## Audio input
 
-Alongside vision, Phi 4 Multimodal in `mistral.rs` can accept **audio** as an additional modality.  This unlocks fully-local pipelines such as **text + speech + vision → text** where the model can reason jointly over what it *hears* and what it *sees*.
+Alongside vision, Phi 4 Multimodal in `mistral.rs` can accept **audio** as an additional modality. This unlocks fully-local pipelines such as **text + speech + vision → text** where the model can reason jointly over what it *hears* and what it *sees*.
 
 `mistral.rs` automatically decodes the supplied audio (WAV/MP3/FLAC/OGG/… – anything [Symphonia](https://github.com/pdeljanov/Symphonia) can handle) into 16-bit PCM.
 

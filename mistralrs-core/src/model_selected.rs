@@ -41,6 +41,7 @@ fn parse_model_dtype(x: &str) -> Result<ModelDType, String> {
 }
 
 #[derive(Debug, Clone, Subcommand, serde::Deserialize)]
+#[command(disable_help_subcommand = true)]
 pub enum ModelSelected {
     /// Select the model from a toml file
     Toml {

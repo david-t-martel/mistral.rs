@@ -3,6 +3,7 @@
 The Phi 3 Vision Model has support in the Rust, Python, and HTTP APIs. The Phi 3 Vision Model supports ISQ for increased performance.
 
 The Python and HTTP APIs support sending images as:
+
 - URL
 - Path to a local image
 - [Base64](https://en.wikipedia.org/wiki/Base64) encoded string
@@ -19,33 +20,37 @@ The Rust API takes an image from the [image](https://docs.rs/image/latest/image/
 > They should be added to messages manually, and are of the format `<|image_{N}|>` where N starts from 1.
 
 ## HTTP server
+
 You can find this example [here](../examples/server/phi3v.py).
 
 We support an OpenAI compatible HTTP API for vision models. This example demonstrates sending a chat completion request with an image.
 
 > Note: The image_url may be either a path, URL, or a base64 encoded string.
 
----
+______________________________________________________________________
 
 **Image:**
 <img src="https://www.nhmagazine.com/content/uploads/2019/05/mtwashingtonFranconia-2-19-18-108-Edit-Edit.jpg" alt="Mount Washington" width = "1000" height = "666">
+
 <h6><a href = "https://www.nhmagazine.com/mount-washington/">Credit</a></h6>
 
 **Prompt:**
+
 ```
 <|image_1|>\nWhat is shown in this image? Write a detailed response analyzing the scene.
 ```
 
 **Output:**
+
 ```
 The image captures a breathtaking view of a mountain peak, bathed in the soft glow of sunlight. The peak, dusted with a layer of snow, stands tall against the backdrop of a clear blue sky. A trail, etched into the mountain's side by countless hikers before it, winds its way up to the summit. The trail's white color contrasts sharply with the surrounding landscape, drawing attention to its path and inviting exploration.
 
 The perspective from which this photo is taken offers an expansive view of the mountain and its surroundings. It seems as if one could look down from this vantage point and see miles upon miles of untouched wilderness stretching out into the distance. The colors in the image are predominantly blue and white, reflecting both sky and snow-covered mountains respectively. However, there are also hints of green from trees dotting lower parts of mountainsides or valleys below them - adding another layer to this picturesque scene. This serene landscape evokes feelings of tranquility and adventure at once - an invitation to explore nature's grandeur while respecting its majesty at all times!
 ```
 
----
+______________________________________________________________________
 
-1) Start the server
+1. Start the server
 
 > [!NOTE]
 > You should replace `--features ...` with one of the features specified [here](../README.md#supported-accelerators), or remove it for pure CPU inference.
@@ -54,7 +59,7 @@ The perspective from which this photo is taken offers an expansive view of the m
 cargo run --release --features ... -- --port 1234 vision-plain -m microsoft/Phi-3.5-vision-instruct
 ```
 
-2) Send a request
+2. Send a request
 
 ```py
 from openai import OpenAI
@@ -93,9 +98,10 @@ print(resp)
 - You can find an example of encoding the [image via base64 here](../examples/server/phi3v_base64.py).
 - You can find an example of loading an [image locally here](../examples/server/phi3v_local_img.py).
 
----
+______________________________________________________________________
 
 ## Rust
+
 You can find this example [here](../mistralrs/examples/phi3v/main.rs).
 
 This is a minimal example of running the Phi 3 Vision model with a dummy image.
@@ -140,6 +146,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Python
+
 You can find this example [here](../examples/python/phi3v.py).
 
 This example demonstrates loading and sending a chat completion request with an image.

@@ -11,17 +11,15 @@ testConfigs:
 languageGlobs:
   rust:
     - "**/*.rs"
-  toml:
-    - "**/Cargo.toml"
-    - "**/*.toml"
   python:
     - "**/*.py"
   javascript:
     - "**/*.js"
     - "**/*.cjs"
     - "**/*.mjs"
-  typescript:
+  ts:
     - "**/*.ts"
+    - "**/*.tsx"
 
 # Ignore patterns
 ignore:

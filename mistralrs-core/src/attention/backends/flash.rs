@@ -147,6 +147,8 @@ pub(crate) fn flash_attn(
     _: Option<&crate::pipeline::text_models_inputs_processor::FlashParams>,
     _: &SdpaParams,
 ) -> Result<Tensor> {
-    // TODO: Provide runtime capability detection or a clearer error pathway for missing flash attention features
-    unimplemented!("Compile with `--features flash-attn` or `--features flash-attn-v3`.")
+    candle_core::bail!(
+        "Flash attention not available. Please recompile with `--features flash-attn` or `--features flash-attn-v3`. \
+        Alternatively, use a different attention backend by setting the attention mechanism in your model config."
+    )
 }

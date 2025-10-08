@@ -48,6 +48,7 @@ while True:
 ```
 
 ## Python API
+
 ```py
 from mistralrs import Runner, Which, ChatCompletionRequest, Architecture
 
@@ -75,6 +76,7 @@ print(res.usage)
 ```
 
 ## Rust API
+
 You can find this example [here](../mistralrs/examples/deepseekv2/main.rs).
 
 ```rust

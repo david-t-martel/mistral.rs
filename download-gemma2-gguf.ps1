@@ -35,21 +35,21 @@ Write-Host ""
 try {
     # Use .NET WebClient for reliable download with progress
     $webClient = New-Object System.Net.WebClient
-    
+
     # Register progress event
     $progressHandler = {
         param($sender, $e)
         $percent = $e.ProgressPercentage
         Write-Progress -Activity "Downloading $ModelFile" -Status "$percent% Complete" -PercentComplete $percent
     }
-    
+
     Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -Action $progressHandler | Out-Null
-    
+
     Write-Host "Starting download..." -ForegroundColor Yellow
     $webClient.DownloadFile($ModelUrl, $targetPath)
-    
+
     Write-Progress -Activity "Downloading $ModelFile" -Completed
-    
+
     if (Test-Path $targetPath) {
         $size = [math]::Round((Get-Item $targetPath).Length / 1GB, 2)
         Write-Host ""

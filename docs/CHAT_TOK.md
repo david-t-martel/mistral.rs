@@ -1,6 +1,7 @@
 # Chat templates and tokenizer customization
 
 ## JINJA chat templates (recommended method)
+
 Some models do not come with support for tool calling or other features, and as such it might be necessary to specify your own chat template.
 
 We provide some chat templates [here](../chat_templates/), and it is easy to modify or create others to customize chat template behavior.
@@ -12,6 +13,7 @@ To use this, add the `jinja-explicit` parameter to the various APIs
 ```
 
 ## Chat template overrides
+
 Mistral.rs attempts to automatically load a chat template from the `tokenizer_config.json` file. This enables high flexibility across instruction-tuned models and ensures accurate chat templating. However, if the `chat_template` field is missing, then a JINJA chat template should be provided. The JINJA chat template may use `messages`, `add_generation_prompt`, `bos_token`, `eos_token`, and `unk_token` as inputs.
 
 We provide some chat templates [here](../chat_templates/), and it is easy to modify or create others to customize chat template behavior.
@@ -35,8 +37,9 @@ $ ./mistralrs-server --port 1234 --log output.log plain -m microsoft/Orca-2-13b 
 ```
 
 Putting it all together, to run, for example, an [Orca](https://huggingface.co/microsoft/Orca-2-13b) model (which does not come with a `tokenizer.json` or chat template):
-1) Generate the `tokenizer.json` by running the script at `scripts/get_tokenizers_json.py`. This will output some files including `tokenizer.json` in the working directory.
-2) Find and copy the correct chat template from `chat-templates` to the working directory (eg., `cp chat_templates/chatml.json .`)
-3) Run `mistralrs-server`, specifying the tokenizer and chat template: `cargo run --release --features cuda -- --port 1234 --log output.txt --chat-template chatml.json plain -m microsoft/Orca-2-13b -t tokenizer.json`
+
+1. Generate the `tokenizer.json` by running the script at `scripts/get_tokenizers_json.py`. This will output some files including `tokenizer.json` in the working directory.
+1. Find and copy the correct chat template from `chat-templates` to the working directory (eg., `cp chat_templates/chatml.json .`)
+1. Run `mistralrs-server`, specifying the tokenizer and chat template: `cargo run --release --features cuda -- --port 1234 --log output.txt --chat-template chatml.json plain -m microsoft/Orca-2-13b -t tokenizer.json`
 
 > Note: For GGUF models, the tokenizer may be loaded directly from the GGUF file by omitting the tokenizer model ID.

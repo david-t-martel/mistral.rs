@@ -30,9 +30,9 @@ fn test_with_fixture() {
 ## Adding New Fixtures
 
 1. Place fixture files in the appropriate subdirectory
-2. Use descriptive names: `sample_<purpose>.<ext>`
-3. Keep fixtures small (< 1MB)
-4. Document complex fixtures with comments or README
+1. Use descriptive names: `sample_<purpose>.<ext>`
+1. Keep fixtures small (< 1MB)
+1. Document complex fixtures with comments or README
 
 ## Fixture Guidelines
 

@@ -54,6 +54,7 @@ The master test runner is the single entry point for all PowerShell-based testin
 ### Test Suites
 
 #### Quick Suite (`-Suite quick`)
+
 - **Duration**: ~1 minute
 - **Purpose**: Fast compilation check
 - **Use Case**: Pre-commit validation
@@ -61,6 +62,7 @@ The master test runner is the single entry point for all PowerShell-based testin
   - `make check` - Verify code compiles
 
 #### Integration Suite (`-Suite integration`)
+
 - **Duration**: ~5-10 minutes
 - **Purpose**: End-to-end integration tests
 - **Location**: `tests/integration/*.ps1`
@@ -71,6 +73,7 @@ The master test runner is the single entry point for all PowerShell-based testin
   - Binary execution tests
 
 #### MCP Suite (`-Suite mcp`)
+
 - **Duration**: ~5-10 minutes
 - **Purpose**: MCP server integration tests
 - **Location**: `tests/mcp/*.ps1`
@@ -82,6 +85,7 @@ The master test runner is the single entry point for all PowerShell-based testin
   - Protocol compliance
 
 #### Build Suite (`-Suite build`)
+
 - **Duration**: ~10-15 minutes (depending on cache)
 - **Purpose**: Build system validation
 - **Location**: `scripts/build/test-*.ps1`
@@ -92,6 +96,7 @@ The master test runner is the single entry point for all PowerShell-based testin
   - Binary verification
 
 #### All Suite (`-Suite all`, default)
+
 - **Duration**: ~15-20 minutes
 - **Purpose**: Comprehensive validation
 - **Runs**: All of the above in optimized order
@@ -99,35 +104,43 @@ The master test runner is the single entry point for all PowerShell-based testin
 ### Output Formats
 
 #### Console (default)
+
 ```powershell
 .\tests\run-all-tests.ps1 -OutputFormat console
 ```
+
 - Colored terminal output
 - Real-time progress
 - Summary table at end
 
 #### JSON
+
 ```powershell
 .\tests\run-all-tests.ps1 -OutputFormat json -OutputFile results
 ```
+
 - Machine-readable format
 - CI/CD integration friendly
 - Structured test results
 - Output: `results.json`
 
 #### Markdown
+
 ```powershell
 .\tests\run-all-tests.ps1 -OutputFormat markdown -OutputFile results
 ```
+
 - Human-readable report
 - GitHub/GitLab compatible
 - Tables and formatting
 - Output: `results.md`
 
 #### HTML
+
 ```powershell
 .\tests\run-all-tests.ps1 -OutputFormat html -OutputFile results
 ```
+
 - Interactive web report
 - Charts and visualizations
 - Auto-opens in browser (non-CI)
@@ -159,13 +172,15 @@ tests/
 The test runner automatically manages MCP server lifecycle during tests:
 
 ### Automatic Lifecycle
+
 1. **Startup**: Servers are started before MCP tests
-2. **Health Check**: Waits for servers to be ready
-3. **Testing**: Runs MCP test suite
-4. **Cleanup**: Gracefully stops all servers
-5. **Force Kill**: Forcefully terminates if shutdown fails
+1. **Health Check**: Waits for servers to be ready
+1. **Testing**: Runs MCP test suite
+1. **Cleanup**: Gracefully stops all servers
+1. **Force Kill**: Forcefully terminates if shutdown fails
 
 ### Manual Management
+
 ```powershell
 # Start servers only
 Start-MCPServers
@@ -180,6 +195,7 @@ Get-Process -Name "node" | Where-Object { $_.CommandLine -like "*@modelcontextpr
 ## CI/CD Integration
 
 ### GitHub Actions Example
+
 ```yaml
 name: Test Suite
 
@@ -205,6 +221,7 @@ jobs:
 ```
 
 ### Exit Codes
+
 - `0`: All tests passed
 - `1`: One or more tests failed
 - Other: Fatal error (see logs)
@@ -214,6 +231,7 @@ jobs:
 ### Common Issues
 
 #### MCP Servers Won't Start
+
 ```powershell
 # Check for conflicting processes
 Get-Process -Name "node" | Stop-Process -Force
@@ -227,6 +245,7 @@ npx --version
 ```
 
 #### Tests Hang or Timeout
+
 ```powershell
 # Run with FailFast to identify problem
 .\tests\run-all-tests.ps1 -FailFast -Verbose
@@ -239,6 +258,7 @@ taskkill /F /IM mistralrs-server.exe
 ```
 
 #### Permission Denied
+
 ```powershell
 # Run as Administrator
 Start-Process powershell -Verb RunAs -ArgumentList "-ExecutionPolicy Bypass -File tests/run-all-tests.ps1"
@@ -248,6 +268,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 #### Binary Not Found
+
 ```bash
 # Rebuild binary
 make build-cuda-full
@@ -262,38 +283,44 @@ echo $env:PATH
 ## Performance Tips
 
 ### Speed Up Tests
+
 1. **Use Quick Suite**: `make test-ps1-quick` for fast checks
-2. **Parallel Execution**: Use `-Parallel` flag (experimental)
-3. **Cache Builds**: Ensure `sccache` is configured
-4. **Skip Suites**: Run only needed suites (`-Suite integration`)
+1. **Parallel Execution**: Use `-Parallel` flag (experimental)
+1. **Cache Builds**: Ensure `sccache` is configured
+1. **Skip Suites**: Run only needed suites (`-Suite integration`)
 
 ### Reduce Resource Usage
+
 1. **Sequential Mode**: Default (safer, less memory)
-2. **Single Suite**: Don't run `-Suite all` unnecessarily
-3. **Cleanup**: Archive old results regularly
-4. **Close Apps**: Free up VRAM before running
+1. **Single Suite**: Don't run `-Suite all` unnecessarily
+1. **Cleanup**: Archive old results regularly
+1. **Close Apps**: Free up VRAM before running
 
 ## Best Practices
 
 ### Pre-Commit
+
 ```bash
 # Always run quick check before committing
 make test-ps1-quick
 ```
 
 ### Pre-Push
+
 ```bash
 # Run full suite before pushing
 make test-full
 ```
 
 ### Pre-Release
+
 ```bash
 # Comprehensive validation
 .\tests\run-all-tests.ps1 -Suite all -OutputFormat html -Verbose
 ```
 
 ### CI Pipeline
+
 ```bash
 # Strict mode with JSON output
 .\tests\run-all-tests.ps1 -Suite all -CI -FailFast -OutputFormat json
@@ -304,19 +331,20 @@ make test-full
 When adding new tests:
 
 1. **Choose Category**: integration, mcp, or build
-2. **Create Script**: `tests/<category>/test-<name>.ps1`
-3. **Follow Pattern**:
+1. **Create Script**: `tests/<category>/test-<name>.ps1`
+1. **Follow Pattern**:
    ```powershell
    # Exit with 0 on success, non-zero on failure
    # Write structured output if possible
    # Handle cleanup in finally block
    ```
-4. **Test Discovery**: Runner auto-discovers `*.ps1` in test directories
-5. **Documentation**: Update this README with test details
+1. **Test Discovery**: Runner auto-discovers `*.ps1` in test directories
+1. **Documentation**: Update this README with test details
 
 ## Support
 
 For issues or questions:
+
 - Check logs in `tests/results/`
 - Review `.logs/build.log` for build issues
 - Check GitHub issues: https://github.com/EricLBuehler/mistral.rs/issues
@@ -325,6 +353,7 @@ For issues or questions:
 ## Summary
 
 **Quick Commands**:
+
 ```bash
 make test-full         # Everything (Rust + PowerShell)
 make test-ps1          # All PowerShell tests
@@ -333,6 +362,7 @@ make test-ps1-ci       # CI mode
 ```
 
 **Direct Execution**:
+
 ```powershell
 .\tests\run-all-tests.ps1                    # Default (all)
 .\tests\run-all-tests.ps1 -Suite quick       # Fast

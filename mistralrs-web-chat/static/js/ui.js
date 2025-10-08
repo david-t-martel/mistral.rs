@@ -7,13 +7,13 @@ function initTextareaResize() {
   const input = document.getElementById('input');
   // ✅ FIX: Make consistent with CSS max-height: calc(1.4em * 15)
   const maxH = parseFloat(getComputedStyle(input).lineHeight) * 15;
-  
-  function fit() { 
-    input.style.height = 'auto'; 
-    input.style.height = Math.min(input.scrollHeight, maxH) + 'px'; 
+
+  function fit() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, maxH) + 'px';
   }
-  
-  input.addEventListener('input', fit); 
+
+  input.addEventListener('input', fit);
   fit();
 }
 
@@ -26,20 +26,20 @@ async function handleImageUpload(file) {
     alert('Please select an image file');
     return;
   }
-  
+
   // ✅ IMPROVEMENT: Validate file size (50MB limit to match backend)
   const maxSize = 50 * 1024 * 1024; // 50MB
   if (file.size > maxSize) {
     alert('Image file is too large. Maximum size is 50MB.');
     return;
   }
-  
+
   const preview = createImagePreview(URL.createObjectURL(file));
   document.getElementById('image-container').appendChild(preview);
-  
-  const fd = new FormData(); 
+
+  const fd = new FormData();
   fd.append('image', file);
-  
+
   try {
     const r = await fetch('/api/upload_image', { method: 'POST', body: fd });
     if (r.ok) {
@@ -63,20 +63,20 @@ async function handleImageUpload(file) {
 function createTextFilePreview(filename, content, size) {
   const preview = document.createElement('div');
   preview.className = 'text-file-preview';
-  
+
   // File header with name, size, and remove button
   const header = document.createElement('div');
   header.className = 'file-header';
-  
+
   const fileName = document.createElement('div');
   fileName.className = 'file-name';
   fileName.textContent = filename;
   fileName.title = filename; // Show full name on hover
-  
+
   const fileSize = document.createElement('div');
   fileSize.className = 'file-size';
   fileSize.textContent = formatFileSize(size);
-  
+
   const removeBtn = document.createElement('button');
   removeBtn.className = 'remove-btn';
   removeBtn.textContent = '×';
@@ -84,24 +84,24 @@ function createTextFilePreview(filename, content, size) {
   removeBtn.addEventListener('click', () => {
     preview.remove();
   });
-  
+
   header.appendChild(fileName);
   header.appendChild(fileSize);
   header.appendChild(removeBtn);
-  
+
   // File content preview (truncated)
   const contentDiv = document.createElement('div');
   contentDiv.className = 'file-content';
   const truncatedContent = content.length > 500 ? content.substring(0, 500) + '...' : content;
   contentDiv.textContent = truncatedContent;
-  
+
   preview.appendChild(header);
   preview.appendChild(contentDiv);
-  
+
   // Store the full content as a data attribute
   preview.dataset.content = content;
   preview.dataset.filename = filename;
-  
+
   return preview;
 }
 
@@ -126,7 +126,7 @@ async function handleTextUpload(file) {
     'application/json', 'application/javascript', 'application/xml', 'application/yaml',
     'application/x-python', 'application/x-rust', 'application/x-sh', 'application/octet-stream'
   ];
-  
+
   const fileExt = file.name.split('.').pop()?.toLowerCase();
   const allowedExtensions = [
     'txt', 'md', 'markdown', 'py', 'js', 'ts', 'jsx', 'tsx', 'rs', 'html', 'htm', 'css', 'json',
@@ -140,28 +140,28 @@ async function handleTextUpload(file) {
     'swift', 'kt', 'scala', 'clj', 'hs', 'elm', 'ex', 'erl', 'fs', 'fsx', 'ml', 'mli',
     'vue', 'svelte', 'lua', 'nim', 'zig', 'd', 'dart', 'jl', 'pl', 'pm', 'tcl'
   ];
-  
+
   if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt) && file.type !== '') {
     alert('Please select a text or code file');
     return;
   }
-  
+
   // ✅ IMPROVEMENT: Validate file size (10MB limit to match backend)
   const maxSize = 10 * 1024 * 1024; // 10MB
   if (file.size > maxSize) {
     alert('Text file is too large. Maximum size is 10MB.');
     return;
   }
-  
-  const fd = new FormData(); 
+
+  const fd = new FormData();
   fd.append('file', file);
-  
+
   try {
     const r = await fetch('/api/upload_text', { method: 'POST', body: fd });
-    
+
     if (r.ok) {
       const response = await r.json();
-      
+
       // Create preview element
       const preview = createTextFilePreview(response.filename, response.content, response.size);
       document.getElementById('text-files-container').appendChild(preview);
@@ -180,11 +180,11 @@ async function handleTextUpload(file) {
  */
 function initImageUpload() {
   const imageInput = document.getElementById('imageInput');
-  
+
   imageInput.addEventListener('change', async () => {
-    const f = imageInput.files[0]; 
+    const f = imageInput.files[0];
     if (!f) return;
-    
+
     await handleImageUpload(f);
     imageInput.value = '';
   });
@@ -195,11 +195,11 @@ function initImageUpload() {
  */
 function initTextUpload() {
   const textInput = document.getElementById('textInput');
-  
+
   textInput.addEventListener('change', async () => {
-    const f = textInput.files[0]; 
+    const f = textInput.files[0];
     if (!f) return;
-    
+
     await handleTextUpload(f);
     textInput.value = '';
   });
@@ -210,30 +210,30 @@ function initTextUpload() {
  */
 function initDragAndDrop() {
   const mainArea = document.getElementById('main');
-  
+
   mainArea.addEventListener('dragover', e => {
     e.preventDefault();
     mainArea.classList.add('drag-over');
   });
-  
+
   mainArea.addEventListener('dragleave', e => {
     e.preventDefault();
     mainArea.classList.remove('drag-over');
   });
-  
+
   mainArea.addEventListener('drop', async e => {
-    e.preventDefault(); 
+    e.preventDefault();
     mainArea.classList.remove('drag-over');
-    
+
     const files = Array.from(e.dataTransfer.files);
-    
+
     // Handle image files
     const imageFile = files.find(f => f.type.startsWith('image/'));
     if (imageFile) {
       await handleImageUpload(imageFile);
       return;
     }
-    
+
     // Handle text files
     const textFile = files.find(f => {
       const ext = f.name.split('.').pop()?.toLowerCase();
@@ -252,12 +252,12 @@ function initDragAndDrop() {
       ];
       return f.type.startsWith('text/') || allowedExtensions.includes(ext) || f.type === 'application/json';
     });
-    
+
     if (textFile) {
       await handleTextUpload(textFile);
       return;
     }
-    
+
     // No supported file type found
     alert('Please drop an image file or text/code file');
   });

@@ -1013,7 +1013,7 @@ gh run rerun <run-id> --failed
 - Check [MCP Testing](mcp-testing.md) for protocol testing
 - Read [Testing Migration](../development/testing-migration.md) for updates
 
----
+______________________________________________________________________
 
 *Last Updated: 2025*
 *Version: 1.0.0*

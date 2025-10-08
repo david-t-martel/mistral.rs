@@ -125,26 +125,26 @@ $processArgs = @(
 try {
     # Start server process in background
     $process = Start-Process -FilePath $BinaryPath -ArgumentList $processArgs -PassThru -RedirectStandardOutput $logFile -RedirectStandardError "${logFile}.err" -NoNewWindow
-    
+
     Write-Host "  Process started (PID: $($process.Id))" -ForegroundColor Gray
     $results.tests.serverStartup.pid = $process.Id
-    
+
     # Wait for server to initialize
     Write-Host "  Waiting for server initialization..." -ForegroundColor Gray
     $initialized = $false
     $attempts = 0
     $maxAttempts = 60
-    
+
     while (-not $initialized -and $attempts -lt $maxAttempts) {
         Start-Sleep -Seconds 2
         $attempts++
-        
+
         # Check if process is still running
         if ($process.HasExited) {
             Write-Host "  ❌ Server process exited unexpectedly (Exit code: $($process.ExitCode))" -ForegroundColor Red
             $results.tests.serverStartup.status = "FAILED"
             $results.tests.serverStartup.error = "Process exited with code $($process.ExitCode)"
-            
+
             # Show error log
             if (Test-Path "${logFile}.err") {
                 $errorContent = Get-Content "${logFile}.err" -Raw
@@ -153,7 +153,7 @@ try {
             }
             break
         }
-        
+
         # Try health check
         try {
             $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 2 -ErrorAction SilentlyContinue
@@ -168,22 +168,22 @@ try {
         } catch {
             # Still initializing, continue waiting
         }
-        
+
         Write-Host "." -NoNewline -ForegroundColor Gray
     }
-    
+
     Write-Host ""
-    
+
     if (-not $initialized -and -not $process.HasExited) {
         Write-Host "  ⚠️ Server timeout after $($maxAttempts * 2) seconds" -ForegroundColor Yellow
         $results.tests.serverStartup.status = "TIMEOUT"
     }
-    
+
     # Test 6: API Endpoint Tests (only if server initialized)
     if ($initialized) {
         Write-Host "`nTest 6: API Endpoint Testing" -ForegroundColor Yellow
         $results.tests.apiEndpoints = @{}
-        
+
         # Test 6a: Health endpoint
         try {
             $healthResponse = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -Method Get
@@ -197,7 +197,7 @@ try {
             Write-Host "  ❌ GET /health failed: $_" -ForegroundColor Red
             $results.tests.apiEndpoints.health = @{ status = "FAILED"; error = $_.Exception.Message }
         }
-        
+
         # Test 6b: Models endpoint
         try {
             $modelsResponse = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/v1/models" -Method Get
@@ -211,7 +211,7 @@ try {
             Write-Host "  ⚠️ GET /v1/models failed: $_" -ForegroundColor Yellow
             $results.tests.apiEndpoints.models = @{ status = "FAILED"; error = $_.Exception.Message }
         }
-        
+
         # Test 6c: Chat completions endpoint
         Write-Host "  Testing inference..." -ForegroundColor Gray
         try {
@@ -226,16 +226,16 @@ try {
                 max_tokens = 10
                 temperature = 0.1
             } | ConvertTo-Json
-            
+
             $inferenceStart = Get-Date
             $chatResponse = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/v1/chat/completions" -Method Post -Body $chatBody -ContentType "application/json" -TimeoutSec 30
             $inferenceTime = (Get-Date) - $inferenceStart
-            
+
             Write-Host "  ✅ POST /v1/chat/completions successful" -ForegroundColor Green
             Write-Host "  Response: $($chatResponse.choices[0].message.content)" -ForegroundColor Gray
             Write-Host "  Inference time: $($inferenceTime.TotalSeconds) seconds" -ForegroundColor Gray
             Write-Host "  Tokens: $($chatResponse.usage.total_tokens)" -ForegroundColor Gray
-            
+
             $results.tests.apiEndpoints.chat_completions = @{
                 status = "PASSED"
                 inference_time_seconds = [math]::Round($inferenceTime.TotalSeconds, 2)
@@ -246,7 +246,7 @@ try {
             Write-Host "  ❌ POST /v1/chat/completions failed: $_" -ForegroundColor Red
             $results.tests.apiEndpoints.chat_completions = @{ status = "FAILED"; error = $_.Exception.Message }
         }
-        
+
         # Test 6d: Check VRAM usage
         Write-Host "`nTest 7: VRAM Usage Monitoring" -ForegroundColor Yellow
         $results.tests.vramUsage = @{}
@@ -257,7 +257,7 @@ try {
                 $used = [int]$vramParts[0].Trim()
                 $total = [int]$vramParts[1].Trim()
                 $percent = [math]::Round(($used / $total) * 100, 1)
-                
+
                 Write-Host "  ✅ VRAM Usage: $used MB / $total MB ($percent%)" -ForegroundColor Green
                 $results.tests.vramUsage.status = "PASSED"
                 $results.tests.vramUsage.used_mb = $used
@@ -269,7 +269,7 @@ try {
             $results.tests.vramUsage.status = "WARNING"
         }
     }
-    
+
     # Cleanup: Stop server
     Write-Host "`nCleaning up..." -ForegroundColor Yellow
     if (-not $process.HasExited) {
@@ -277,12 +277,12 @@ try {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
     }
-    
+
     # Check if logs exist
     if (Test-Path $logFile) {
         $logSize = (Get-Item $logFile).Length
         Write-Host "  Log file created: $logFile ($logSize bytes)" -ForegroundColor Gray
-        
+
         # Check for CUDA initialization in logs
         $logContent = Get-Content $logFile -Raw
         if ($logContent -match "CUDA") {
@@ -293,7 +293,7 @@ try {
             }
         }
     }
-    
+
 } catch {
     Write-Host "  ❌ Server startup failed: $_" -ForegroundColor Red
     $results.tests.serverStartup.status = "FAILED"

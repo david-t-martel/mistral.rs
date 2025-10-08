@@ -26,7 +26,7 @@ jobs:
           script: |
             const fs = require('fs');
             const tokeiOutput = fs.readFileSync('tokei_output.txt', 'utf8');
-            const uniqueIdentifier = 'Code Metrics Report'; 
+            const uniqueIdentifier = 'Code Metrics Report';
             const codeReport = `
               <details>
               <summary>${uniqueIdentifier}</summary>

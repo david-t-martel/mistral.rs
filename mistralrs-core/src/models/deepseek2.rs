@@ -1145,8 +1145,12 @@ impl NormalModel for DeepSeekV2 {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Provide XLora forward path (merge adapter deltas or route through expanded LoRA layers)
-        unimplemented!()
+        candle_core::bail!(
+            "X-LoRA is not yet supported for DeepSeek V2 models. \
+            DeepSeek V2 uses a unique MLA (Multi-head Latent Attention) architecture that requires \
+            specialized adapter integration. Use standard LoRA adapters with non-XLora models, or \
+            use XLora with other supported architectures (Llama, Mistral, etc.)."
+        )
     }
     fn cache(&self) -> &EitherCache {
         &self.cache

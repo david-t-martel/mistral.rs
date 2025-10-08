@@ -1,5 +1,7 @@
 # Agent Tools Integration
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before expanding this integration._
+
 ## Overview
 
 The `mistralrs-agent-tools` crate has been successfully integrated into the `mistralrs-server` to enable sandboxed filesystem operations in agent mode.

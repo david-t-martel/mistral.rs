@@ -2,6 +2,7 @@
 # example: python3 examples/convert_awq_marlin.py --src /home/Meta-Llama-3.1-8B-Instruct-AWQ-INT4/ --dst /home/Meta-Llama-3.1-8B-Instruct-AWQ-INT4-Marlin/ --bits 4
 
 from typing import List
+import json
 import torch
 import numpy
 from safetensors.torch import load_file, save_file
@@ -54,10 +55,11 @@ def unpack_cols(
 ):
     pack_factor = 32 // num_bits
     assert size_n % pack_factor == 0
-    assert packed_q_w.shape == (size_k, size_n // pack_factor), (
-        "packed_q_w.shape = {} size_k = {}, size_n = {} pack_Factor = {}".format(
-            packed_q_w.shape, size_k, size_n, pack_factor
-        )
+    assert packed_q_w.shape == (
+        size_k,
+        size_n // pack_factor,
+    ), "packed_q_w.shape = {} size_k = {}, size_n = {} pack_Factor = {}".format(
+        packed_q_w.shape, size_k, size_n, pack_factor
     )
 
     orig_device = packed_q_w.device
@@ -161,9 +163,6 @@ def transform_file(src_folder, dst_folder, bits):
     print("Transformation complete.")
 
 
-import json
-
-
 def load_json(json_path, fn):
     json_fn = os.path.join(json_path, fn)
     with open(json_fn, "r", encoding="utf-8") as f_json:
@@ -196,15 +195,15 @@ def main():
     )
 
     args = parser.parse_args()
-    assert args.src != "" and os.path.exists(args.src), (
-        "Must provide src folder (or src folder not found)!"
-    )
-    assert args.dst != "" and not os.path.exists(args.dst), (
-        "Must provide dst folder (or dst folder must be empty)!"
-    )
-    assert args.bits == 8 or args.bits == 4, (
-        "only 4-bit and 8-bit models are supported!"
-    )
+    assert args.src != "" and os.path.exists(
+        args.src
+    ), "Must provide src folder (or src folder not found)!"
+    assert args.dst != "" and not os.path.exists(
+        args.dst
+    ), "Must provide dst folder (or dst folder must be empty)!"
+    assert (
+        args.bits == 8 or args.bits == 4
+    ), "only 4-bit and 8-bit models are supported!"
 
     try:
         src_directory = args.src

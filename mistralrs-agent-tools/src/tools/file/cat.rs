@@ -211,6 +211,10 @@ mod tests {
     #[test]
     fn test_cat_sandbox_violation() {
         let (sandbox, _temp_dir) = create_test_sandbox();
+        // Use a path outside the sandbox - on Windows use a different drive or system path
+        #[cfg(windows)]
+        let outside_path = PathBuf::from("C:\\Windows\\System32\\drivers\\etc\\hosts");
+        #[cfg(not(windows))]
         let outside_path = PathBuf::from("/tmp/outside.txt");
 
         let options = CatOptions::default();

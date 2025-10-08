@@ -1,5 +1,7 @@
 # Agent Tools Development - Session Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before applying this session plan._
+
 **Date**: 2025-01-04
 **Session Duration**: ~3 hours\
 **Status**: ✅ Major Milestone Achieved

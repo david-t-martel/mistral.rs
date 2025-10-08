@@ -29,7 +29,7 @@ tools = [
 def custom_serializer(obj):
     try:
         res = json.dumps(obj)
-    except:
+    except Exception:
         # Handle serializing, for example, an imported module
         res = None
     return res

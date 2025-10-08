@@ -21,6 +21,11 @@ serde_json = { workspace = true }
 thiserror = "2.0"
 tracing = { workspace = true }
 
+# Integration with mistralrs-core
+mistralrs-mcp = { path = "../mistralrs-mcp" }
+futures = "0.3"
+tokio = { workspace = true, features = ["full"] }
+
 # Path and file handling
 camino = { version = "1.1", features = ["serde1"] }
 ignore = "0.4"

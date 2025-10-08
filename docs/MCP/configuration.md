@@ -20,6 +20,7 @@ For simple use cases, you can now use a minimal configuration that leverages sma
 ```
 
 This automatically provides:
+
 - **UUID-based server ID**: Unique identifier generated automatically
 - **Enabled by default**: Server is active without explicit `enabled: true`
 - **UUID-based tool prefix**: Prevents naming conflicts automatically
@@ -106,55 +107,59 @@ Configuration for each MCP server:
 
 ### McpClientConfig Fields
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `servers` | Array | Yes | - | List of MCP server configurations |
-| `auto_register_tools` | Boolean | No | `true` | Automatically discover and register tools at startup |
-| `tool_timeout_secs` | Integer | No | `null` | Timeout in seconds for individual tool calls (null = no timeout) |
-| `max_concurrent_calls` | Integer | No | `1` | Maximum number of concurrent tool executions |
+| Field                  | Type    | Required | Default | Description                                                      |
+| ---------------------- | ------- | -------- | ------- | ---------------------------------------------------------------- |
+| `servers`              | Array   | Yes      | -       | List of MCP server configurations                                |
+| `auto_register_tools`  | Boolean | No       | `true`  | Automatically discover and register tools at startup             |
+| `tool_timeout_secs`    | Integer | No       | `null`  | Timeout in seconds for individual tool calls (null = no timeout) |
+| `max_concurrent_calls` | Integer | No       | `1`     | Maximum number of concurrent tool executions                     |
 
 ### McpServerConfig Fields
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `id` | String | No | UUID | Unique identifier for the server (UUID generated if not provided) |
-| `name` | String | Yes | - | Human-readable server name |
-| `source` | Object | Yes | - | Transport configuration |
-| `enabled` | Boolean | No | `true` | Whether to connect to this server |
-| `tool_prefix` | String | No | UUID-based | Prefix to add to all tool names (UUID-based if not provided) |
-| `resources` | Array | No | None | Resource URI patterns to subscribe to |
-| `bearer_token` | String | No | None | Bearer token for authentication |
+| Field          | Type    | Required | Default    | Description                                                       |
+| -------------- | ------- | -------- | ---------- | ----------------------------------------------------------------- |
+| `id`           | String  | No       | UUID       | Unique identifier for the server (UUID generated if not provided) |
+| `name`         | String  | Yes      | -          | Human-readable server name                                        |
+| `source`       | Object  | Yes      | -          | Transport configuration                                           |
+| `enabled`      | Boolean | No       | `true`     | Whether to connect to this server                                 |
+| `tool_prefix`  | String  | No       | UUID-based | Prefix to add to all tool names (UUID-based if not provided)      |
+| `resources`    | Array   | No       | None       | Resource URI patterns to subscribe to                             |
+| `bearer_token` | String  | No       | None       | Bearer token for authentication                                   |
 
 ### Transport Source Fields
 
 #### HTTP Source
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `type` | String | Yes | - | Must be "Http" |
-| `url` | String | Yes | - | HTTP/HTTPS URL of the MCP server |
-| `timeout_secs` | Integer | No | `null` | Request timeout in seconds (null = no timeout) |
-| `headers` | Object | No | None | Additional HTTP headers |
+
+| Field          | Type    | Required | Default | Description                                    |
+| -------------- | ------- | -------- | ------- | ---------------------------------------------- |
+| `type`         | String  | Yes      | -       | Must be "Http"                                 |
+| `url`          | String  | Yes      | -       | HTTP/HTTPS URL of the MCP server               |
+| `timeout_secs` | Integer | No       | `null`  | Request timeout in seconds (null = no timeout) |
+| `headers`      | Object  | No       | None    | Additional HTTP headers                        |
 
 #### WebSocket Source
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `type` | String | Yes | - | Must be "WebSocket" |
-| `url` | String | Yes | - | WS/WSS URL of the MCP server |
-| `timeout_secs` | Integer | No | `null` | Connection timeout in seconds (null = no timeout) |
-| `headers` | Object | No | None | WebSocket handshake headers |
+
+| Field          | Type    | Required | Default | Description                                       |
+| -------------- | ------- | -------- | ------- | ------------------------------------------------- |
+| `type`         | String  | Yes      | -       | Must be "WebSocket"                               |
+| `url`          | String  | Yes      | -       | WS/WSS URL of the MCP server                      |
+| `timeout_secs` | Integer | No       | `null`  | Connection timeout in seconds (null = no timeout) |
+| `headers`      | Object  | No       | None    | WebSocket handshake headers                       |
 
 #### Process Source
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `type` | String | Yes | - | Must be "Process" |
-| `command` | String | Yes | - | Executable command to run |
-| `args` | Array | No | `[]` | Command line arguments |
-| `work_dir` | String | No | Current dir | Working directory |
-| `env` | Object | No | None | Environment variables |
+
+| Field      | Type   | Required | Default     | Description               |
+| ---------- | ------ | -------- | ----------- | ------------------------- |
+| `type`     | String | Yes      | -           | Must be "Process"         |
+| `command`  | String | Yes      | -           | Executable command to run |
+| `args`     | Array  | No       | `[]`        | Command line arguments    |
+| `work_dir` | String | No       | Current dir | Working directory         |
+| `env`      | Object | No       | None        | Environment variables     |
 
 ## Authentication
 
 ### Bearer Token
+
 The `bearer_token` field is automatically added as an `Authorization: Bearer <token>` header for HTTP and WebSocket connections.
 
 ```json
@@ -164,6 +169,7 @@ The `bearer_token` field is automatically added as an `Authorization: Bearer <to
 ```
 
 ### Custom Headers
+
 For other authentication schemes, use the `headers` field:
 
 ```json
@@ -182,11 +188,15 @@ For other authentication schemes, use the `headers` field:
 ## Tool Naming
 
 ### Without Prefix
+
 Tools are registered with their original names:
+
 - MCP tool: `search` → Registered as: `search`
 
 ### With Prefix
+
 When `tool_prefix` is set, all tools from that server get prefixed:
+
 - MCP tool: `search` with prefix `web` → Registered as: `web_search`
 
 This prevents conflicts when multiple servers provide tools with the same name.
@@ -237,23 +247,24 @@ McpServerConfigPy(
 
 ### MCP-Related Environment Variables
 
-| Variable | Description |
-|----------|-------------|
+| Variable          | Description                                           |
+| ----------------- | ----------------------------------------------------- |
 | `MCP_CONFIG_PATH` | Path to MCP configuration file (for mistralrs-server) |
-| `MCP_LOG_LEVEL` | Logging level for MCP operations |
-| `MCP_POOL_SIZE` | Connection pool size for HTTP/WebSocket |
+| `MCP_LOG_LEVEL`   | Logging level for MCP operations                      |
+| `MCP_POOL_SIZE`   | Connection pool size for HTTP/WebSocket               |
 
 ## Validation Rules
 
 1. **Unique Server IDs**: All server `id` values must be unique
-2. **Valid URLs**: HTTP URLs must start with `http://` or `https://`
-3. **Valid WebSocket URLs**: Must start with `ws://` or `wss://`
-4. **Executable Commands**: Process commands must be executable
-5. **Tool Name Conflicts**: Use `tool_prefix` to avoid conflicts
+1. **Valid URLs**: HTTP URLs must start with `http://` or `https://`
+1. **Valid WebSocket URLs**: Must start with `ws://` or `wss://`
+1. **Executable Commands**: Process commands must be executable
+1. **Tool Name Conflicts**: Use `tool_prefix` to avoid conflicts
 
 ## Example Configurations
 
 ### Single Server (Hugging Face) - Minimal
+
 ```json
 {
   "servers": [{
@@ -268,6 +279,7 @@ McpServerConfigPy(
 ```
 
 ### Single Server (Hugging Face) - Full Configuration
+
 ```json
 {
   "servers": [{
@@ -289,6 +301,7 @@ McpServerConfigPy(
 ```
 
 ### Multi-Server Setup
+
 ```json
 {
   "servers": [

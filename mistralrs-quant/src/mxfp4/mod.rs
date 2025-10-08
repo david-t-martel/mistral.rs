@@ -117,7 +117,7 @@ impl QuantMethod for MXFP4Layer {
         _imatrix_weight: Option<Vec<f32>>,
         _guard: QuantizeOntoGuard,
     ) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!("ISQ (In-Situ Quantization) is not supported for MXFP4 layers. MXFP4 quantization must be applied during model loading.")
     }
 }
 

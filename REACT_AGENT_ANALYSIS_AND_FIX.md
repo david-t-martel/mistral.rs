@@ -1,5 +1,7 @@
 # ReAct Agent Tool Execution - Complete Analysis & Fix
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before applying this remediation._
+
 ## Executive Summary
 
 **Status**: ✅ **FIXED** - Tool execution now fully functional

@@ -210,8 +210,19 @@ impl LinearLayerLike for QLoraLinear {
         None
     }
     fn weight(&self) -> &Tensor {
-        // TODO: Provide access to underlying weight tensor for QLoraLinear (expose quantized base weight or merged view)
-        unimplemented!()
+        // QLoraLinear does not directly expose the weight tensor because:
+        // 1. The base layer is quantized (not a regular tensor)
+        // 2. LoRA adapters modify the effective weights
+        // 3. Merging adapters changes the weight representation
+        //
+        // To access weights, use:
+        // - old.dequantize_w() for the base quantized weights
+        // - merge_weights() to apply adapters, then old.dequantize_w()
+        panic!(
+            "QLoraLinear does not expose a single weight tensor. \
+            The base layer uses quantized weights and LoRA adapters modify the effective weights. \
+            Use old.dequantize_w() to get the base weights, or merge_weights() followed by dequantize_w() for merged weights."
+        )
     }
     fn quantized_act_type(&self) -> Option<DType> {
         Some(DType::F32)

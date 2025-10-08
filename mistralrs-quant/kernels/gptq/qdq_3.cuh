@@ -139,6 +139,6 @@ __forceinline__ __device__ void dequant_3bit_32(const uint32_t q_0,
   dq[13] = __hfma2(q13.as_half2, y8, z8);
   dq[14] = __hfma2(q14.as_half2, y64, z64);
   dq[15] = __hadd2(q15.as_half2, z1);
-} 
+}
 
 #endif

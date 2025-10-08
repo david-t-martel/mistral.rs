@@ -3,6 +3,7 @@
 These are API docs for the `mistralrs` package.
 
 **Table of contents**
+
 - Full API docs: [here](https://ericlbuehler.github.io/mistral.rs/pyo3/mistralrs.html)
 - Docs for the `Which` enum: [here](#which)
 - Multi-model support: [here](#multi-model-support)
@@ -14,6 +15,7 @@ These are API docs for the `mistralrs` package.
 Each `*_model_id` may be a HF hub repo or a local path. For quantized GGUF models, a list is accepted if multiple files must be specified.
 
 ### Architecture for plain models
+
 If you do not specify the architecture, an attempt will be made to use the model's config. If this fails, please raise an issue.
 
 - `Mistral`
@@ -34,10 +36,12 @@ If you do not specify the architecture, an attempt will be made to use the model
 - `SmolLm3`
 
 ### ISQ Organization
+
 - `Default`
 - `MoQE`: if applicable, only quantize MoE experts. https://arxiv.org/abs/2310.02410
 
 ### Architecture for vision models
+
 - `Phi3V`
 - `Idefics2`
 - `LLaVaNext`
@@ -54,13 +58,16 @@ If you do not specify the architecture, an attempt will be made to use the model
 - `Gemma3n`
 
 ### Architecture for diffusion models
+
 - `Flux`
 - `FluxOffloaded`
 
 ### Architecture for speech models
+
 - `Dia`
 
 ### ISQ Organization
+
 - `Default`
 - `MoQE`: if applicable, only quantize MoE experts. https://arxiv.org/abs/2310.02410
 
@@ -273,6 +280,7 @@ runner.remove_model("meta-llama/Llama-3.2-3B-Instruct")
 ```
 
 ### Server Configuration
+
 For server-based multi-model deployment, see the [multi-model documentation](../docs/multi_model/README.md).
 
 ## MCP Client
@@ -360,10 +368,11 @@ runner = mistralrs.Runner(
 ```
 
 When `auto_register_tools=True`, the MCP client will:
+
 1. Connect to all enabled MCP servers
-2. Discover available tools from each server
-3. Register them for automatic tool calling with appropriate prefixes
-4. Make them available during model conversations
+1. Discover available tools from each server
+1. Register them for automatic tool calling with appropriate prefixes
+1. Make them available during model conversations
 
 ### MCP Transport Types
 
@@ -380,6 +389,7 @@ When `auto_register_tools=True`, the MCP client will:
 - **Process Servers**: Typically don't require authentication as they run locally
 
 ## Example
+
 ```python
 from mistralrs import Runner, Which, ChatCompletionRequest
 

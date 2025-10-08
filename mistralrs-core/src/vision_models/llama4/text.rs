@@ -858,8 +858,9 @@ impl NormalModel for TextModel {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement xlora_forward for LLaMA4 text component
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this LLaMA4 text model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &crate::pipeline::EitherCache {
         &self.kv_cache

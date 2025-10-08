@@ -16,6 +16,13 @@ pub mod pathlib;
 pub mod tools;
 pub mod types;
 
+// Core integration with mistralrs-core
+pub mod core_integration;
+
+// MCP server for exposing tools via Model Context Protocol
+#[cfg(feature = "sandbox")]
+pub mod mcp_server;
+
 // Test utilities (only available in tests)
 #[cfg(test)]
 pub mod test_utils;
@@ -28,9 +35,16 @@ pub use tools::shell::execute;
 pub use tools::text::{grep, head, sort, tail, uniq, wc};
 pub use types::{
     AgentError, AgentResult, Bom, CatOptions, CommandOptions, CommandResult, FileEntry, GrepMatch,
-    GrepOptions, HeadOptions, LineEnding, LsOptions, LsResult, SandboxConfig, ShellType,
-    SortOptions, TailOptions, UniqOptions, WcOptions, WcResult,
+    GrepOptions, HeadOptions, LineEnding, LsOptions, LsResult, SandboxConfig, SecurityLevel,
+    SecurityPolicy, ShellType, SortOptions, TailOptions, UniqOptions, WcOptions, WcResult,
 };
+
+// Core integration exports
+pub use core_integration::AgentToolProvider;
+
+// MCP server exports
+#[cfg(feature = "sandbox")]
+pub use mcp_server::McpServer;
 
 /// Main agent toolkit providing high-level API for all operations
 #[derive(Debug, Clone)]
@@ -341,333 +355,6 @@ impl AgentToolkit {
     /// Touch file with winutils
     pub fn touch_util(&self, path: &std::path::Path) -> AgentResult<()> {
         tools::winutils::fileops::touch(&self.sandbox, path)
-    }
-}
-
-// Keep legacy AgentTools API for backwards compatibility
-use anyhow::Result;
-use camino::{Utf8Path, Utf8PathBuf};
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io::Write;
-use tracing::{info, warn};
-use walkdir::WalkDir;
-
-/// Maximum file size for read operations (5 MiB)
-const MAX_READ_SIZE: u64 = 5 * 1024 * 1024;
-
-/// Maximum number of results for find/tree operations
-const MAX_RESULTS: usize = 1000;
-
-/// Legacy sandbox configuration (deprecated, use SandboxConfig instead)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LegacySandboxConfig {
-    pub root: Utf8PathBuf,
-    pub readonly_paths: Vec<Utf8PathBuf>,
-    pub enforce: bool,
-}
-
-impl Default for LegacySandboxConfig {
-    fn default() -> Self {
-        let root = std::env::var("MISTRALRS_AGENT_SANDBOX_ROOT")
-            .ok()
-            .and_then(|p| Utf8PathBuf::from_path_buf(PathBuf::from(p)).ok())
-            .unwrap_or_else(|| {
-                Utf8PathBuf::from_path_buf(std::env::current_dir().unwrap_or_default())
-                    .unwrap_or_else(|_| Utf8PathBuf::from("."))
-            });
-
-        let root = root.canonicalize_utf8().unwrap_or(root);
-
-        Self {
-            root,
-            readonly_paths: vec![
-                Utf8PathBuf::from(".git"),
-                Utf8PathBuf::from("target"),
-                Utf8PathBuf::from("node_modules"),
-            ],
-            enforce: true,
-        }
-    }
-}
-
-/// Legacy filesystem errors
-#[derive(Debug, thiserror::Error)]
-pub enum FsError {
-    #[error("Path '{0}' is outside the sandbox root")]
-    OutsideSandbox(String),
-    #[error("Path '{0}' is read-only")]
-    ReadOnly(String),
-    #[error("File too large: {0} bytes (max {1})")]
-    FileTooLarge(u64, u64),
-    #[error("Too many results: {0} (max {1})")]
-    TooManyResults(usize, usize),
-    #[error("Invalid path: {0}")]
-    InvalidPath(String),
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-}
-
-/// Legacy result type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FsResult {
-    pub success: bool,
-    pub path: String,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<String>,
-}
-
-impl FsResult {
-    pub fn success(path: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            success: true,
-            path: path.into(),
-            message: message.into(),
-            data: None,
-        }
-    }
-
-    pub fn success_with_data(
-        path: impl Into<String>,
-        message: impl Into<String>,
-        data: String,
-    ) -> Self {
-        Self {
-            success: true,
-            path: path.into(),
-            message: message.into(),
-            data: Some(data),
-        }
-    }
-
-    pub fn error(path: impl Into<String>, error: FsError) -> Self {
-        Self {
-            success: false,
-            path: path.into(),
-            message: error.to_string(),
-            data: None,
-        }
-    }
-}
-
-/// Legacy AgentTools (deprecated, use AgentToolkit instead)
-pub struct AgentTools {
-    config: LegacySandboxConfig,
-}
-
-impl AgentTools {
-    pub fn new(config: LegacySandboxConfig) -> Self {
-        info!(
-            "Initializing agent filesystem tools with sandbox root: {}",
-            config.root
-        );
-        Self { config }
-    }
-
-    pub fn with_defaults() -> Self {
-        Self::new(LegacySandboxConfig::default())
-    }
-
-    pub fn config(&self) -> &LegacySandboxConfig {
-        &self.config
-    }
-
-    fn validate_path(&self, path: &str) -> Result<Utf8PathBuf, FsError> {
-        let path = Utf8Path::new(path);
-        let absolute = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            self.config.root.join(path)
-        };
-
-        let normalized = if absolute.exists() {
-            absolute
-                .canonicalize_utf8()
-                .map_err(|e| FsError::InvalidPath(format!("{}: {}", path, e)))?
-        } else if let Some(parent) = absolute.parent() {
-            if parent.exists() {
-                let canonical_parent = parent
-                    .canonicalize_utf8()
-                    .map_err(|e| FsError::InvalidPath(format!("{}: {}", path, e)))?;
-                if let Some(filename) = absolute.file_name() {
-                    canonical_parent.join(filename)
-                } else {
-                    absolute
-                }
-            } else {
-                absolute
-            }
-        } else {
-            absolute
-        };
-
-        if self.config.enforce && !normalized.starts_with(&self.config.root) {
-            warn!("Path traversal attempt blocked: {}", normalized);
-            return Err(FsError::OutsideSandbox(normalized.to_string()));
-        }
-
-        Ok(normalized)
-    }
-
-    fn is_readonly(&self, path: &Utf8Path) -> bool {
-        self.config
-            .readonly_paths
-            .iter()
-            .any(|ro| path.components().any(|comp| comp.as_str() == ro.as_str()))
-    }
-
-    pub fn read(&self, path: &str) -> Result<FsResult, FsError> {
-        let validated_path = self.validate_path(path)?;
-        info!("Reading file: {}", validated_path);
-
-        let metadata = fs::metadata(&validated_path)?;
-        if metadata.len() > MAX_READ_SIZE {
-            return Err(FsError::FileTooLarge(metadata.len(), MAX_READ_SIZE));
-        }
-
-        let contents = fs::read_to_string(&validated_path)?;
-        Ok(FsResult::success_with_data(
-            validated_path.as_str(),
-            format!("Read {} bytes", contents.len()),
-            contents,
-        ))
-    }
-
-    pub fn write(
-        &self,
-        path: &str,
-        content: &str,
-        create: bool,
-        overwrite: bool,
-    ) -> Result<FsResult, FsError> {
-        let validated_path = self.validate_path(path)?;
-
-        if self.is_readonly(&validated_path) {
-            return Err(FsError::ReadOnly(validated_path.to_string()));
-        }
-
-        info!(
-            "Writing file: {} (create={}, overwrite={})",
-            validated_path, create, overwrite
-        );
-
-        if let Some(parent) = validated_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        if validated_path.exists() && !overwrite {
-            return Err(FsError::Io(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                "File exists and overwrite=false",
-            )));
-        }
-
-        fs::write(&validated_path, content)?;
-        Ok(FsResult::success(
-            validated_path.as_str(),
-            format!("Wrote {} bytes", content.len()),
-        ))
-    }
-
-    pub fn append(&self, path: &str, content: &str) -> Result<FsResult, FsError> {
-        let validated_path = self.validate_path(path)?;
-
-        if self.is_readonly(&validated_path) {
-            return Err(FsError::ReadOnly(validated_path.to_string()));
-        }
-
-        info!("Appending to file: {}", validated_path);
-
-        use std::fs::OpenOptions;
-        let mut file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&validated_path)?;
-
-        file.write_all(content.as_bytes())?;
-        file.sync_all()?;
-
-        Ok(FsResult::success(
-            validated_path.as_str(),
-            format!("Appended {} bytes", content.len()),
-        ))
-    }
-
-    pub fn delete(&self, path: &str) -> Result<FsResult, FsError> {
-        let validated_path = self.validate_path(path)?;
-
-        if self.is_readonly(&validated_path) {
-            return Err(FsError::ReadOnly(validated_path.to_string()));
-        }
-
-        info!("Deleting file: {}", validated_path);
-        fs::remove_file(&validated_path)?;
-        Ok(FsResult::success(validated_path.as_str(), "Deleted"))
-    }
-
-    pub fn exists(&self, path: &str) -> Result<bool, FsError> {
-        let validated_path = self.validate_path(path)?;
-        Ok(validated_path.exists())
-    }
-
-    pub fn find(&self, pattern: &str, max_depth: Option<usize>) -> Result<Vec<String>, FsError> {
-        info!("Finding files with pattern: {}", pattern);
-
-        let mut results = Vec::new();
-        let walker = if let Some(depth) = max_depth {
-            WalkDir::new(&self.config.root).max_depth(depth)
-        } else {
-            WalkDir::new(&self.config.root)
-        };
-
-        for entry in walker.into_iter().filter_map(|e| e.ok()) {
-            if results.len() >= MAX_RESULTS {
-                return Err(FsError::TooManyResults(results.len(), MAX_RESULTS));
-            }
-
-            let path = entry.path();
-            if let Some(path_str) = path.to_str() {
-                if path_str.contains(pattern) {
-                    results.push(path_str.to_string());
-                }
-            }
-        }
-
-        Ok(results)
-    }
-
-    pub fn tree(
-        &self,
-        root: Option<String>,
-        max_depth: Option<usize>,
-    ) -> Result<Vec<String>, FsError> {
-        let start_path = if let Some(r) = root {
-            self.validate_path(&r)?
-        } else {
-            self.config.root.clone()
-        };
-
-        info!("Listing tree from: {}", start_path);
-
-        let mut results = Vec::new();
-        let walker = if let Some(depth) = max_depth {
-            WalkDir::new(&start_path).max_depth(depth)
-        } else {
-            WalkDir::new(&start_path)
-        };
-
-        for entry in walker.into_iter().filter_map(|e| e.ok()) {
-            if results.len() >= MAX_RESULTS {
-                return Err(FsError::TooManyResults(results.len(), MAX_RESULTS));
-            }
-
-            if let Some(path_str) = entry.path().to_str() {
-                results.push(path_str.to_string());
-            }
-        }
-
-        Ok(results)
     }
 }
 

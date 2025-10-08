@@ -32,7 +32,7 @@
   {%- set today = strftime_now("%d %B %Y") -%}
   {{- "Today Date: " ~ today ~ "\n" -}}
   {{- "Reasoning Mode: " + reasoning_mode + "\n\n" -}}
-  
+
   {{- "## Custom Instructions\n\n" -}}
   {%- if custom_instructions -%}
     {{- custom_instructions + "\n\n" -}}

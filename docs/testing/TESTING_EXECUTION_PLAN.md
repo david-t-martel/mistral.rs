@@ -1,15 +1,17 @@
 # Comprehensive Testing & Evaluation Plan for mistral.rs
+
 ## Project: mistral.rs CUDA Agent with MCP Integration
 
-**Date Created**: 2025-10-03  
-**Working Directory**: `T:\projects\rust-mistral\mistral.rs`  
+**Date Created**: 2025-10-03\
+**Working Directory**: `T:\projects\rust-mistral\mistral.rs`\
 **Total Phases**: 24 (0-8 with subphases)
 
----
+______________________________________________________________________
 
 ## Overview
 
 This plan systematically tests the mistral.rs server with comprehensive coverage of:
+
 - **MCP Server Integration** (9 servers)
 - **TUI Interactive Mode** (text, vision, MCP-enabled)
 - **PyO3 Python Bindings** (build, import, inference)
@@ -19,34 +21,37 @@ This plan systematically tests the mistral.rs server with comprehensive coverage
 
 All test outputs will be captured in `.testlogs/` directory and consolidated into comprehensive reports.
 
----
+______________________________________________________________________
 
 ## ✅ Phase 0: Workspace Bootstrap [COMPLETED]
 
-**Status**: Complete  
+**Status**: Complete\
 **Artifacts**: `.testlogs/` directory created, helper functions defined
 
 **What Was Done**:
+
 - Created `.testlogs/` directory for all test outputs
 - Verified PATH includes `C:\Users\david\.local\bin`
 - Started transcript logging
 - Defined `Invoke-Logged` helper function for consistent test execution
 
----
+______________________________________________________________________
 
 ## Phase 1: Pre-flight Verification
 
 **Objective**: Verify binaries, dependencies, and system readiness
 
 ### Tasks:
+
 1. Binary verification via `test-mistralrs.ps1` or rebuild
-2. GPU/CUDA check with `nvidia-smi`
-3. Environment setup via `setup-dev-env.ps1`
-4. MODEL_INVENTORY.json presence check
-5. Redis connectivity test
-6. Node/Bun/uv/Python version capture
+1. GPU/CUDA check with `nvidia-smi`
+1. Environment setup via `setup-dev-env.ps1`
+1. MODEL_INVENTORY.json presence check
+1. Redis connectivity test
+1. Node/Bun/uv/Python version capture
 
 ### Commands:
+
 ```powershell
 $logDir = Join-Path (Get-Location) '.testlogs'
 
@@ -90,18 +95,20 @@ python --version 2>&1 | Tee-Object "$logDir\python-version.log"
 ```
 
 **Expected Outputs**:
+
 - Logs in `.testlogs/preflight-*`
 - Binary confirmation or rebuild trigger
 - GPU info captured
 - Dependency versions logged
 
----
+______________________________________________________________________
 
 ## Phase 1.1: MODEL_INVENTORY.json Generation
 
 **Objective**: Scan and catalog all available models
 
 ### Command:
+
 ```powershell
 $modelsRoot = 'C:\codedev\llm\.models'
 if (Test-Path $modelsRoot) {
@@ -123,13 +130,14 @@ if (Test-Path $modelsRoot) {
 
 **Outputs**: `MODEL_INVENTORY.json`
 
----
+______________________________________________________________________
 
 ## Phase 2: MCP Server Testing (Existing Scripts)
 
 **Objective**: Run existing test harnesses and consolidate results
 
 ### Commands:
+
 ```powershell
 # Run both existing test scripts
 if (Test-Path .\test-mcp-servers.ps1) {
@@ -146,28 +154,31 @@ $valid  = if (Test-Path mcp-validation-results.json) { Get-Content mcp-validatio
 ```
 
 **Expected Files**:
+
 - `.testlogs/test-mcp-servers.log`
 - `.testlogs/test-phase2-mcp-servers.log`
 - `MCP_TEST_RESULTS.json`
 
----
+______________________________________________________________________
 
 ## Phase 2.1: Manual MCP Server Tests (9 Servers)
 
 **Objective**: Individually test each MCP server with timeouts and logs
 
 ### Servers to Test:
+
 1. **Memory** (npx @modelcontextprotocol/server-memory@2025.8.4)
-2. **Filesystem** (npx @modelcontextprotocol/server-filesystem@2025.8.21)
-3. **Sequential Thinking** (npx @modelcontextprotocol/server-sequential-thinking@2025.7.1)
-4. **GitHub** (npx @modelcontextprotocol/server-github@2025.4.8) - Requires GITHUB_PERSONAL_ACCESS_TOKEN
-5. **Fetch** (npx @modelcontextprotocol/server-fetch@0.6.3)
-6. **Time** (npx @theo.foobar/mcp-time) - New replacement
-7. **Serena Claude** (uv run python T:/projects/mcp_servers/serena/scripts/mcp_server.py)
-8. **Desktop Commander** (uv --directory C:/Users/david/.claude/python_fileops run python -m desktop_commander.mcp_server)
-9. **RAG-Redis** (C:/users/david/bin/rag-redis-mcp-server.exe) - Requires Redis
+1. **Filesystem** (npx @modelcontextprotocol/server-filesystem@2025.8.21)
+1. **Sequential Thinking** (npx @modelcontextprotocol/server-sequential-thinking@2025.7.1)
+1. **GitHub** (npx @modelcontextprotocol/server-github@2025.4.8) - Requires GITHUB_PERSONAL_ACCESS_TOKEN
+1. **Fetch** (npx @modelcontextprotocol/server-fetch@0.6.3)
+1. **Time** (npx @theo.foobar/mcp-time) - New replacement
+1. **Serena Claude** (uv run python T:/projects/mcp_servers/serena/scripts/mcp_server.py)
+1. **Desktop Commander** (uv --directory C:/Users/david/.claude/python_fileops run python -m desktop_commander.mcp_server)
+1. **RAG-Redis** (C:/users/david/bin/rag-redis-mcp-server.exe) - Requires Redis
 
 ### Testing Pattern (per server):
+
 ```powershell
 # Example for Memory server
 $result = Invoke-Logged -Name 'mcp-memory' -TimeoutSec 20 -Script {
@@ -177,19 +188,21 @@ $manualResults += $result
 ```
 
 **Cleanup After Tests**:
+
 ```powershell
 Get-Process node,bun,python,rag-redis-mcp-server -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
 **Outputs**: Individual logs in `.testlogs/mcp-*.log`
 
----
+______________________________________________________________________
 
 ## Phase 3A: TUI Interactive Test (Text Model)
 
 **Objective**: Test TUI with smallest GGUF text model
 
 ### Commands:
+
 ```powershell
 $inv = Get-Content .\MODEL_INVENTORY.json -Raw | ConvertFrom-Json
 $textModel = ($inv | Where-Object { $_.format -eq 'gguf' -and $_.name -match 'qwen|gemma|phi|mistral' } | Sort-Object size_bytes | Select-Object -First 1).path
@@ -210,19 +223,21 @@ $cmds | & $exe -i gguf -m (Split-Path $textModel -Parent) -f $textModel 2>&1 | T
 ```
 
 **Test Validation**:
+
 - Prompts echo correctly
 - Commands work: `\system`, `\temperature`, `\topk`, `\help`, `\clear`, `\exit`
 - Process exits cleanly
 
 **Outputs**: `TUI_TEST_LOG.txt`
 
----
+______________________________________________________________________
 
 ## Phase 3B: TUI Vision Model Test (If Available)
 
 **Objective**: Test vision capabilities in TUI
 
 ### Commands:
+
 ```powershell
 $visionModel = ($inv | Where-Object { $_.format -eq 'gguf' -and $_.name -match 'vision|llava|qwen-vl|phi-vision' } | Sort-Object size_bytes | Select-Object -First 1).path
 
@@ -238,13 +253,14 @@ if ($visionModel) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3C: TUI with MCP Integration
 
 **Objective**: Test TUI with MCP tools enabled
 
 ### Commands:
+
 ```powershell
 $cmdsMcp = @(
   "\help",
@@ -258,31 +274,34 @@ $cmdsMcp | & $exe -i --mcp-config MCP_CONFIG.json gguf -m (Split-Path $textModel
 ```
 
 **Validation**:
+
 - Tools discovered at startup
 - Tool listing works
 - MCP tool calls succeed
 
----
+______________________________________________________________________
 
 ## Phase 3D: TUI Code Review
 
 **Objective**: Review interactive_mode.rs implementation
 
 ### Tasks:
+
 1. Read `T:\projects\rust-mistral\mistral.rs\mistralrs-server\src\interactive_mode.rs`
-2. Confirm history file location: `%APPDATA%\mistral.rs\history.txt`
-3. Document slash commands and multi-modal support
-4. Identify TODOs and panics
+1. Confirm history file location: `%APPDATA%\mistral.rs\history.txt`
+1. Document slash commands and multi-modal support
+1. Identify TODOs and panics
 
 **Output**: Section in COMPREHENSIVE_TEST_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 4A: PyO3 Bindings Check
 
 **Objective**: Verify PyO3 artifacts and features
 
 ### Commands:
+
 ```powershell
 $wheelDir = Join-Path (Get-Location) 'target\wheels'
 $pyd = Get-ChildItem -Path .\target\release -Filter mistralrs*.pyd -ErrorAction SilentlyContinue
@@ -295,13 +314,14 @@ if (Test-Path $pyo3Cargo) {
 
 **Output**: PYO3_STATUS_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 4B: Build PyO3 via Maturin
 
 **Objective**: Build Python bindings with CUDA support
 
 ### Commands:
+
 ```powershell
 uv pip install -U maturin
 
@@ -313,13 +333,14 @@ Set-Location ..
 
 **Expected**: Wheel in `target/wheels/`
 
----
+______________________________________________________________________
 
 ## Phase 4C: PyO3 Import and Inference Test
 
 **Objective**: Smoke test Python bindings
 
 ### Commands:
+
 ```powershell
 python -c @"
 try:
@@ -333,31 +354,34 @@ except Exception as e:
 
 **Output**: Results in PYO3_STATUS_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 5: Cargo Configuration Review
 
 **Objective**: Review build settings and optimization flags
 
 ### Files to Review:
+
 - `Cargo.toml` (workspace)
 - `mistralrs-server/Cargo.toml`
 - `.cargo/config.toml`
 
 ### Verify:
+
 - Features: `cuda`, `flash-attn`, `cudnn`, `mkl` wired correctly
 - Release profile: `opt-level = 3`, `lto`, `codegen-units`, `strip`, `panic`
 - RUSTC_WRAPPER (sccache) for faster rebuilds
 
 **Output**: CONFIG_REVIEW.md
 
----
+______________________________________________________________________
 
 ## Phase 5B: MCP_CONFIG.json Validation
 
 **Objective**: Validate MCP configuration
 
 ### Check:
+
 - JSON syntax validity
 - File paths exist
 - Environment variable expansions (e.g., `${GITHUB_PERSONAL_ACCESS_TOKEN}`)
@@ -365,13 +389,14 @@ except Exception as e:
 
 **Output**: Section in CONFIG_REVIEW.md
 
----
+______________________________________________________________________
 
 ## Phase 5C: Launch Scripts Validation
 
 **Objective**: Review PowerShell launch scripts
 
 ### Scripts:
+
 - `launch-gemma2.ps1`
 - `launch-qwen-coder.ps1`
 - `launch-qwen-fast.ps1`
@@ -379,32 +404,35 @@ except Exception as e:
 - `start-mistralrs.ps1`
 
 ### Verify:
+
 - Binary path: `target\release\mistralrs-server.exe`
 - Model paths match MODEL_INVENTORY.json
 - CUDA environment variables correct
 
 **Output**: Notes in CONFIG_REVIEW.md
 
----
+______________________________________________________________________
 
 ## Phase 5D: Environment Variables Review
 
 **Objective**: Document required environment setup
 
 ### Variables to Check:
+
 - `NVCC_CCBIN`, `CUDA_PATH`, `CUDNN_PATH`
 - `MKLROOT`, `HF_HOME`
 - Tool availability: node, npx, bun, uv, python, redis-cli
 
 **Output**: Environment section in CONFIG_REVIEW.md
 
----
+______________________________________________________________________
 
 ## Phase 6: HTTP Server Testing (No MCP)
 
 **Objective**: Test model loading and inference via HTTP API
 
 ### Commands:
+
 ```powershell
 # Start server
 & $exe --port 11434 gguf -m (Split-Path $textModel -Parent) -f $textModel 2>&1 | Tee-Object "$logDir\server-no-mcp.log"
@@ -429,13 +457,14 @@ nvidia-smi dmon -s mu -d 2 -c 5 2>&1 | Tee-Object "$logDir\nvidia-dmon-no-mcp.lo
 
 **Metrics**: Load time, VRAM usage, TTFB
 
----
+______________________________________________________________________
 
 ## Phase 6B: HTTP Server with MCP
 
 **Objective**: Test tool calling via HTTP API
 
 ### Commands:
+
 ```powershell
 & $exe --port 11434 --mcp-config MCP_CONFIG.json gguf -m (Split-Path $textModel -Parent) -f $textModel 2>&1 | Tee-Object "$logDir\server-with-mcp.log"
 
@@ -454,13 +483,14 @@ $resp | ConvertTo-Json -Depth 6 | Out-File -Encoding utf8 "$logDir\http-with-mcp
 
 **Validation**: MCP tools register and at least one tool call succeeds
 
----
+______________________________________________________________________
 
 ## Phase 6C: Performance Benchmarking
 
 **Objective**: Compare no-MCP vs MCP-enabled performance
 
 ### Metrics:
+
 - Time-to-first-byte (TTFB)
 - Tokens per second
 - VRAM usage
@@ -468,28 +498,30 @@ $resp | ConvertTo-Json -Depth 6 | Out-File -Encoding utf8 "$logDir\http-with-mcp
 
 **Output**: Performance table in COMPREHENSIVE_TEST_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 7: End-to-End Integration Tests
 
 **Objective**: Test real-world scenarios with TUI + MCP
 
 ### Scenarios:
+
 1. **Filesystem**: List repo files, read a file
-2. **Fetch**: Retrieve example.com, summarize headers
-3. **Memory**: Add fact, restart, verify persistence
-4. **Sequential Thinking**: Request step-by-step plan
-5. **RAG-Redis**: Submit question triggering retrieval
+1. **Fetch**: Retrieve example.com, summarize headers
+1. **Memory**: Add fact, restart, verify persistence
+1. **Sequential Thinking**: Request step-by-step plan
+1. **RAG-Redis**: Submit question triggering retrieval
 
 **Output**: Success/failure per tool in COMPREHENSIVE_TEST_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 7B: Multi-Model Switching
 
 **Objective**: Validate model swapping without memory leaks
 
 ### Test:
+
 - Load small model
 - Monitor VRAM
 - Unload and load medium model
@@ -497,13 +529,14 @@ $resp | ConvertTo-Json -Depth 6 | Out-File -Encoding utf8 "$logDir\http-with-mcp
 
 **Output**: VRAM deltas in COMPREHENSIVE_TEST_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 7C: Comprehensive Test Suite
 
 **Objective**: Run existing comprehensive test script
 
 ### Command:
+
 ```powershell
 if (Test-Path .\run-tests.ps1) {
   .\run-tests.ps1 2>&1 | Tee-Object "$logDir\run-tests.log"
@@ -512,7 +545,7 @@ if (Test-Path .\run-tests.ps1) {
 
 **Output**: Pass/fail summary in COMPREHENSIVE_TEST_REPORT.md
 
----
+______________________________________________________________________
 
 ## Phase 8: Documentation & Consolidation
 
@@ -521,38 +554,46 @@ if (Test-Path .\run-tests.ps1) {
 ### Deliverables:
 
 1. **COMPREHENSIVE_TEST_REPORT.md**
+
    - Executive summary (pass/fail rates)
    - Environment summary
    - Performance metrics
    - Known issues with reproduction steps
 
-2. **MCP_TEST_RESULTS.json**
+1. **MCP_TEST_RESULTS.json**
+
    - Per-server results with status, timing, errors
 
-3. **TUI_TEST_LOG.txt**
+1. **TUI_TEST_LOG.txt**
+
    - Complete TUI session logs
 
-4. **PYO3_STATUS_REPORT.md**
+1. **PYO3_STATUS_REPORT.md**
+
    - Build status, features, API surface
 
-5. **CONFIG_REVIEW.md**
+1. **CONFIG_REVIEW.md**
+
    - Cargo analysis, MCP config, scripts, env vars
 
-6. **TODO.md** (Updated)
+1. **TODO.md** (Updated)
+
    - New issues discovered
    - File paths and suggested fixes
 
 ### Final Cleanup:
+
 ```powershell
 Get-Process mistralrs-server,node,bun,python,rag-redis-mcp-server -ErrorAction SilentlyContinue | Stop-Process -Force
 Stop-Transcript
 ```
 
----
+______________________________________________________________________
 
 ## Execution Notes
 
 ### Directory Structure After Tests:
+
 ```
 T:\projects\rust-mistral\mistral.rs\
 ├── .testlogs/                      # All raw logs
@@ -571,6 +612,7 @@ T:\projects\rust-mistral\mistral.rs\
 ```
 
 ### Execution Time Estimate:
+
 - **Phase 0-1**: 5 minutes (setup, preflight)
 - **Phase 2**: 15-20 minutes (MCP server tests)
 - **Phase 3**: 10 minutes (TUI tests)
@@ -583,6 +625,7 @@ T:\projects\rust-mistral\mistral.rs\
 **Total**: ~2-2.5 hours for complete execution
 
 ### Prerequisites:
+
 - ✅ mistralrs-server binary built
 - ✅ At least one GGUF model available
 - ✅ Node.js/npx or Bun installed
@@ -590,7 +633,7 @@ T:\projects\rust-mistral\mistral.rs\
 - ⚠️ Redis optional (for RAG-Redis tests)
 - ⚠️ GITHUB_PERSONAL_ACCESS_TOKEN optional (for GitHub MCP)
 
----
+______________________________________________________________________
 
 ## Quick Start Commands
 
@@ -618,25 +661,27 @@ nvidia-smi
 # Continue with remaining phases...
 ```
 
----
+______________________________________________________________________
 
 ## Support & Troubleshooting
 
 ### Common Issues:
 
 1. **Redis not running**: Start with `redis-server` or skip RAG-Redis tests
-2. **GitHub MCP fails**: Set `$env:GITHUB_PERSONAL_ACCESS_TOKEN`
-3. **PyO3 build errors**: Ensure CUDA headers accessible and Python 3.10+
-4. **Model not found**: Run Phase 1.1 to regenerate MODEL_INVENTORY.json
-5. **Port in use**: Change test port or kill existing mistralrs-server processes
+1. **GitHub MCP fails**: Set `$env:GITHUB_PERSONAL_ACCESS_TOKEN`
+1. **PyO3 build errors**: Ensure CUDA headers accessible and Python 3.10+
+1. **Model not found**: Run Phase 1.1 to regenerate MODEL_INVENTORY.json
+1. **Port in use**: Change test port or kill existing mistralrs-server processes
 
 ### Log Analysis:
+
 All logs are timestamped and in `.testlogs/` for easy debugging. Use:
+
 ```powershell
 Get-ChildItem .testlogs -Filter *.log | Sort-Object LastWriteTime -Descending
 ```
 
----
+______________________________________________________________________
 
 **End of Execution Plan**
 

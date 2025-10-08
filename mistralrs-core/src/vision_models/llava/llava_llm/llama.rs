@@ -653,8 +653,9 @@ impl NormalModel for Llama {
         _flash_params: &FlashParams,
         _flash_params_full: &FlashParams,
     ) -> Result<Tensor> {
-        // TODO: Implement xlora_forward for LLaVA LLaMA variant
-        unimplemented!()
+        candle_core::bail!(
+            "XLora is not supported for this LLaVA LLaMA model. Use the XLora-specific model loader instead."
+        )
     }
     fn cache(&self) -> &crate::pipeline::EitherCache {
         &self.kv_cache

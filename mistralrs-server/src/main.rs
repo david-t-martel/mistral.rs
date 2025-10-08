@@ -21,9 +21,18 @@ use interactive_mode::interactive_mode;
 mod agent_mode;
 use agent_mode::agent_mode;
 mod mcp_server;
+mod tool_registry;
+
+use mistralrs_agent_tools::{AgentToolkit, SandboxConfig, SecurityLevel, SecurityPolicy};
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    about,
+    long_about = None,
+    disable_help_subcommand = true,
+    propagate_version = true
+)]
 struct Args {
     /// IP to serve on. Defaults to "0.0.0.0"
     #[arg(long)]
@@ -158,6 +167,26 @@ struct Args {
     /// Enter agent mode for autonomous ReAct-style reasoning with automatic tool execution.
     #[clap(long, action)]
     agent_mode: bool,
+
+    /// Enable agent tools for automatic tool execution (enabled by default, use --no-agent-tools to disable)
+    #[arg(long = "enable-agent-tools", default_value_t = true, action = clap::ArgAction::SetTrue)]
+    enable_agent_tools: bool,
+
+    /// Disable agent tools
+    #[arg(long = "no-agent-tools", action = clap::ArgAction::SetFalse, conflicts_with = "enable_agent_tools")]
+    no_agent_tools: bool,
+
+    /// Sandbox mode for agent tools: 'strict' (default), 'permissive', or 'none'
+    #[arg(long = "agent-sandbox-mode", default_value = "strict")]
+    agent_sandbox_mode: String,
+
+    /// Custom root directory for agent tool sandbox (defaults to current directory)
+    #[arg(long = "agent-sandbox-root")]
+    agent_sandbox_root: Option<String>,
+
+    /// Maximum file size agent tools can read (in MB, default: 100)
+    #[arg(long = "agent-max-file-size", default_value_t = 100)]
+    agent_max_file_size: usize,
 
     /// Port to serve MCP protocol on
     #[arg(long)]
@@ -334,6 +363,57 @@ fn load_multi_model_config(config_path: &str) -> Result<Vec<ModelConfig>> {
     Ok(configs)
 }
 
+/// Build AgentToolkit from CLI arguments
+fn build_toolkit_from_args(args: &Args) -> Result<Option<AgentToolkit>> {
+    // Check if agent tools are disabled
+    let tools_enabled = if args.no_agent_tools {
+        false
+    } else {
+        args.enable_agent_tools
+    };
+
+    if !tools_enabled {
+        info!("Agent tools disabled via CLI flags");
+        return Ok(None);
+    }
+
+    // Determine sandbox root
+    let root = if let Some(root_str) = &args.agent_sandbox_root {
+        std::path::PathBuf::from(root_str)
+    } else {
+        std::env::current_dir()?
+    };
+
+    // Parse sandbox mode
+    let security_level = match args.agent_sandbox_mode.to_lowercase().as_str() {
+        "strict" => SecurityLevel::Strict,
+        "permissive" => SecurityLevel::Permissive,
+        "none" | "disabled" => SecurityLevel::Disabled,
+        other => {
+            anyhow::bail!(
+                "Invalid sandbox mode '{}'. Valid options: strict, permissive, none/disabled",
+                other
+            );
+        }
+    };
+
+    // Create security policy
+    let security_policy = SecurityPolicy::from_level(security_level);
+
+    // Create sandbox config
+    let mut config = SandboxConfig::with_security_policy(root.clone(), security_policy);
+
+    // Set max file size (convert MB to bytes)
+    config = config.max_read_size(args.agent_max_file_size * 1024 * 1024);
+
+    info!(
+        "Initializing agent toolkit: root={:?}, mode={}, max_file_size={}MB",
+        root, args.agent_sandbox_mode, args.agent_max_file_size
+    );
+
+    Ok(Some(AgentToolkit::new(config)))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -344,6 +424,20 @@ async fn main() -> Result<()> {
     let mcp_config = load_mcp_config(args.mcp_config.as_deref())?;
 
     let paged_attn = configure_paged_attn_from_flags(args.paged_attn, args.no_paged_attn)?;
+
+    // Initialize agent toolkit based on CLI flags
+    let tool_callbacks = if let Some(toolkit) = build_toolkit_from_args(&args)? {
+        let (_tool_definitions, callbacks) =
+            tool_registry::build_tool_definitions_and_callbacks(&toolkit);
+        info!(
+            "Registered {} agent tool callbacks with mistral.rs",
+            callbacks.len()
+        );
+        callbacks
+    } else {
+        info!("Running without agent tools");
+        HashMap::new()
+    };
 
     let mistralrs = match args.model {
         ModelSelected::MultiModel {
@@ -366,6 +460,7 @@ async fn main() -> Result<()> {
                 .with_seed_optional(args.seed)
                 .with_log_optional(args.log)
                 .with_mcp_config_optional(mcp_config)
+                .with_tool_callbacks_map(tool_callbacks.clone())
                 .with_paged_attn_cache_type(args.cache_type.unwrap_or_default());
 
             // Add models to builder
@@ -398,6 +493,7 @@ async fn main() -> Result<()> {
                 .with_chat_template_optional(args.chat_template)
                 .with_jinja_explicit_optional(args.jinja_explicit)
                 .with_num_device_layers_optional(args.num_device_layers)
+                .with_tool_callbacks_map(tool_callbacks)
                 .with_in_situ_quant_optional(args.in_situ_quant)
                 .with_paged_attn_gpu_mem_optional(args.paged_attn_gpu_mem)
                 .with_paged_attn_gpu_mem_usage_optional(args.paged_attn_gpu_mem_usage)

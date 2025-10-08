@@ -1,0 +1,56 @@
+{
+  "violations": [
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-mcp\\examples\\optimized_config.rs",
+      "pattern": "^optimized_.*\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "config.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\test_git_bash_simple.rs",
+      "pattern": "_simple\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "test_git_bash.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\benchmarks\\src\\platforms_enhanced.rs",
+      "pattern": "_enhanced\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "platforms.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\shared\\winpath\\benches\\optimized_benchmarks.rs",
+      "pattern": "^optimized_.*\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "benchmarks.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\shared\\winpath\\tests\\git_bash_manual_test.rs",
+      "pattern": "_test\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "git_bash_manual.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\derive-utils\\bash-wrapper\\src\\main_fixed.rs",
+      "pattern": "_fixed\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "main.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\derive-utils\\cmd-wrapper\\src\\main_fixed.rs",
+      "pattern": "_fixed\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "main.rs",
+      "severity": "error"
+    },
+    {
+      "file": "T:\\projects\\rust-mistral\\mistral.rs\\mistralrs-agent-tools\\winutils\\derive-utils\\pwsh-wrapper\\src\\main_fixed.rs",
+      "pattern": "_fixed\\.(ts|js|py|rs|jsx|tsx|cjs|mjs)$",
+      "suggestedName": "main.rs",
+      "severity": "error"
+    }
+  ],
+  "totalViolations": 8,
+  "filesScanned": 1022,
+  "canAutoFix": true,
+  "timestamp": "2025-10-08T20:26:43.027Z"
+}

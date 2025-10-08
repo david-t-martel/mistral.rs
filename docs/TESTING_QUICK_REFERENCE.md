@@ -2,7 +2,7 @@
 
 > **Quick commands and tips for mistral.rs testing**
 
----
+______________________________________________________________________
 
 ## Before You Commit
 
@@ -18,78 +18,90 @@ cargo test --workspace --all-features
 ```
 
 **Or use the Makefile:**
+
 ```bash
 make ci-full  # Run full CI pipeline locally
 ```
 
----
+______________________________________________________________________
 
 ## Running Tests
 
 ### All Tests
+
 ```bash
 cargo test --workspace --all-features
 ```
 
 ### Specific Crate
+
 ```bash
 cargo test -p mistralrs-core
 cargo test -p mistralrs-agent-tools
 ```
 
 ### Specific Test
+
 ```bash
 cargo test test_name
 cargo test test_name -- --nocapture  # Show output
 ```
 
 ### Integration Tests Only
+
 ```bash
 cargo test --test '*'
 ```
 
 ### Doc Tests
+
 ```bash
 cargo test --doc
 ```
 
 ### With Features
+
 ```bash
 cargo test --all-features
 cargo test --no-default-features
 cargo test --features "cuda,metal"
 ```
 
----
+______________________________________________________________________
 
 ## Debugging Failed Tests
 
 ### Show Output
+
 ```bash
 cargo test -- --nocapture
 ```
 
 ### With Backtrace
+
 ```bash
 RUST_BACKTRACE=1 cargo test
 RUST_BACKTRACE=full cargo test
 ```
 
 ### Single-Threaded (Debug Race Conditions)
+
 ```bash
 cargo test -- --test-threads=1
 ```
 
 ### Specific Test with Debug
+
 ```bash
 cargo test test_name -- --nocapture --test-threads=1
 ```
 
----
+______________________________________________________________________
 
 ## Writing Tests
 
 ### Basic Unit Test
+
 ```rust
 #[cfg(test)]
 mod tests {
@@ -110,6 +122,7 @@ mod tests {
 ```
 
 ### Async Test
+
 ```rust
 #[tokio::test]
 async fn test_async_function() {
@@ -119,6 +132,7 @@ async fn test_async_function() {
 ```
 
 ### Test with Error
+
 ```rust
 #[test]
 #[should_panic(expected = "error message")]
@@ -128,6 +142,7 @@ fn test_panics_on_invalid() {
 ```
 
 ### Integration Test
+
 ```rust
 // tests/integration_test.rs
 use my_crate::Engine;
@@ -140,96 +155,108 @@ fn test_engine_integration() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Test Naming Convention
 
 **Pattern**: `test_<function>_<scenario>_<expected>`
 
 **Examples**:
+
 - `test_parse_valid_json_returns_ok`
 - `test_parse_empty_input_returns_error`
 - `test_calculate_with_negative_returns_error`
 - `test_auth_invalid_credentials_denies_access`
 
----
+______________________________________________________________________
 
 ## CI Checks
 
 ### What CI Runs
 
 1. **quick-check**: Formatting & Clippy (2-3 min)
-2. **check**: Build verification (5-7 min)
-3. **test**: Full test suite (8-12 min)
-4. **coverage**: Code coverage (10-15 min)
-5. **docs**: Documentation build (3-5 min)
-6. **typos**: Spell checking (1 min)
-7. **msrv**: Rust 1.86 compatibility (5-7 min)
-8. **security-audit**: Dependency scanning (1 min)
-9. **integration**: Integration tests (5-10 min)
+1. **check**: Build verification (5-7 min)
+1. **test**: Full test suite (8-12 min)
+1. **coverage**: Code coverage (10-15 min)
+1. **docs**: Documentation build (3-5 min)
+1. **typos**: Spell checking (1 min)
+1. **msrv**: Rust 1.86 compatibility (5-7 min)
+1. **security-audit**: Dependency scanning (1 min)
+1. **integration**: Integration tests (5-10 min)
 
 ### Fix Common CI Failures
 
 **Formatting Issues:**
+
 ```bash
 cargo fmt --all
 ```
 
 **Clippy Warnings:**
+
 ```bash
 cargo clippy --workspace --all-targets --fix
 ```
 
 **Test Failures:**
+
 ```bash
 cargo test <failing-test> -- --nocapture
 RUST_BACKTRACE=1 cargo test <failing-test>
 ```
 
 **Doc Build Issues:**
+
 ```bash
 cargo doc --workspace --all-features --no-deps
 ```
 
----
+______________________________________________________________________
 
 ## Useful Commands
 
 ### Check Without Building
+
 ```bash
 cargo check --workspace --all-features
 ```
 
 ### Build Documentation
+
 ```bash
 cargo doc --workspace --no-deps --open
 ```
 
 ### Run Benchmarks
+
 ```bash
 cargo bench
 ```
 
 ### Update Dependencies
+
 ```bash
 cargo update
 ```
 
 ### Check Security
+
 ```bash
 cargo audit
 ```
 
 ### Clean Build Artifacts
+
 ```bash
 cargo clean
 ```
 
----
+______________________________________________________________________
 
 ## Test Utilities
 
 ### Temporary Directories
+
 ```rust
 use tempfile::TempDir;
 
@@ -243,6 +270,7 @@ fn test_with_tempdir() {
 ```
 
 ### Mock Data
+
 ```rust
 #[cfg(test)]
 mod test_utils {
@@ -256,6 +284,7 @@ mod test_utils {
 ```
 
 ### Assert Approximately Equal
+
 ```rust
 pub fn assert_approx_eq(a: f64, b: f64, epsilon: f64) {
     assert!(
@@ -266,23 +295,25 @@ pub fn assert_approx_eq(a: f64, b: f64, epsilon: f64) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Environment Variables
 
 ### For Tests
+
 ```bash
 TESTS_HF_TOKEN=<token> cargo test
 ```
 
 ### For Debugging
+
 ```bash
 RUST_LOG=debug cargo test
 RUST_BACKTRACE=1 cargo test
 RUST_TEST_THREADS=1 cargo test
 ```
 
----
+______________________________________________________________________
 
 ## Makefile Targets
 
@@ -296,7 +327,7 @@ make fmt               # Format code
 make lint              # Run clippy
 ```
 
----
+______________________________________________________________________
 
 ## Documentation Links
 
@@ -305,11 +336,12 @@ make lint              # Run clippy
 - **Testing Analysis**: `docs/TESTING_ANALYSIS.md`
 - **Rust Testing Book**: https://doc.rust-lang.org/book/ch11-00-testing.html
 
----
+______________________________________________________________________
 
 ## Quick Tips
 
 ✅ **DO**:
+
 - Run tests before committing
 - Use descriptive test names
 - Test edge cases and errors
@@ -317,23 +349,24 @@ make lint              # Run clippy
 - Use fixtures for complex data
 
 ❌ **DON'T**:
+
 - Ignore CI failures
 - Push unformatted code
 - Skip tests with `#[ignore]` permanently
 - Test implementation details
 - Use shared mutable state
 
----
+______________________________________________________________________
 
 ## Getting Help
 
 1. Check test output for error details
-2. Read CI logs in GitHub Actions
-3. Review documentation (links above)
-4. Ask in project discussions
-5. Create an issue if stuck
+1. Read CI logs in GitHub Actions
+1. Review documentation (links above)
+1. Ask in project discussions
+1. Create an issue if stuck
 
----
+______________________________________________________________________
 
-**Quick Reference Version**: 1.0  
+**Quick Reference Version**: 1.0\
 **Last Updated**: 2025-01-05

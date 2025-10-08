@@ -1,5 +1,7 @@
 # ReAct Agent Tool Execution - Complete Fix
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before applying this fix plan._
+
 ## Files to Modify
 
 ### 1. mistralrs-core/src/lib.rs

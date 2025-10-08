@@ -264,7 +264,11 @@ impl QuantMethod for BnbLinear {
         _imatrix_weight: Option<Vec<f32>>,
         _guard: QuantizeOntoGuard,
     ) -> Result<Arc<dyn QuantMethod>> {
-        todo!()
+        candle_core::bail!(
+            "In-situ quantization (ISQ) is not yet supported for BitsAndBytes quantization. \
+            BitsAndBytes layers are already quantized. To requantize to a different format, \
+            please use GGUF or ISQ quantization directly on the original model."
+        )
     }
 }
 

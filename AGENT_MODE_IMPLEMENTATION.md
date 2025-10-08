@@ -1,5 +1,7 @@
 # Agent Mode Implementation Summary
 
+_Reference: Review the [Repository Guidelines](AGENTS.md) for shared contribution standards before using this implementation guide._
+
 ## Overview
 
 Implemented a new `--agent-mode` CLI flag for `mistralrs-server` that enables autonomous reasoning with automatic tool execution.
@@ -100,25 +102,28 @@ Display to user with notification
 
 ### Basic Usage
 
+> **Binary name update:** The canonical executable is now `mistral-rs` (Windows: `mistral-rs.exe`).
+> The legacy `mistralrs-server` alias remains available for compatibility with existing scripts.
+
 ```bash
 # With GGUF model
-./mistralrs-server --agent-mode gguf -m /path/to/model -f model.gguf
+./mistral-rs --agent-mode gguf -m /path/to/model -f model.gguf
 
 # With Hugging Face model
-./mistralrs-server --agent-mode plain -m Qwen/Qwen3-4B
+./mistral-rs --agent-mode plain -m Qwen/Qwen3-4B
 
 # With MCP tools
-./mistralrs-server --agent-mode --mcp-config mcp-config.json plain -m Qwen/Qwen3-4B
+./mistral-rs --agent-mode --mcp-config mcp-config.json plain -m Qwen/Qwen3-4B
 
 # With web search
-./mistralrs-server --agent-mode --enable-search plain -m meta-llama/Llama-3.2-3B-Instruct
+./mistral-rs --agent-mode --enable-search plain -m meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ### Interactive Commands
 
 Once in agent mode:
 
-```
+```text
 > \help                    # Show help
 > \clear                   # Clear conversation history
 > \temperature 0.8         # Set temperature
@@ -129,8 +134,8 @@ Once in agent mode:
 
 ### Example Session
 
-```
-$ ./mistralrs-server --agent-mode --mcp-config mcp-config.json plain -m Qwen/Qwen3-4B
+```text
+$ ./mistral-rs --agent-mode --mcp-config mcp-config.json plain -m Qwen/Qwen3-4B
 
 ====================
 Welcome to Agent Mode! This mode enables autonomous reasoning with automatic tool execution.
