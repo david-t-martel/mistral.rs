@@ -71,7 +71,7 @@ fn read_line<H: Helper, I: History>(editor: &mut Editor<H, I>) -> String {
             std::process::exit(1);
         }
         Ok(prompt) => {
-            editor.add_history_entry(prompt.clone()).unwrap();
+            let _ = editor.add_history_entry(prompt.clone());
             prompt
         }
     }
@@ -366,7 +366,7 @@ async fn text_interactive_mode(
                         print!("{content}");
                         let _ = io::stdout().flush();
                         if finish_reason.is_some() {
-                            if matches!(finish_reason.as_ref().unwrap().as_str(), "length") {
+                            if matches!(finish_reason.as_deref(), Some("length")) {
                                 print!("...");
                             }
                             break;
@@ -452,22 +452,23 @@ async fn vision_interactive_mode(
     enable_thinking: Option<bool>,
 ) {
     // Capture HTTP/HTTPS URLs and local file paths ending with common image extensions
-    let image_regex = Regex::new(IMAGE_REGEX).unwrap();
-    let audio_regex = Regex::new(AUDIO_REGEX).unwrap();
+    let image_regex = Regex::new(IMAGE_REGEX).expect("IMAGE_REGEX pattern is invalid");
+    let audio_regex = Regex::new(AUDIO_REGEX).expect("AUDIO_REGEX pattern is invalid");
 
     let sender = mistralrs.get_sender(None).expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
     let mut images = Vec::new();
     let mut audios = Vec::new();
 
-    let config = mistralrs.config(None).unwrap();
+    let config = mistralrs.config(None).expect("Model configuration not initialized");
     let prefixer = match &config.category {
         ModelCategory::Vision { prefixer } => prefixer,
         ModelCategory::Text
         | ModelCategory::Diffusion
         | ModelCategory::Speech
         | ModelCategory::Audio => {
-            panic!("`add_image_message` expects a vision model.")
+            eprintln!("Error: add_image_message expects a vision model.");
+            return;
         }
     };
 
@@ -673,7 +674,7 @@ async fn vision_interactive_mode(
                         print!("{content}");
                         let _ = io::stdout().flush();
                         if finish_reason.is_some() {
-                            if matches!(finish_reason.as_ref().unwrap().as_str(), "length") {
+                            if matches!(finish_reason.as_deref(), Some("length")) {
                                 print!("...");
                             }
                             break;
@@ -810,9 +811,9 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         let start = Instant::now();
         sender.send(req).await.expect("Failed to send request to model");
 
-        let ResponseOk::ImageGeneration(response) = rx.recv().await.unwrap().as_result().unwrap()
+        let ResponseOk::ImageGeneration(response) = rx.recv().await.expect("Channel closed").as_result().expect("Request failed")
         else {
-            panic!("Got unexpected response type.")
+            eprintln!("Error: Got unexpected response type."); return;
         };
         let end = Instant::now();
 
@@ -821,7 +822,7 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
 
         println!(
             "Image generated can be found at: image is at `{}`. Took {duration:.2}s ({pixels_per_s:.2} pixels/s).",
-            response.data[0].url.as_ref().unwrap(),
+            response.data[0].url.as_ref().expect("Image URL not present in response"),
         );
 
         println!();
@@ -904,15 +905,15 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
             pcm,
             rate,
             channels,
-        } = rx.recv().await.unwrap().as_result().unwrap()
+        } = rx.recv().await.expect("Channel closed").as_result().expect("Request failed")
         else {
-            panic!("Got unexpected response type.")
+            eprintln!("Error: Got unexpected response type."); return;
         };
         let end = Instant::now();
 
         let out_file = format!("speech-{n}.wav");
-        let mut output = std::fs::File::create(&out_file).unwrap();
-        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16).unwrap();
+        let mut output = std::fs::File::create(&out_file).expect("Failed to create output audio file");
+        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16).expect("Failed to write WAV file");
 
         let duration = end.duration_since(start).as_secs_f32();
         println!("Speech generated can be found at `{out_file}`. Took {duration:.2}s.");
@@ -933,7 +934,7 @@ mod tests {
 
     #[test]
     fn parse_files_and_message_trims_trailing_punctuation() {
-        let regex = Regex::new(IMAGE_REGEX).unwrap();
+        let regex = Regex::new(IMAGE_REGEX).expect("IMAGE_REGEX pattern is invalid");
         let input = "Look at this https://example.com/test.png.";
         let (urls, text) = parse_files_and_message(input, &regex);
         assert_eq!(urls, vec!["https://example.com/test.png"]);

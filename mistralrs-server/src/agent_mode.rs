@@ -92,7 +92,7 @@ fn read_line(editor: &mut DefaultEditor) -> String {
             std::process::exit(1);
         }
         Ok(prompt) => {
-            editor.add_history_entry(prompt.clone()).unwrap();
+            let _ = editor.add_history_entry(prompt.clone());
             prompt
         }
     }
@@ -364,5 +364,7 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         println!();
     }
 
-    rl.save_history(&history_file_path()).unwrap();
+    if let Err(e) = rl.save_history(&history_file_path()) {
+        eprintln!("Warning: Failed to save history: {}", e);
+    }
 }
