@@ -2,6 +2,7 @@
 
 use std::{any::Any, sync::Arc};
 
+use anyhow::{anyhow, Context};
 use candle_core::{Device, IndexOp, Result, Tensor};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use mistralrs_vision::{ApplyTransforms, Normalize, ToTensor, Transforms};
@@ -41,6 +42,12 @@ const DEFAULT_SLICE_END_TOKEN: &str = "</slice>";
 const DEFAULT_UNK_TOKEN: &str = "<unk>";
 const DEFAULT_USE_IMAGE_ID: bool = false;
 const DEFAULT_SLICE_MODE: bool = true;
+
+type MiniCpmOImageOutputs = (
+    Option<Vec<Vec<Tensor>>>,
+    Option<Vec<Tensor>>,
+    Option<Vec<Tensor>>,
+);
 
 pub struct MiniCpmOImageProcessor {
     config: PreProcessorConfig,
@@ -116,25 +123,35 @@ impl InputsProcessor for MiniCpmOImageProcessor {
             ));
         };
 
-        let config = other_config.expect("Need a PreProcessorConfig config.");
-        let config: &PreProcessorConfig = config.downcast_ref().expect("Downcast failed.");
+        let config = other_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("MiniCpmOImageProcessor requires PreProcessorConfig"))?;
+        let config: &PreProcessorConfig = config
+            .downcast_ref()
+            .ok_or_else(|| anyhow!("Failed to downcast PreProcessorConfig"))?;
 
         let has_images = input_seqs.iter().all(|seq| seq.has_images());
 
-        let (pixel_values_all, image_bound, tgt_sizes) = if has_images {
+        let (pixel_values_all, image_bound, tgt_sizes): MiniCpmOImageOutputs = if has_images {
             const IMAGE_TAG: &str = "(<image>./</image>)";
             const IMAGE_PATTERN: &str = r"\(<image>./</image>\)";
             const AUDIO_PATTERN: &str = r"\(<audio>./</audio>\)";
 
-            let image_pattern = Regex::new(IMAGE_PATTERN).unwrap();
-            let _audio_pattern = Regex::new(AUDIO_PATTERN).unwrap();
-            let split_pattern = Regex::new(&format!(r"({IMAGE_PATTERN}|{AUDIO_PATTERN})")).unwrap();
+            let image_pattern = Regex::new(IMAGE_PATTERN)
+                .context("Failed to compile MiniCpmO image placeholder regex")?;
+            let _audio_pattern = Regex::new(AUDIO_PATTERN)
+                .context("Failed to compile MiniCpmO audio placeholder regex")?;
+            let split_pattern = Regex::new(&format!(r"({IMAGE_PATTERN}|{AUDIO_PATTERN})"))
+                .context("Failed to compile MiniCpmO multimodal split regex")?;
 
             let mut pixel_values_accum = Vec::new();
             let mut tgt_sizes_accum = Vec::new();
             let mut image_bounds_accum = Vec::new();
 
             for seq in input_seqs.iter_mut() {
+                let images = seq
+                    .take_images()
+                    .ok_or_else(|| anyhow!("MiniCpmO sequence missing expected images"))?;
                 let PreprocessedImages {
                     pixel_values: _,
                     pixel_attention_mask: _,
@@ -153,21 +170,23 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                     num_crops: _,
                 } = self
                     .preprocess(
-                        seq.take_images()
-                            .expect("Need to have images by this point."),
+                        images,
                         vec![],
                         config,
                         device,
                         (usize::MAX, usize::MAX), // Don't use it here...
                     )
-                    .expect("Preprocessing failed");
-                let pixel_values_list = pixel_values_list.unwrap();
-                let tgt_sizes = tgt_sizes.unwrap();
-                let image_sizes_all = image_sizes_all.unwrap();
+                    .context("MiniCpmO preprocessing failed")?;
+                let pixel_values_list = pixel_values_list
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no pixel values"))?;
+                let tgt_sizes = tgt_sizes
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no target sizes"))?;
+                let image_sizes_all = image_sizes_all
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no image sizes"))?;
 
                 let text = tokenizer
                     .decode(seq.get_toks(), false)
-                    .expect("Detokenization failed!");
+                    .map_err(|e| anyhow!("MiniCpmO detokenization failed: {e}"))?;
 
                 let mut text_chunks = {
                     let mut results = Vec::new();
@@ -194,8 +213,12 @@ impl InputsProcessor for MiniCpmOImageProcessor {
 
                 let image_tags = image_pattern.find_iter(&text).collect::<Vec<_>>();
 
-                if !image_tags.is_empty() {
-                    assert_eq!(image_tags.len(), image_sizes_all.len());
+                if !image_tags.is_empty() && image_tags.len() != image_sizes_all.len() {
+                    return Err(anyhow!(
+                        "MiniCpmO expected {} image sizes, got {} from tokenizer output",
+                        image_tags.len(),
+                        image_sizes_all.len()
+                    ));
                 }
 
                 let mut image_id = 0;
@@ -211,7 +234,7 @@ impl InputsProcessor for MiniCpmOImageProcessor {
 
                 let input_ids = tokenizer
                     .encode_fast(final_text.clone(), false)
-                    .unwrap()
+                    .map_err(|e| anyhow!("MiniCpmO failed to encode prompt: {e}"))?
                     .get_ids()
                     .to_vec();
 
@@ -228,41 +251,53 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                             self.config
                                 .im_start_token
                                 .clone()
-                                .unwrap_or(DEFAULT_IM_START_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_IM_START_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode im_start token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for im_start token"))?;
                     let im_end_id = tokenizer
                         .encode_fast(
                             self.config
                                 .im_end_token
                                 .clone()
-                                .unwrap_or(DEFAULT_IM_END_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_IM_END_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode im_end token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for im_end token"))?;
                     let slice_start_id = tokenizer
                         .encode_fast(
                             self.config
                                 .slice_start_token
                                 .clone()
-                                .unwrap_or(DEFAULT_SLICE_START_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_SLICE_START_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode slice_start token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for slice_start"))?;
                     let slice_end_id = tokenizer
                         .encode_fast(
                             self.config
                                 .slice_end_token
                                 .clone()
-                                .unwrap_or(DEFAULT_SLICE_END_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_SLICE_END_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode slice_end token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for slice_end"))?;
 
                     let image_start_idx = input_ids
                         .iter()
@@ -295,30 +330,31 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                         (valid_image_nums, 1),
                         device,
                     )
-                    .unwrap();
+                    .context("Failed to build MiniCpmO image start tensor")?;
                     let image_end_idx = Tensor::from_slice(
                         &image_end_idx[..valid_image_nums],
                         (valid_image_nums, 1),
                         device,
                     )
-                    .unwrap();
+                    .context("Failed to build MiniCpmO image end tensor")?;
 
-                    Tensor::cat(&[image_start_idx, image_end_idx], 1).unwrap()
-                };
+                    Tensor::cat(&[image_start_idx, image_end_idx], 1)
+                        .context("Failed to concatenate MiniCpmO image bounds")
+                }?;
 
                 pixel_values_accum.push(pixel_values_list);
                 tgt_sizes_accum.push(tgt_sizes);
                 image_bounds_accum.push(image_bounds);
             }
 
-            (
+            Ok::<_, anyhow::Error>((
                 Some(pixel_values_accum),
                 Some(image_bounds_accum),
                 Some(tgt_sizes_accum),
-            )
+            ))
         } else {
-            (None, None, None)
-        };
+            Ok::<_, anyhow::Error>((None, None, None))
+        }?;
 
         let text_models_inputs_processor::InnerInputProcessorOutput {
             inputs:
@@ -344,7 +380,7 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                 paged_attn_metadata.as_mut(),
                 mapper,
             )
-            .unwrap()
+            .context("Failed to build MiniCpmO prompt input")?
         } else {
             get_completion_input(
                 input_seqs
@@ -359,7 +395,7 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                 paged_attn_metadata.as_mut(),
                 mapper,
             )
-            .unwrap()
+            .context("Failed to build MiniCpmO completion input")?
         };
 
         let args = MiniCpmOSpecificArgs {

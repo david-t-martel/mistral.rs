@@ -5,8 +5,7 @@ use std::sync::atomic::Ordering;
 use crate::utils::gguf_metadata::ContentMetadata;
 use crate::DEBUG;
 use ahash::AHashMap;
-use anyhow::{Context, Result};
-use candle_core::quantized::gguf_file::Value;
+use anyhow::Result;
 use itertools::Itertools;
 use tokenizers::pre_tokenizers::{
     sequence::Sequence,

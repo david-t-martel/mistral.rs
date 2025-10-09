@@ -504,8 +504,7 @@ pub(super) async fn search_request(this: Arc<Engine>, request: NormalRequest) {
                 tracing::error!("Failed to get search tools: {}", e);
                 // Send error response back to user
                 let _ = user_sender
-                    .send(Response::InternalError(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
+                    .send(Response::InternalError(Box::new(std::io::Error::other(
                         format!("Failed to initialize search tools: {}", e),
                     ))))
                     .await;
@@ -615,8 +614,7 @@ pub(super) async fn search_request(this: Arc<Engine>, request: NormalRequest) {
                     Err(e) => {
                         tracing::error!("Request failed: {}", e);
                         let _ = user_sender
-                            .send(Response::InternalError(Box::new(std::io::Error::new(
-                                std::io::ErrorKind::Other,
+                            .send(Response::InternalError(Box::new(std::io::Error::other(
                                 format!("Request failed: {}", e),
                             ))))
                             .await;

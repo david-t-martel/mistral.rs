@@ -53,59 +53,106 @@ pub fn nccl_daemon_replicator(request_sender: Sender<Request>) {
                         continue;
                     }
                 };
-                if let Ok(stream) = LocalStream::connect(name) {
-                    let mut reader = BufReader::new(stream);
-                    let mut buf = String::new();
-                    if let Err(e) = reader.read_line(&mut buf) {
-                        tracing::error!("Failed to read from IPC stream: {}", e);
+                match LocalStream::connect(name) {
+                    Ok(stream) => {
+                        let mut reader = BufReader::new(stream);
+                        let mut buf = String::new();
+                        if let Err(e) = reader.read_line(&mut buf) {
+                            tracing::error!("Failed to read from IPC stream: {}", e);
+                            continue;
+                        }
+                        if buf.trim().is_empty() {
+                            tracing::warn!("Received empty IPC message; skipping.");
+                            continue;
+                        }
+                        let mut req: Request = match serde_json::from_str(&buf) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                tracing::error!("Failed to deserialize request: {}", e);
+                                continue;
+                            }
+                        };
+
+                        req = match req {
+                            Request::ReIsq(x) => Request::ReIsq(x),
+                            Request::Terminate => Request::Terminate,
+                            Request::Detokenize(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.response = sender;
+                                let req = Request::Detokenize(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward detokenize request: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!(
+                                            "Engine dropped detokenize response channel"
+                                        );
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp {
+                                    tracing::error!("Detokenize request failed: {e}");
+                                }
+                                continue;
+                            }
+                            Request::Tokenize(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.response = sender;
+                                let req = Request::Tokenize(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward tokenize request: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!("Engine dropped tokenize response channel");
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp {
+                                    tracing::error!("Tokenize request failed: {e}");
+                                }
+                                continue;
+                            }
+                            Request::Normal(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.is_streaming = false;
+                                x.response = sender;
+                                let req = Request::Normal(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward request to engine: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!("Engine dropped normal response channel");
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp.as_result() {
+                                    tracing::error!("Normal request failed: {e:?}");
+                                }
+                                continue;
+                            }
+                            Request::TerminateAllSeqsNextStep => Request::TerminateAllSeqsNextStep,
+                        };
+
+                        if let Err(e) = request_sender.send(req).await {
+                            tracing::error!("Failed to forward request: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to IPC stream: {}", e);
                         continue;
                     }
-                    let mut req: Request = match serde_json::from_str(&buf) {
-                        Ok(r) => r,
-                        Err(e) => {
-                            tracing::error!("Failed to deserialize request: {}", e);
-                            continue;
-                        }
-                    };
-
-                    req = match req {
-                        Request::ReIsq(x) => Request::ReIsq(x),
-                        Request::Terminate => Request::Terminate,
-                        Request::Detokenize(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.response = sender;
-                            let req = Request::Detokenize(x);
-
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.unwrap();
-                            continue;
-                        }
-                        Request::Tokenize(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.response = sender;
-                            let req = Request::Tokenize(x);
-
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.unwrap();
-                            continue;
-                        }
-                        Request::Normal(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.is_streaming = false;
-                            x.response = sender;
-                            let req = Request::Normal(x);
-
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.as_result().unwrap();
-                            continue;
-                        }
-                        Request::TerminateAllSeqsNextStep => Request::TerminateAllSeqsNextStep,
-                    };
-
-                    request_sender.send(req).await.unwrap();
                 }
             }
         });
@@ -115,59 +162,122 @@ pub fn nccl_daemon_replicator(request_sender: Sender<Request>) {
 pub fn ring_daemon_replicator(request_sender: Sender<Request>) {
     use std::io::BufRead;
     use std::io::BufReader;
-
     let ring_config = RingConfig::load();
 
     let master_ip = ring_config.master_ip();
     let master_port = ring_config.master_port;
     std::thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
+        let rt = match Runtime::new() {
+            Ok(rt) => rt,
+            Err(e) => {
+                tracing::error!("Failed to create tokio runtime for ring daemon: {}", e);
+                return;
+            }
+        };
         rt.block_on(async move {
             loop {
-                if let Ok(stream) = TcpStream::connect(format!("{master_ip}:{master_port}")) {
-                    let mut reader = BufReader::new(stream);
-                    let mut buf = String::new();
-                    reader.read_line(&mut buf).unwrap();
-                    let mut req: Request = serde_json::from_str(&buf).unwrap();
-
-                    req = match req {
-                        Request::ReIsq(x) => Request::ReIsq(x),
-                        Request::Terminate => Request::Terminate,
-                        Request::Detokenize(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.response = sender;
-                            let req = Request::Detokenize(x);
-
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.unwrap();
+                match TcpStream::connect(format!("{master_ip}:{master_port}")) {
+                    Ok(stream) => {
+                        let mut reader = BufReader::new(stream);
+                        let mut buf = String::new();
+                        if let Err(e) = reader.read_line(&mut buf) {
+                            tracing::error!("Failed to read from TCP stream: {}", e);
                             continue;
                         }
-                        Request::Tokenize(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.response = sender;
-                            let req = Request::Tokenize(x);
-
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.unwrap();
+                        if buf.trim().is_empty() {
+                            tracing::warn!("Received empty TCP message; skipping.");
                             continue;
                         }
-                        Request::Normal(mut x) => {
-                            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
-                            x.is_streaming = false;
-                            x.response = sender;
-                            let req = Request::Normal(x);
+                        let mut req: Request = match serde_json::from_str(&buf) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                tracing::error!("Failed to deserialize request: {}", e);
+                                continue;
+                            }
+                        };
 
-                            request_sender.send(req).await.unwrap();
-                            let resp = receiver.recv().await.unwrap();
-                            resp.as_result().unwrap();
-                            continue;
+                        req = match req {
+                            Request::ReIsq(x) => Request::ReIsq(x),
+                            Request::Terminate => Request::Terminate,
+                            Request::Detokenize(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.response = sender;
+                                let req = Request::Detokenize(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward detokenize request: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!(
+                                            "Engine dropped detokenize response channel"
+                                        );
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp {
+                                    tracing::error!("Detokenize request failed: {e}");
+                                }
+                                continue;
+                            }
+                            Request::Tokenize(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.response = sender;
+                                let req = Request::Tokenize(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward tokenize request: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!("Engine dropped tokenize response channel");
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp {
+                                    tracing::error!("Tokenize request failed: {e}");
+                                }
+                                continue;
+                            }
+                            Request::Normal(mut x) => {
+                                let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+                                x.is_streaming = false;
+                                x.response = sender;
+                                let req = Request::Normal(x);
+
+                                if let Err(e) = request_sender.send(req).await {
+                                    tracing::error!("Failed to forward request to engine: {e}");
+                                    continue;
+                                }
+                                let resp = match receiver.recv().await {
+                                    Some(r) => r,
+                                    None => {
+                                        tracing::error!("Engine dropped normal response channel");
+                                        continue;
+                                    }
+                                };
+                                if let Err(e) = resp.as_result() {
+                                    tracing::error!("Normal request failed: {e:?}");
+                                }
+                                continue;
+                            }
+                            Request::TerminateAllSeqsNextStep => Request::TerminateAllSeqsNextStep,
+                        };
+
+                        if let Err(e) = request_sender.send(req).await {
+                            tracing::error!("Failed to forward request: {e}");
                         }
-                        Request::TerminateAllSeqsNextStep => Request::TerminateAllSeqsNextStep,
-                    };
-
-                    request_sender.send(req).await.unwrap();
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to connect to master {master_ip}:{master_port}: {e}"
+                        );
+                        continue;
+                    }
                 }
             }
         });
