@@ -509,16 +509,16 @@ impl XLoraModel {
             info!("Merging LoRA adapters.");
             for layer in layers.iter_mut().tqdm() {
                 Arc::get_mut(&mut layer.self_attn.k_proj)
-                    .unwrap()
+                    .expect("Multiple references to k_proj")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.o_proj)
-                    .unwrap()
+                    .expect("Multiple references to o_proj")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.q_proj)
-                    .unwrap()
+                    .expect("Multiple references to q_proj")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.v_proj)
-                    .unwrap()
+                    .expect("Multiple references to v_proj")
                     .merge_weights()?;
 
                 Arc::get_mut(&mut layer.mlp.down_proj)
@@ -730,29 +730,34 @@ impl IsqModel for XLoraModel {
         &dyn DeviceMapper,
     ) {
         let mut tensors = Vec::new();
-        tensors.push((Arc::get_mut(&mut self.lm_head).unwrap().quant_inner(), None));
+        tensors.push((
+            Arc::get_mut(&mut self.lm_head)
+                .expect("Multiple references to lm_head")
+                .quant_inner(),
+            None,
+        ));
         for (i, layer) in self.layers.iter_mut().enumerate() {
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.q_proj)
-                    .unwrap()
+                    .expect("Multiple references to q_proj")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.k_proj)
-                    .unwrap()
+                    .expect("Multiple references to k_proj")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.v_proj)
-                    .unwrap()
+                    .expect("Multiple references to v_proj")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.o_proj)
-                    .unwrap()
+                    .expect("Multiple references to o_proj")
                     .quant_inner(),
                 Some(i),
             ));
@@ -846,7 +851,9 @@ impl ScalingsMaker for XLoraModel {
         &self.cache
     }
     fn get_classifier(&self) -> &XLoraClassifier {
-        self.xlora_classifier.as_ref().unwrap()
+        self.xlora_classifier
+            .as_ref()
+            .expect("XLoraClassifier not initialized")
     }
     fn forward(
         &self,
