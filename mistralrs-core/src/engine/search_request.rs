@@ -136,13 +136,19 @@ async fn do_search(
             {
                 // Semantic reranking with embeddings
                 let device = get_mut_arcmutex!(this.pipeline).device();
-                search::rag::compute_most_similar(
+                match search::rag::compute_most_similar(
                     &device,
                     &tool_call_params.query,
                     results.iter().map(|(res, _)| res).collect::<Vec<_>>(),
                     bert_pipeline,
-                )
-                .unwrap()
+                ) {
+                    Ok(indexes) => indexes,
+                    Err(e) => {
+                        tracing::error!("Failed to compute semantic similarity: {}", e);
+                        // Fall back to original order
+                        (0..results.len()).collect()
+                    }
+                }
             } else {
                 tracing::warn!("No embedding model loaded; falling back to BM25 ranking for web search results.");
 
@@ -214,11 +220,16 @@ async fn do_search(
             used_results.push(item);
         }
 
-        let tool_result = serde_json::to_string(&used_results)
-            .unwrap()
-            .replace("\\n", "\n")
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\");
+        let tool_result = match serde_json::to_string(&used_results) {
+            Ok(s) => s
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\"),
+            Err(e) => {
+                tracing::error!("Failed to serialize search results: {}", e);
+                format!("{{\"error\": \"Failed to serialize results: {}\"}}", e)
+            }
+        };
         let end = Instant::now();
         tracing::info!(
             "Web search executed in {:.2}s, using {used_len} tokens of {} search results.",
@@ -278,7 +289,24 @@ async fn do_extraction(
         messages.push(message);
     }
     let tool_call_params: ExtractFunctionParameters =
-        serde_json::from_str(&tool_calls.function.arguments).unwrap();
+        match serde_json::from_str(&tool_calls.function.arguments) {
+            Ok(params) => params,
+            Err(e) => {
+                tracing::error!("Failed to parse extraction tool arguments: {}", e);
+                // Return early with error message in tool response
+                let mut message: IndexMap<String, MessageContent> = IndexMap::new();
+                message.insert("role".to_string(), Either::Left("tool".to_string()));
+                message.insert(
+                    "content".to_string(),
+                    Either::Left(format!(
+                        "Error: Failed to parse extraction arguments: {}",
+                        e
+                    )),
+                );
+                messages.push(message);
+                return second_request;
+            }
+        };
     println!();
     tracing::info!(
         "Called extrcation tool with query `{}`.",
@@ -306,22 +334,44 @@ async fn do_extraction(
                 SearchContextSize::Low => 4096_usize,
             };
 
-        let res = {
-            let extract_result = tokio::task::block_in_place(|| {
-                tracing::dispatcher::with_default(&dispatch, || {
-                    search::run_extract_tool(&tool_call_params).unwrap()
-                })
-            });
-            extract_result
-                .cap_content_len(&tokenizer, max_results_budget_toks)
-                .unwrap()
-        };
+        let res = tokio::task::block_in_place(|| {
+            tracing::dispatcher::with_default(&dispatch, || {
+                let extract_result = match search::run_extract_tool(&tool_call_params) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        tracing::error!("Extract tool failed: {}", e);
+                        // Return an error extract result
+                        search::ExtractResult {
+                            url: tool_call_params.url.clone(),
+                            content: format!("Failed to extract content: {}", e),
+                        }
+                    }
+                };
 
-        let tool_result = serde_json::to_string(&res)
-            .unwrap()
-            .replace("\\n", "\n")
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\");
+                // Try to cap content, but if it fails just return the original
+                extract_result
+                    .cap_content_len(&tokenizer, max_results_budget_toks)
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("Failed to cap extraction content length: {}", e);
+                        // Return error result since we can't recover the moved value
+                        search::ExtractResult {
+                            url: tool_call_params.url.clone(),
+                            content: "Content capping failed".to_string(),
+                        }
+                    })
+            })
+        });
+
+        let tool_result = match serde_json::to_string(&res) {
+            Ok(s) => s
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\"),
+            Err(e) => {
+                tracing::error!("Failed to serialize extraction result: {}", e);
+                format!("{{\"error\": \"Failed to serialize result: {}\"}}", e)
+            }
+        };
         let end = Instant::now();
         let used_len = {
             let inp = InputSequence::Raw(Cow::from(&tool_result));
@@ -446,10 +496,22 @@ pub(super) async fn search_request(this: Arc<Engine>, request: NormalRequest) {
     // ---------------------------------------------------------------------
     let mut probe = request.clone();
     if let Some(ref opts) = web_search_options {
-        probe
-            .tools
-            .get_or_insert_with(Vec::new)
-            .extend(search::get_search_tools(opts).unwrap());
+        match search::get_search_tools(opts) {
+            Ok(tools) => {
+                probe.tools.get_or_insert_with(Vec::new).extend(tools);
+            }
+            Err(e) => {
+                tracing::error!("Failed to get search tools: {}", e);
+                // Send error response back to user
+                let _ = user_sender
+                    .send(Response::InternalError(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to initialize search tools: {}", e),
+                    ))))
+                    .await;
+                return;
+            }
+        }
     }
 
     // Add Tool definitions from tool callbacks with tools if they're not already present
@@ -491,49 +553,73 @@ pub(super) async fn search_request(this: Arc<Engine>, request: NormalRequest) {
 
             // ----------------------- NON-STREAMING ------------------------
             if !is_streaming {
-                let done = match receiver.recv().await.unwrap().as_result().unwrap() {
-                    ResponseOk::Done(done) => done,
-                    other => {
-                        match other {
-                            ResponseOk::Chunk(res) => {
-                                user_sender.send(Response::Chunk(res)).await.unwrap()
+                let response = match receiver.recv().await {
+                    Some(resp) => resp,
+                    None => {
+                        tracing::error!("Channel closed unexpectedly in search request");
+                        let _ = user_sender
+                            .send(Response::InternalError(Box::new(std::io::Error::new(
+                                std::io::ErrorKind::BrokenPipe,
+                                "Internal communication error",
+                            ))))
+                            .await;
+                        return;
+                    }
+                };
+
+                let done = match response.as_result() {
+                    Ok(ResponseOk::Done(done)) => done,
+                    Ok(other) => {
+                        let send_result = match other {
+                            ResponseOk::Chunk(res) => user_sender.send(Response::Chunk(res)).await,
+                            ResponseOk::CompletionChunk(res) => {
+                                user_sender.send(Response::CompletionChunk(res)).await
                             }
-                            ResponseOk::CompletionChunk(res) => user_sender
-                                .send(Response::CompletionChunk(res))
-                                .await
-                                .unwrap(),
                             ResponseOk::Done(_) => unreachable!(),
-                            ResponseOk::CompletionDone(res) => user_sender
-                                .send(Response::CompletionDone(res))
-                                .await
-                                .unwrap(),
-                            ResponseOk::ImageGeneration(res) => user_sender
-                                .send(Response::ImageGeneration(res))
-                                .await
-                                .unwrap(),
+                            ResponseOk::CompletionDone(res) => {
+                                user_sender.send(Response::CompletionDone(res)).await
+                            }
+                            ResponseOk::ImageGeneration(res) => {
+                                user_sender.send(Response::ImageGeneration(res)).await
+                            }
                             ResponseOk::Raw {
                                 logits_chunks,
                                 tokens,
-                            } => user_sender
-                                .send(Response::Raw {
-                                    logits_chunks,
-                                    tokens,
-                                })
-                                .await
-                                .unwrap(),
+                            } => {
+                                user_sender
+                                    .send(Response::Raw {
+                                        logits_chunks,
+                                        tokens,
+                                    })
+                                    .await
+                            }
                             ResponseOk::Speech {
                                 pcm,
                                 rate,
                                 channels,
-                            } => user_sender
-                                .send(Response::Speech {
-                                    pcm,
-                                    rate,
-                                    channels,
-                                })
-                                .await
-                                .unwrap(),
+                            } => {
+                                user_sender
+                                    .send(Response::Speech {
+                                        pcm,
+                                        rate,
+                                        channels,
+                                    })
+                                    .await
+                            }
                         };
+                        if let Err(e) = send_result {
+                            tracing::error!("Failed to send response to user: {}", e);
+                        }
+                        return;
+                    }
+                    Err(e) => {
+                        tracing::error!("Request failed: {}", e);
+                        let _ = user_sender
+                            .send(Response::InternalError(Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Request failed: {}", e),
+                            ))))
+                            .await;
                         return;
                     }
                 };
@@ -546,15 +632,17 @@ pub(super) async fn search_request(this: Arc<Engine>, request: NormalRequest) {
 
                 // No tool call? We are finished.
                 if tc_opt.is_none() {
-                    user_sender
-                        .send(Response::Done(done.clone()))
-                        .await
-                        .unwrap();
+                    if let Err(e) = user_sender.send(Response::Done(done.clone())).await {
+                        tracing::error!("Failed to send final response: {}", e);
+                    }
                     return;
                 }
 
                 // Tool requested → build the next turn.
-                let tc = tc_opt.unwrap();
+                let tc = match tc_opt {
+                    Some(call) => call,
+                    None => return, // Already handled above, but be explicit
+                };
                 let next_visible = if search::search_tool_called(&tc.function.name) {
                     let web_search_options = web_search_options.as_ref().unwrap();
                     if tc.function.name == search::SEARCH_TOOL_NAME {

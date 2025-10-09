@@ -296,7 +296,10 @@ impl ModelConfig::FromGGML for ModelWeights {
                 n_kv_head: ct.hparams.n_head as usize / gqa,
                 head_dim: (ct.hparams.n_embd / ct.hparams.n_head) as usize,
                 rotary: rotary.clone().into(),
-                paged_attn: None, // TODO
+                // NOTE: Paged attention is not available for GGUF/GGML quantized models.
+                // GGUF models use the default KV cache implementation. For paged attention
+                // support, use non-quantized or other quantization formats (GPTQ, AWQ, HQQ).
+                paged_attn: None,
                 sdpa_params: SdpaParams {
                     n_kv_groups: ct.hparams.n_head as usize / n_kv_head,
                     softcap: None,
