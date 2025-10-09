@@ -494,7 +494,7 @@ pub async fn sample_target_sequence_speculative(
             seq,
             return_logprobs,
             rng.clone(),
-            true, // TODO(EricLBuehler): does this hurt perf?
+            true, // TODO @gemini(EricLBuehler): does this hurt perf?
             true,
             false,
         )

@@ -49,9 +49,9 @@ pub enum RequestMessage {
     },
     CompletionTokens(Vec<u32>),
     VisionChat {
-        #[serde(skip)] // TODO
+        #[serde(skip)] // TODO @codex
         images: Vec<image::DynamicImage>,
-        #[serde(skip)] // TODO
+        #[serde(skip)] // TODO @gemini
         audios: Vec<AudioInput>,
         messages: Vec<IndexMap<String, MessageContent>>,
         enable_thinking: Option<bool>,

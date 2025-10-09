@@ -11,7 +11,7 @@
 
 mod executor;
 
-// TODO: Implement specialized shell executors (future enhancement)
+// TODO @gemini: Implement specialized shell executors (future enhancement)
 // mod pwsh;
 // mod cmd;
 // mod bash;

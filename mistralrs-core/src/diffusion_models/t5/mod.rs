@@ -378,7 +378,7 @@ impl T5Attention {
 
         let k = k.contiguous()?;
         let v = v.contiguous()?;
-        // TODO: Use flash_attn.
+        // TODO @codex: Use flash_attn.
         let scores = { MatMul.matmul(&q, &k.t()?)? };
         let scores = match mask {
             None => scores,
@@ -446,7 +446,7 @@ impl T5Attention {
                         .permute((2, 0, 1))?
                         .unsqueeze(0)?;
                     (scores.broadcast_add(&position_bias)?, Some(position_bias))
-                    // TODO: position_bias_masked?
+                    // TODO @gemini: position_bias_masked?
                 }
             },
         };
@@ -643,7 +643,7 @@ impl T5Block {
         position_bias: Option<&Tensor>,
         encoder_hidden_states: Option<&Tensor>,
     ) -> Result<(Tensor, Option<Tensor>)> {
-        // TODO: Cache masks
+        // TODO @codex: Cache masks
         let mask = match self.cross_attn.is_some() {
             true => {
                 let mask_len = xs.dim(1)?;

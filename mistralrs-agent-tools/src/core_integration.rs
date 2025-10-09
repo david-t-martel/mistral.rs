@@ -3,7 +3,6 @@
 //! This module provides `AgentToolProvider` which bridges agent-tools with mistralrs-core's
 //! tool callback infrastructure, enabling all 90+ utilities to be used by language models.
 
-use crate::catalog::{ToolCatalog, ToolDefinition};
 use crate::types::{
     CatOptions, CommandOptions, GrepOptions, HeadOptions, LsOptions, ShellType, SortOptions,
     TailOptions, UniqOptions, WcOptions,

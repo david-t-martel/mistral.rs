@@ -506,7 +506,7 @@ fn to_wide_string(path: &Path) -> UResult<Vec<u16>> {
 /// Get sector size for a drive
 fn get_sector_size(path: &Path) -> UResult<usize> {
     // Default to 4KB sectors for most modern drives
-    // TODO: Implement actual sector size detection using GetDiskFreeSpace
+    // TODO @codex: Implement actual sector size detection using GetDiskFreeSpace
     Ok(4096)
 }
 

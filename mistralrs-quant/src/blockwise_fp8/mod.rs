@@ -67,7 +67,7 @@ impl QuantMethod for BlockwiseFP8Linear {
 
     fn forward(&self, x: &Tensor) -> Result<Tensor> {
         // Dequantize matmul always.
-        // TODO: add a specific kernel?
+        // TODO @gemini: add a specific kernel?
         let weight = self.dequantize_w()?;
         // Dispatch to unquant. This uses some cublaslt for bias & on cuda always, so it is better
         let unquant = UnquantLinear::new(QuantMethodConfig::Unquantized(Linear::new(

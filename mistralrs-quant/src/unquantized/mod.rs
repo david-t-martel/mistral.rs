@@ -160,7 +160,7 @@ impl QuantMethod for UnquantLinear {
             Some(IsqType::HQQ4 | IsqType::HQQ8) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
+                    // TODO @codex just warn?
                     candle_core::bail!("HQQ does not support imatrix.");
                 }
 
@@ -194,7 +194,7 @@ impl QuantMethod for UnquantLinear {
             Some(IsqType::AFQ2 | IsqType::AFQ3 | IsqType::AFQ4 | IsqType::AFQ6 | IsqType::AFQ8) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
+                    // TODO @gemini just warn?
                     candle_core::bail!("AFQ does not support imatrix.");
                 }
 
@@ -246,7 +246,7 @@ impl QuantMethod for UnquantLinear {
             Some(IsqType::F8E4M3) => {
                 let _acquired_quantize_guard = guard.acquire(&device);
                 if imatrix_weight.is_some() {
-                    // TODO just warn?
+                    // TODO @codex just warn?
                     candle_core::bail!("F8E4M3 does not support imatrix.");
                 }
 

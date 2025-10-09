@@ -348,14 +348,14 @@ impl MatMul {
     /// Compute matrix-matrix product.
     /// The result will be divided by the `scale` parameter in an affine division.
     pub fn matmul_affine_div(&self, a: &Tensor, b: &Tensor, scale: f64) -> Result<Tensor> {
-        // TODO(EricLBuehler): Optimize this by using the gemm parameter?
+        // TODO @codex(EricLBuehler): Optimize this by using the gemm parameter?
         self.matmul(a, b)? / scale
     }
 
     /// Compute matrix-matrix product.
     /// The result will be divided by the `scale` parameter in an affine multiplication.
     pub fn matmul_affine_mul(&self, a: &Tensor, b: &Tensor, scale: f64) -> Result<Tensor> {
-        // TODO(EricLBuehler): Optimize this by using the gemm parameter?
+        // TODO @gemini(EricLBuehler): Optimize this by using the gemm parameter?
         self.matmul(a, b)? * scale
     }
 

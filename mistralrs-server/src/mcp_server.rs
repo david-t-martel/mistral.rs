@@ -20,7 +20,6 @@ use rust_mcp_sdk::schema::{
 };
 
 mod errors {
-    #![allow(dead_code)]
 
     /// JSON-RPC error codes based on MCPEx.Protocol.Errors
     pub const PARSE_ERROR: i32 = -32700;

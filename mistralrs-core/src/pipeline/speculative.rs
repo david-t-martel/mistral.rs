@@ -215,7 +215,7 @@ impl SpeculativePipeline {
         }
         let metadata = get_mut_arcmutex!(target).get_metadata().clone();
         let category = get_mut_arcmutex!(target).category();
-        // TODO: some checks or relaxation here?
+        // TODO @codex: some checks or relaxation here?
         Ok(Self {
             target,
             draft,
@@ -381,7 +381,7 @@ impl Pipeline for SpeculativePipeline {
                             None,
                             false,
                             None,
-                            None, // TODO: get block tables/handle it
+                            None, // TODO @gemini: get block tables/handle it
                             get_mut_arcmutex!(self.draft).device_mapper(),
                         )
                         .unwrap()
@@ -400,7 +400,7 @@ impl Pipeline for SpeculativePipeline {
                         seq,
                         seq.return_logprobs(),
                         rng.clone(),
-                        false, // todo tune
+                        false, // todo @codex tune
                         true,
                         false,
                     )
@@ -451,7 +451,7 @@ impl Pipeline for SpeculativePipeline {
                         Some((self.gamma, initial_cache_len)), // Get the last gamma, see above
                         false,
                         None,
-                        None, // TODO: get block tables/handle it
+                        None, // TODO @gemini: get block tables/handle it
                         get_mut_arcmutex!(self.target).device_mapper(),
                     )
                     .unwrap()
@@ -573,7 +573,7 @@ impl Pipeline for SpeculativePipeline {
                     seq,
                     seq.return_logprobs(),
                     rng.clone(),
-                    false, // todo tune
+                    false, // todo @codex tune
                     true, // do not add to tok trie yet
                     true,
                 )

@@ -26,7 +26,7 @@ impl HqqLayer {
 
         // Get min and max valyes
         let (min, max) = if !cfg.channel_wise {
-            // TODO we need min_all
+            // TODO @gemini we need min_all
             let mut min = w.min(0)?;
             let mut max = w.max(0)?;
             while !min.dims().is_empty() {

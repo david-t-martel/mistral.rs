@@ -125,7 +125,7 @@ impl DrySamplingParamsInner {
                         tokenizer
                             // Prefix with 'a' to get the correct encoding of the token at the end of a text.
                             //
-                            // FIXME: This is a hack. See https://github.com/LostRuins/koboldcpp/pull/982
+                            // FIXME @codex: This is a hack. See https://github.com/LostRuins/koboldcpp/pull/982
                             //        for the correct solution which covers multi-token sequence breakers
                             //        and ambiguous encodings.
                             .encode_fast(["a", &breaker].concat(), true)
@@ -733,7 +733,7 @@ impl Sampler {
 
             let mut counts = vec![0.0f32; logits.len()];
             for ctx in context.iter() {
-                // Llama 3.2 uses a hack triggering this error... we wouldn't want a weight on it anyway
+                // Llama 3.2 uses a hack @gemini triggering this error... we wouldn't want a weight on it anyway
                 if *ctx as usize >= logits.len() {
                     continue;
                 }
@@ -817,7 +817,7 @@ impl Sampler {
             // Actually apply penalties
             for (tok, match_len) in match_lengths {
                 if match_len >= params.allowed_length {
-                    // Llama 3.2 uses a hack triggering this error... we wouldn't want a weight on it anyway
+                    // Llama 3.2 uses a hack @codex triggering this error... we wouldn't want a weight on it anyway
                     if tok as usize >= logits.len() {
                         continue;
                     }

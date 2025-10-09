@@ -208,7 +208,7 @@ impl TryFrom<ContentMetadata<'_>> for PropsGGUF {
         let head_count = c.get_value::<u32>("attention.head_count")? as usize;
 
         // NOTE: Values are not aligned with GGUFv3 types
-        // TODO: Normalize value types to spec
+        // TODO @codex: Normalize value types to spec
         let props = Self {
             head_count,
             head_count_kv: c.get_value::<u32>("attention.head_count_kv")? as usize,

@@ -109,7 +109,7 @@ pub struct GeneralMetadata {
     pub num_hidden_layers: usize,
     pub eos_tok: Vec<u32>,
     pub kind: ModelKind,
-    // TODO: Replace is_xlora queries to check via kind instead:
+    // TODO @gemini: Replace is_xlora queries to check via kind instead:
     pub is_xlora: bool,
     pub activation_dtype: DType,
     pub sliding_window: Option<usize>,

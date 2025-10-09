@@ -27,7 +27,7 @@ mod tail;
 mod uniq;
 mod wc;
 
-// TODO: Implement remaining text processing utilities
+// TODO @codex: Implement remaining text processing utilities
 // mod cut;
 // mod tr;
 // mod base64, base32, basenc (encoding)

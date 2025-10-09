@@ -12,7 +12,7 @@ use axum::{
     },
 };
 use either::Either;
-use mistralrs_core::{ChatCompletionResponse, MistralRs, Request, Response};
+use mistralrs_core::{ChatCompletionResponse, MistralRs, Request, Response, ToolType};
 use serde_json::Value;
 use tokio::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -29,7 +29,7 @@ use crate::{
         ChatCompletionRequest, FunctionCalled, Message, MessageContent, ResponsesChunk,
         ResponsesContent, ResponsesCreateRequest, ResponsesDelta, ResponsesDeltaContent,
         ResponsesDeltaOutput, ResponsesError, ResponsesObject, ResponsesOutput, ResponsesUsage,
-        ToolCall, ToolType,
+        ToolCall,
     },
     streaming::{get_keep_alive_interval, BaseStreamer, DoneState},
     types::{ExtractedMistralRsState, OnChunkCallback, OnDoneCallback, SharedMistralRsState},

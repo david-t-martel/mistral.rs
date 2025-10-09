@@ -122,7 +122,7 @@ impl BnbLinear {
             serde_json::from_str(&state_str).map_err(candle_core::Error::msg)?;
 
         let nested = if vb_w.contains_tensor("nested_absmax") {
-            // TODO: can `nested_blocksize` be None, default to 64 like bnb?
+            // TODO @codex: can `nested_blocksize` be None, default to 64 like bnb?
             Some(Arc::new(BnbQuantParmas {
                 absmax: vb_w.get_unchecked_dtype("nested_absmax", DType::F32)?,
                 code: vb_w.get_unchecked_dtype("nested_quant_map", DType::F32)?,

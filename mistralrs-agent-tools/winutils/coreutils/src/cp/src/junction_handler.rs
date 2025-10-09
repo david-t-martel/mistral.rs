@@ -240,7 +240,7 @@ impl JunctionHandler {
         }
 
         if path_str.starts_with("\\Device\\") {
-            // TODO: Convert device paths to drive letters
+            // TODO @gemini: Convert device paths to drive letters
             // For now, return as-is
             return Ok(path);
         }
@@ -287,7 +287,7 @@ impl JunctionHandler {
                     target.display()
                 )));
             }
-            // TODO: Copy directory recursively
+            // TODO @codex: Copy directory recursively
             // For now, delegate to standard copy
             std::fs::create_dir_all(destination)
                 .map_err(|e| USimpleError::new(1, format!("cannot create directory: {}", e)))?;

@@ -21,7 +21,7 @@
 //! use rg_wrapper::{SearchOptions, TextSearcher};
 //!
 //! let options = SearchOptions::new()
-//!     .pattern("TODO")
+//!     .pattern("TODO @codex")
 //!     .case_insensitive(true)
 //!     .context_lines(2);
 //!
@@ -361,10 +361,10 @@ impl Sink for ResultSink {
             file_path: self.file_path.clone(),
             line_number,
             column_number,
-            match_text: line_text.clone(), // TODO: Extract just the matching part
+            match_text: line_text.clone(), // TODO @gemini: Extract just the matching part
             line_text: line_text.clone(),
-            context_before: Vec::new(), // TODO: Implement context collection
-            context_after: Vec::new(),  // TODO: Implement context collection
+            context_before: Vec::new(), // TODO @codex: Implement context collection
+            context_after: Vec::new(),  // TODO @gemini: Implement context collection
             byte_offset: mat.absolute_byte_offset(),
             match_start,
             match_end,
@@ -379,7 +379,7 @@ impl Sink for ResultSink {
         _searcher: &Searcher,
         _context: &grep::searcher::SinkContext<'_>,
     ) -> Result<bool, Self::Error> {
-        // TODO: Handle context lines
+        // TODO @codex: Handle context lines
         Ok(true)
     }
 
@@ -556,7 +556,7 @@ impl TextSearcher {
                     total_matches: sink.matches.len(),
                     encoding_used,
                     line_ending_detected: Some(self.detect_line_ending(&content)),
-                    is_binary: false, // TODO: Detect binary files
+                    is_binary: false, // TODO @gemini: Detect binary files
                     file_size: metadata.len(),
                     search_time_ms: search_time,
                 })
@@ -676,7 +676,7 @@ impl TextSearcher {
             }
         }
 
-        // Check file type (TODO: implement file type detection)
+        // Check file type (TODO @codex: implement file type detection)
 
         // Check exclude patterns
         let path_str = path.to_string_lossy();
@@ -938,7 +938,7 @@ mod tests {
         let root = temp_dir.path();
 
         fs::write(root.join("file1.txt"), "Hello world\nThis is a test\nTODO: Fix this").unwrap();
-        fs::write(root.join("file2.rs"), "fn main() {\n    println!(\"Hello\");\n    // TODO: Add error handling\n}").unwrap();
+        fs::write(root.join("file2.rs"), "fn main() {\n    println!(\"Hello\");\n    // TODO @gemini: Add error handling\n}").unwrap();
         fs::write(root.join("file3.md"), "# Documentation\n\nThis file contains no matches.").unwrap();
 
         // Create a subdirectory
@@ -957,7 +957,7 @@ mod tests {
         let results = searcher.search_directory(temp_dir.path()).unwrap();
         let total_matches: usize = results.iter().map(|r| r.total_matches).sum();
 
-        assert!(total_matches >= 2); // Should find TODO in file1.txt and file2.rs
+        assert!(total_matches >= 2); // Should find TODO @codex in file1.txt and file2.rs
     }
 
     #[test]

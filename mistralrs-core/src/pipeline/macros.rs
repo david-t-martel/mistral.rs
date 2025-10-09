@@ -609,7 +609,7 @@ macro_rules! xlora_model_loader {
         $multi_progress:expr,
         $matformer_config:expr,
     ) => {{
-        // TODO: remove lora_preload_adapter_info
+        // TODO @codex: remove lora_preload_adapter_info
         let $crate::pipeline::AdapterPaths::XLora {
             adapter_configs,
             adapter_safetensors,

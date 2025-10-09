@@ -65,7 +65,7 @@ impl QuantMethod for GgufMatMul {
     /// then the indices are (n_tokens, n_experts).
     fn gather_forward(&self, x: &Tensor, indices: &Tensor) -> Result<Tensor> {
         // Dequantize matmul always.
-        // TODO: add a specific kernel?
+        // TODO @gemini: add a specific kernel?
         let weight = self.dequantize_w()?;
         // Dispatch to unquant. This uses some cublaslt for bias & on cuda always, so it is better
         let unquant = UnquantLinear::new(QuantMethodConfig::Unquantized(Linear::new(
@@ -282,7 +282,7 @@ impl QuantizedSerde for GgufMatMul {
 
         let has_bias = buffer.read_u8()? != 0;
 
-        // TODO: keep this in sync with get_isq_type_from_uqff!
+        // TODO @codex: keep this in sync with get_isq_type_from_uqff!
         let dtype = buffer.read_u32::<LittleEndian>()?;
         let dtype = match dtype {
             0 => GgmlDType::F32,
@@ -352,7 +352,7 @@ impl QuantizedSerde for GgufMatMul {
 
         let has_bias = buffer.read_u8()? != 0;
 
-        // TODO: keep this in sync with get_isq_type_from_uqff!
+        // TODO @gemini: keep this in sync with get_isq_type_from_uqff!
         let dtype = buffer.read_u32::<LittleEndian>()?;
         let dtype = match dtype {
             0 => GgmlDType::F32,

@@ -143,7 +143,7 @@ pub fn convert_gguf_to_hf_tokenizer<R: std::io::Seek + std::io::Read>(
     })
 }
 
-// TODO: Add support for additional tokenizer models: WordPiece, WordLevel
+// TODO @gemini: Add support for additional tokenizer models: WordPiece, WordLevel
 // https://docs.rs/tokenizers/latest/tokenizers/models/enum.ModelWrapper.html
 #[derive(Debug)]
 enum TokenizerKind {

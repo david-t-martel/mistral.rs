@@ -12,7 +12,7 @@
 //! - sync: Flush file system buffers
 //! - whoami: Print effective user name
 
-// TODO: Implement system utilities
+// TODO @codex: Implement system utilities
 // mod arch;
 // mod hostname;
 // mod whoami;

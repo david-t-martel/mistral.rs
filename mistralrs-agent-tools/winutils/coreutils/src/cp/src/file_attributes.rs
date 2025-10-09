@@ -312,14 +312,14 @@ fn set_security_descriptor(path: &Path, security_data: &[u8]) -> UResult<()> {
 
 /// Get alternate data streams for a file
 fn get_alternate_streams(path: &Path) -> UResult<Vec<AlternateDataStream>> {
-    // TODO: Implement ADS enumeration using FindFirstStreamW/FindNextStreamW
+    // TODO @gemini: Implement ADS enumeration using FindFirstStreamW/FindNextStreamW
     // For now, return empty vector
     Ok(Vec::new())
 }
 
 /// Set alternate data stream
 fn set_alternate_stream(path: &Path, stream_name: &str, data: &[u8]) -> UResult<()> {
-    // TODO: Implement ADS writing
+    // TODO @codex: Implement ADS writing
     // For now, this is a placeholder
     Ok(())
 }

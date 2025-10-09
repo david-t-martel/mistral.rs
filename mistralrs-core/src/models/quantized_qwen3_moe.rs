@@ -275,7 +275,7 @@ impl TryFrom<ContentMetadata<'_>> for PropsGGUF {
         let head_count = c.get_value::<u32>("attention.head_count")? as usize;
 
         // NOTE: Values are not aligned with GGUFv3 types
-        // TODO: Normalize value types to spec
+        // TODO @gemini: Normalize value types to spec
 
         let moe_cfg = QwenMoEConfig {
             moe_intermediate_size: c.get_value::<u32>("expert_feed_forward_length")? as usize,

@@ -1012,8 +1012,8 @@ impl WorkloadBenchmarks {
         // Create main.rs
         let main_content = r#"//! Main application entry point
 /// This is the main function that starts the application
-/// TODO: Add command line argument parsing
-/// TODO: Implement proper error handling
+/// TODO @gemini: Add command line argument parsing
+/// TODO @codex: Implement proper error handling
 fn main() {
     println!("Hello, world!");
     let result = process_data();
@@ -1026,7 +1026,7 @@ fn main() {
 /// Process application data
 /// Returns the processed data or an error
 pub fn process_data() -> Result<String, Box<dyn std::error::Error>> {
-    // TODO: Implement actual data processing
+    // TODO @gemini: Implement actual data processing
     Ok("sample data".to_string())
 }
 
@@ -1045,8 +1045,8 @@ mod tests {
         // Create lib.rs
         let lib_content = r#"//! Core library functionality
 /// Core data structures and algorithms
-/// TODO: Add comprehensive documentation
-/// TODO: Implement additional algorithms
+/// TODO @codex: Add comprehensive documentation
+/// TODO @gemini: Implement additional algorithms
 
 /// Data processor trait
 pub trait DataProcessor {
@@ -1091,8 +1091,8 @@ impl DataProcessor for FilterProcessor {
         // Create utils.rs
         let utils_content = r#"//! Utility functions
 /// Utility functions for data processing
-/// TODO: Add more utility functions
-/// TODO: Optimize performance
+/// TODO @codex: Add more utility functions
+/// TODO @gemini: Optimize performance
 
 use std::collections::HashMap;
 
