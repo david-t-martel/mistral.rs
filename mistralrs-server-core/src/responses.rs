@@ -26,9 +26,10 @@ use crate::{
         JsonError, ModelErrorMessage,
     },
     openai::{
-        ChatCompletionRequest, Message, MessageContent, ResponsesChunk, ResponsesContent,
-        ResponsesCreateRequest, ResponsesDelta, ResponsesDeltaContent, ResponsesDeltaOutput,
-        ResponsesError, ResponsesObject, ResponsesOutput, ResponsesUsage,
+        ChatCompletionRequest, FunctionCalled, Message, MessageContent, ResponsesChunk,
+        ResponsesContent, ResponsesCreateRequest, ResponsesDelta, ResponsesDeltaContent,
+        ResponsesDeltaOutput, ResponsesError, ResponsesObject, ResponsesOutput, ResponsesUsage,
+        ToolCall, ToolType,
     },
     streaming::{get_keep_alive_interval, BaseStreamer, DoneState},
     types::{ExtractedMistralRsState, OnChunkCallback, OnDoneCallback, SharedMistralRsState},
@@ -191,6 +192,20 @@ impl IntoResponse for ResponsesResponder {
 }
 
 /// Convert chat completion response to responses object
+/// Convert a ToolCallResponse from mistralrs_core to a ToolCall for the OpenAI API format.
+///
+/// This handles the conversion between the internal tool call representation and the
+/// format expected by the OpenAI-compatible API and conversation history storage.
+fn convert_tool_call_response(tool_call_resp: &mistralrs_core::ToolCallResponse) -> ToolCall {
+    ToolCall {
+        tp: ToolType::Function,
+        function: FunctionCalled {
+            name: tool_call_resp.function.name.clone(),
+            parameters: tool_call_resp.function.arguments.clone(),
+        },
+    }
+}
+
 fn chat_response_to_responses_object(
     chat_resp: &ChatCompletionResponse,
     request_id: String,
@@ -470,14 +485,22 @@ pub async fn create_response(
                     if let Some(mut history) = conversation_history.clone() {
                         // Add the assistant's response to the conversation history
                         for choice in &chat_resp.choices {
-                            if let Some(content) = &choice.message.content {
-                                history.push(Message {
-                                    content: Some(MessageContent::from_text(content.clone())),
-                                    role: choice.message.role.clone(),
-                                    name: None,
-                                    tool_calls: None, // TODO: Convert ToolCallResponse to ToolCall if needed
+                            // Convert tool calls if present
+                            let tool_calls_converted =
+                                choice.message.tool_calls.as_ref().map(|calls| {
+                                    calls.iter().map(convert_tool_call_response).collect()
                                 });
-                            }
+
+                            history.push(Message {
+                                content: choice
+                                    .message
+                                    .content
+                                    .as_ref()
+                                    .map(|c| MessageContent::from_text(c.clone())),
+                                role: choice.message.role.clone(),
+                                name: None,
+                                tool_calls: tool_calls_converted,
+                            });
                         }
                         let _ = cache.store_conversation_history(request_id, history);
                     }
@@ -502,14 +525,22 @@ pub async fn create_response(
                     if let Some(mut history) = conversation_history.clone() {
                         // Add any partial response to the conversation history
                         for choice in &partial_resp.choices {
-                            if let Some(content) = &choice.message.content {
-                                history.push(Message {
-                                    content: Some(MessageContent::from_text(content.clone())),
-                                    role: choice.message.role.clone(),
-                                    name: None,
-                                    tool_calls: None, // TODO: Convert ToolCallResponse to ToolCall if needed
+                            // Convert tool calls if present
+                            let tool_calls_converted =
+                                choice.message.tool_calls.as_ref().map(|calls| {
+                                    calls.iter().map(convert_tool_call_response).collect()
                                 });
-                            }
+
+                            history.push(Message {
+                                content: choice
+                                    .message
+                                    .content
+                                    .as_ref()
+                                    .map(|c| MessageContent::from_text(c.clone())),
+                                role: choice.message.role.clone(),
+                                name: None,
+                                tool_calls: tool_calls_converted,
+                            });
                         }
                         let _ = cache.store_conversation_history(request_id, history);
                     }
