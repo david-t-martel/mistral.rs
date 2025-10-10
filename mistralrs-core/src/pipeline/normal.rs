@@ -1221,7 +1221,7 @@ impl AnyMoePipelineMixin for NormalPipeline {
                             .expect("Pattern should exist");
                         let layer_n = key[first_layer_idx + 1..last_layer_idx]
                             .parse::<usize>()
-                            .unwrap();
+                            .expect("Failed to parse layer number from tensor key");
                         layers_clone.contains(&layer_n) || layers_clone.is_empty()
                     } else {
                         false
