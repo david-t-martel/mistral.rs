@@ -162,8 +162,13 @@ impl T5RelativeAttentionLogitBias {
             let abs_pos = position.abs();
             offset + self.bucket_single_side(abs_pos, half, max_distance)
         } else {
-            let pos = if position < 0 { -position } else { 0 };
-            self.bucket_single_side(pos, total_buckets, max_distance)
+            // Non-symmetric: positive positions use second half of buckets
+            if position >= 0 {
+                let half = (total_buckets / 2).max(1);
+                half + self.bucket_single_side(position, half, max_distance)
+            } else {
+                self.bucket_single_side(-position, total_buckets / 2, max_distance)
+            }
         };
         if bucket >= total_buckets {
             bucket = total_buckets - 1;

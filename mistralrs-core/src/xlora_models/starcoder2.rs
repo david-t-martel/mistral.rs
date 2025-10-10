@@ -758,7 +758,9 @@ impl IsqModel for Model {
                 Some(i),
             ));
             tensors.push((
-                Arc::get_mut(&mut layer.mlp.c_proj).unwrap().quant_inner(),
+                Arc::get_mut(&mut layer.mlp.c_proj)
+                    .expect("Multiple references to c_proj layer")
+                    .quant_inner(),
                 Some(i),
             ));
         }

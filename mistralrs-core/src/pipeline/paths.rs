@@ -250,7 +250,7 @@ pub fn get_xlora_paths(
                             }
                         }
 
-                        let (config, safetensor) = (config.expect("Config required"), safetensor.unwrap());
+                        let (config, safetensor) = (config.expect("Config required"), safetensor.expect("Safetensor file required"));
                         output.insert(adapter.name.clone(), (safetensor, config));
                     }
                     Some(output)

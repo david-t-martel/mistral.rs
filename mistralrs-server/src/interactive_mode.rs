@@ -256,12 +256,12 @@ async fn text_interactive_mode(
     // Set the handler to process exit
     *CTRLC_HANDLER
         .lock()
-        .expect("Control-C handler mutex poisoned") = &exit_handler;
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
     ctrlc::set_handler(move || {
         CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned")()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
     })
     .expect("Failed to set CTRL-C handler for interactive mode");
 
@@ -271,7 +271,7 @@ async fn text_interactive_mode(
         // Set the handler to process exit
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &exit_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -325,7 +325,7 @@ async fn text_interactive_mode(
         // Set the handler to terminate all seqs, so allowing cancelling running
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &terminate_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let request_messages = RequestMessage::Chat {
             messages: messages.clone(),
@@ -503,12 +503,12 @@ async fn vision_interactive_mode(
     // Set the handler to process exit
     *CTRLC_HANDLER
         .lock()
-        .expect("Control-C handler mutex poisoned") = &exit_handler;
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
     ctrlc::set_handler(move || {
         CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned")()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
     })
     .expect("Failed to set CTRL-C handler for interactive mode");
 
@@ -518,7 +518,7 @@ async fn vision_interactive_mode(
         // Set the handler to process exit
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &exit_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -648,7 +648,7 @@ async fn vision_interactive_mode(
         // Set the handler to terminate all seqs, so allowing cancelling running
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &terminate_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let request_messages = RequestMessage::VisionChat {
             images: images.clone(),
@@ -790,12 +790,12 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
     // Set the handler to process exit
     *CTRLC_HANDLER
         .lock()
-        .expect("Control-C handler mutex poisoned") = &exit_handler;
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
     ctrlc::set_handler(move || {
         CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned")()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
     })
     .expect("Failed to set CTRL-C handler for interactive mode");
 
@@ -805,7 +805,7 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         // Set the handler to process exit
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &exit_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -828,7 +828,7 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         // Set the handler to terminate all seqs, so allowing cancelling running
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &terminate_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {
@@ -906,12 +906,12 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     // Set the handler to process exit
     *CTRLC_HANDLER
         .lock()
-        .expect("Control-C handler mutex poisoned") = &exit_handler;
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
     ctrlc::set_handler(move || {
         CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned")()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
     })
     .expect("Failed to set CTRL-C handler for interactive mode");
 
@@ -923,7 +923,7 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         // Set the handler to process exit
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &exit_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -946,7 +946,7 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         // Set the handler to terminate all seqs, so allowing cancelling running
         *CTRLC_HANDLER
             .lock()
-            .expect("Control-C handler mutex poisoned") = &terminate_handler;
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {

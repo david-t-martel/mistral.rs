@@ -7,7 +7,7 @@ use axum::{
     extract::{Json, Path, State},
     http::{self, StatusCode},
     response::{
-        sse::{Event, KeepAlive},
+        sse::{Event, KeepAlive, KeepAliveStream},
         IntoResponse, Sse,
     },
 };
@@ -628,7 +628,7 @@ fn handle_error(
 fn create_streamer(
     streamer: ResponsesStreamer,
     on_done: Option<OnDoneCallback<ResponsesChunk>>,
-) -> Sse<ResponsesStreamer> {
+) -> Sse<KeepAliveStream<ResponsesStreamer>> {
     let keep_alive_interval = get_keep_alive_interval();
 
     let streamer_with_callback = ResponsesStreamer {

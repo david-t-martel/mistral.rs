@@ -189,7 +189,6 @@ pub async fn agent_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
 
     *CTRLC_HANDLER
         .lock()
-        .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
     ctrlc::set_handler(move || {
