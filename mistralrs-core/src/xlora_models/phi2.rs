@@ -498,7 +498,7 @@ impl Model {
                     .expect("Multiple references to k_proj")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.dense)
-                    .unwrap()
+                    .expect("Multiple references to dense layer")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.q_proj)
                     .expect("Multiple references to q_proj")
