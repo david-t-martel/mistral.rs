@@ -511,7 +511,7 @@ impl Model {
 
                 Arc::get_mut(&mut layer.mlp.c_fc)
                     .expect("Multiple references to c_fc layer")
-                    .merge_weights()?;
+                    .expect("Multiple references to c_proj layer")
                 Arc::get_mut(&mut layer.mlp.c_proj)
                     .expect("Multiple references to c_proj layer")
                     .merge_weights()?;
