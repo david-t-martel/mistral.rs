@@ -297,7 +297,7 @@ pub trait IsqModel {
     /// - This is only for loading from a llama.cpp imatrix file.
     /// - Corresponds to `IsqOrganization::Default`
     fn imatrix_names(&self) -> candle_core::Result<Vec<Option<String>>> {
-        // TODO: make this required.
+        // TODO @gemini: make this required.
         candle_core::bail!("This model does not support quantizing with an imatrix.");
     }
 

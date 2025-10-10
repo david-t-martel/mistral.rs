@@ -483,7 +483,6 @@ impl McpServer {
                     number_lines: Self::bool_arg(&args_map, "number_lines", false),
                     show_ends: Self::bool_arg(&args_map, "show_ends", false),
                     squeeze_blank: Self::bool_arg(&args_map, "squeeze_blank", false),
-                    ..Default::default()
                 };
                 let path_refs = Self::path_refs(&paths);
                 let output = self.toolkit.cat(&path_refs, &options)?;
@@ -498,7 +497,6 @@ impl McpServer {
                     recursive: Self::bool_arg(&args_map, "recursive", false),
                     sort_by_time: Self::bool_arg(&args_map, "sort_by_time", false),
                     reverse: Self::bool_arg(&args_map, "reverse", false),
-                    ..Default::default()
                 };
                 let listing = self.toolkit.ls(Path::new(&path), &options)?;
                 let listing_json = json!({
@@ -596,7 +594,6 @@ impl McpServer {
                     words: Self::bool_arg(&args_map, "words", true),
                     bytes: Self::bool_arg(&args_map, "bytes", false),
                     chars: Self::bool_arg(&args_map, "chars", false),
-                    ..Default::default()
                 };
                 let path_refs = Self::path_refs(&paths);
                 let results = self.toolkit.wc(&path_refs, &options)?;

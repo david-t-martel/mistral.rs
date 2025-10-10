@@ -1019,7 +1019,7 @@ impl MistralRsForServerBuilder {
     }
 }
 
-// TODO: replace with best device?
+// TODO @codex: replace with best device?
 /// Initializes the device to be used for computation, optionally forcing CPU usage and setting a seed.
 fn init_device(force_cpu: bool, seed: Option<u64>) -> Result<candle_core::Device> {
     #[cfg(feature = "metal")]

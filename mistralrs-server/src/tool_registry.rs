@@ -412,6 +412,366 @@ pub fn build_tool_definitions_and_callbacks(
                 }
             }),
         ),
+        // Text processing utilities
+        (
+            mk(
+                "cut",
+                "Extract fields from lines of text",
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "fields": {"type": "string", "description": "Field selection (e.g., '1,3' or '1-5')"},
+                    "delimiter": {"type": "string", "description": "Field delimiter character"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let paths: Vec<PathBuf> = v
+                        .get("paths")
+                        .and_then(|p| p.as_array())
+                        .ok_or_else(|| anyhow!("cut: 'paths' must be an array"))?
+                        .iter()
+                        .filter_map(|s| s.as_str())
+                        .map(PathBuf::from)
+                        .collect();
+                    let fields = v
+                        .get("fields")
+                        .and_then(|f| f.as_str())
+                        .ok_or_else(|| anyhow!("cut: 'fields' required"))?;
+                    let delimiter = v
+                        .get("delimiter")
+                        .and_then(|d| d.as_str())
+                        .and_then(|s| s.chars().next());
+                    let owned: Vec<PathBuf> = paths;
+                    let refs: Vec<&std::path::Path> = owned.iter().map(|p| p.as_path()).collect();
+                    let out = tk
+                        .cut(&refs, fields, delimiter)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        (
+            mk(
+                "tr",
+                "Translate or delete characters",
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "from_chars": {"type": "string", "description": "Characters to translate from"},
+                    "to_chars": {"type": "string", "description": "Characters to translate to"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let paths: Vec<PathBuf> = v
+                        .get("paths")
+                        .and_then(|p| p.as_array())
+                        .ok_or_else(|| anyhow!("tr: 'paths' must be an array"))?
+                        .iter()
+                        .filter_map(|s| s.as_str())
+                        .map(PathBuf::from)
+                        .collect();
+                    let from_chars = v
+                        .get("from_chars")
+                        .and_then(|f| f.as_str())
+                        .ok_or_else(|| anyhow!("tr: 'from_chars' required"))?;
+                    let to_chars = v.get("to_chars").and_then(|t| t.as_str());
+                    let owned: Vec<PathBuf> = paths;
+                    let refs: Vec<&std::path::Path> = owned.iter().map(|p| p.as_path()).collect();
+                    let out = tk
+                        .tr(&refs, from_chars, to_chars)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        (
+            mk(
+                "expand",
+                "Convert tabs to spaces",
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "tab_stops": {"type": "integer", "description": "Number of spaces per tab (default: 8)"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let paths: Vec<PathBuf> = v
+                        .get("paths")
+                        .and_then(|p| p.as_array())
+                        .ok_or_else(|| anyhow!("expand: 'paths' must be an array"))?
+                        .iter()
+                        .filter_map(|s| s.as_str())
+                        .map(PathBuf::from)
+                        .collect();
+                    let tab_stops = v
+                        .get("tab_stops")
+                        .and_then(|t| t.as_u64())
+                        .map(|n| n as usize);
+                    let owned: Vec<PathBuf> = paths;
+                    let refs: Vec<&std::path::Path> = owned.iter().map(|p| p.as_path()).collect();
+                    let out = tk
+                        .expand(&refs, tab_stops)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        (
+            mk(
+                "tac",
+                "Concatenate and print files in reverse",
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let paths: Vec<PathBuf> = v
+                        .get("paths")
+                        .and_then(|p| p.as_array())
+                        .ok_or_else(|| anyhow!("tac: 'paths' must be an array"))?
+                        .iter()
+                        .filter_map(|s| s.as_str())
+                        .map(PathBuf::from)
+                        .collect();
+                    let owned: Vec<PathBuf> = paths;
+                    let refs: Vec<&std::path::Path> = owned.iter().map(|p| p.as_path()).collect();
+                    let out = tk.tac(&refs).map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        (
+            mk(
+                "nl",
+                "Number lines of files",
+                json!({
+                    "paths": {"type": "array", "items": {"type": "string"}},
+                    "start": {"type": "integer", "description": "Starting line number (default: 1)"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let paths: Vec<PathBuf> = v
+                        .get("paths")
+                        .and_then(|p| p.as_array())
+                        .ok_or_else(|| anyhow!("nl: 'paths' must be an array"))?
+                        .iter()
+                        .filter_map(|s| s.as_str())
+                        .map(PathBuf::from)
+                        .collect();
+                    let start = v.get("start").and_then(|s| s.as_u64()).map(|n| n as usize);
+                    let owned: Vec<PathBuf> = paths;
+                    let refs: Vec<&std::path::Path> = owned.iter().map(|p| p.as_path()).collect();
+                    let out = tk.nl(&refs, start).map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        // Encoding utilities
+        (
+            mk(
+                "base64",
+                "Encode or decode base64",
+                json!({
+                    "path": {"type": "string"},
+                    "decode": {"type": "boolean", "description": "Decode instead of encode"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let path = PathBuf::from(
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .ok_or_else(|| anyhow!("base64: 'path' required"))?,
+                    );
+                    let decode = v.get("decode").and_then(|d| d.as_bool()).unwrap_or(false);
+                    let out = tk
+                        .base64_util(&path, decode)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        (
+            mk(
+                "base32",
+                "Encode or decode base32",
+                json!({
+                    "path": {"type": "string"},
+                    "decode": {"type": "boolean", "description": "Decode instead of encode"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let path = PathBuf::from(
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .ok_or_else(|| anyhow!("base32: 'path' required"))?,
+                    );
+                    let decode = v.get("decode").and_then(|d| d.as_bool()).unwrap_or(false);
+                    let out = tk
+                        .base32_util(&path, decode)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok(out)
+                }
+            }),
+        ),
+        // File operations
+        (
+            mk(
+                "cp",
+                "Copy files or directories",
+                json!({
+                    "source": {"type": "string"},
+                    "dest": {"type": "string"},
+                    "recursive": {"type": "boolean", "description": "Copy directories recursively"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let source = PathBuf::from(
+                        v.get("source")
+                            .and_then(|s| s.as_str())
+                            .ok_or_else(|| anyhow!("cp: 'source' required"))?,
+                    );
+                    let dest = PathBuf::from(
+                        v.get("dest")
+                            .and_then(|d| d.as_str())
+                            .ok_or_else(|| anyhow!("cp: 'dest' required"))?,
+                    );
+                    let recursive = v
+                        .get("recursive")
+                        .and_then(|r| r.as_bool())
+                        .unwrap_or(false);
+                    tk.cp_util(&source, &dest, recursive)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok("File(s) copied successfully".to_string())
+                }
+            }),
+        ),
+        (
+            mk(
+                "mv",
+                "Move or rename files",
+                json!({
+                    "source": {"type": "string"},
+                    "dest": {"type": "string"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let source = PathBuf::from(
+                        v.get("source")
+                            .and_then(|s| s.as_str())
+                            .ok_or_else(|| anyhow!("mv: 'source' required"))?,
+                    );
+                    let dest = PathBuf::from(
+                        v.get("dest")
+                            .and_then(|d| d.as_str())
+                            .ok_or_else(|| anyhow!("mv: 'dest' required"))?,
+                    );
+                    tk.mv_util(&source, &dest)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok("File moved successfully".to_string())
+                }
+            }),
+        ),
+        (
+            mk(
+                "rm",
+                "Remove files or directories",
+                json!({
+                    "path": {"type": "string"},
+                    "recursive": {"type": "boolean", "description": "Remove directories recursively"},
+                    "force": {"type": "boolean", "description": "Force removal without confirmation"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let path = PathBuf::from(
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .ok_or_else(|| anyhow!("rm: 'path' required"))?,
+                    );
+                    let recursive = v
+                        .get("recursive")
+                        .and_then(|r| r.as_bool())
+                        .unwrap_or(false);
+                    let force = v.get("force").and_then(|f| f.as_bool()).unwrap_or(false);
+                    tk.rm_util(&path, recursive, force)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok("File(s) removed successfully".to_string())
+                }
+            }),
+        ),
+        (
+            mk(
+                "mkdir",
+                "Create directories",
+                json!({
+                    "path": {"type": "string"},
+                    "parents": {"type": "boolean", "description": "Create parent directories as needed"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let path = PathBuf::from(
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .ok_or_else(|| anyhow!("mkdir: 'path' required"))?,
+                    );
+                    let parents = v.get("parents").and_then(|p| p.as_bool()).unwrap_or(false);
+                    tk.mkdir_util(&path, parents)
+                        .map_err(|e| anyhow!(e.to_string()))?;
+                    Ok("Directory created successfully".to_string())
+                }
+            }),
+        ),
+        (
+            mk(
+                "touch",
+                "Create empty file or update timestamp",
+                json!({
+                    "path": {"type": "string"}
+                }),
+            ),
+            Arc::new({
+                let tk = toolkit.clone();
+                move |cf: &mistralrs_core::CalledFunction| {
+                    let v: Value = serde_json::from_str(&cf.arguments)?;
+                    let path = PathBuf::from(
+                        v.get("path")
+                            .and_then(|p| p.as_str())
+                            .ok_or_else(|| anyhow!("touch: 'path' required"))?,
+                    );
+                    tk.touch_util(&path).map_err(|e| anyhow!(e.to_string()))?;
+                    Ok("File touched successfully".to_string())
+                }
+            }),
+        ),
     ];
 
     let mut defs = Vec::with_capacity(tool_specs.len());

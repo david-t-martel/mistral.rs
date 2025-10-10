@@ -369,7 +369,7 @@ impl Loader for GGUFLoader {
             layer_devices.push(device);
         }
 
-        // TODO: PagedAttention is not supported with CPU for now.
+        // TODO @gemini: PagedAttention is not supported with CPU for now.
         // This check is not really necessary because `get_device_layers` should prevent it.
         let mapping_uses_cpu = mapper.get_unique_devices().iter().any(Device::is_cpu);
         if mapping_uses_cpu {
@@ -793,5 +793,5 @@ impl Pipeline for GGUFPipeline {
     }
 }
 
-// TODO
+// TODO @codex
 impl AnyMoePipelineMixin for GGUFPipeline {}

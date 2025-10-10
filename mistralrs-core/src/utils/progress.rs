@@ -13,7 +13,7 @@ pub trait IterWithProgress<'a, T>: Iterator<Item = T> + 'a {
     where
         Self: Sized,
     {
-        // TODO: Should `is_silent` instead be referenced as a global read-only state? (`AtomicBool`)
+        // TODO @gemini: Should `is_silent` instead be referenced as a global read-only state? (`AtomicBool`)
         if is_silent {
             Box::new(self)
         } else {

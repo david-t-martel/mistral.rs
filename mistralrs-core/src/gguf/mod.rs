@@ -32,7 +32,7 @@ pub enum GGUFArchitecture {
 }
 
 // Wraps from_str() for some convenience:
-// - Case-insensitive variant matching (TODO: is this desirable?)
+// - Case-insensitive variant matching (TODO @codex: is this desirable?)
 // - Customized error until potential upstream support: https://github.com/Peternator7/strum/issues/332
 impl GGUFArchitecture {
     pub fn from_value<T: AsRef<str> + std::fmt::Display>(value: T) -> Result<Self> {

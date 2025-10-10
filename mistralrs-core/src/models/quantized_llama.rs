@@ -296,7 +296,10 @@ impl ModelConfig::FromGGML for ModelWeights {
                 n_kv_head: ct.hparams.n_head as usize / gqa,
                 head_dim: (ct.hparams.n_embd / ct.hparams.n_head) as usize,
                 rotary: rotary.clone().into(),
-                paged_attn: None, // TODO
+                // NOTE: Paged attention is not available for GGUF/GGML quantized models.
+                // GGUF models use the default KV cache implementation. For paged attention
+                // support, use non-quantized or other quantization formats (GPTQ, AWQ, HQQ).
+                paged_attn: None,
                 sdpa_params: SdpaParams {
                     n_kv_groups: ct.hparams.n_head as usize / n_kv_head,
                     softcap: None,
@@ -364,7 +367,7 @@ impl TryFrom<ContentMetadata<'_>> for PropsGGUF {
         let head_count = c.get_value::<u32>("attention.head_count")? as usize;
 
         // NOTE: Values are not aligned with GGUFv3 types
-        // TODO: Normalize value types to spec
+        // TODO @gemini: Normalize value types to spec
         let props = Self {
             n_expert: c.get_value::<u32>("expert_count").ok().unwrap_or(0) as usize,
             n_expert_used: c.get_value::<u32>("expert_used_count").ok().unwrap_or(0) as usize,

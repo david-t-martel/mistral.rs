@@ -109,7 +109,7 @@ impl ReparsePointInfo {
         }
 
         // For now, we'll use basic detection
-        // TODO: Implement full reparse point parsing
+        // TODO @gemini: Implement full reparse point parsing
         let metadata = std::fs::symlink_metadata(path)?;
         let file_type = metadata.file_type();
 
@@ -125,7 +125,7 @@ impl ReparsePointInfo {
             Ok(Some(Self {
                 is_symlink: false,
                 is_junction: true,
-                target: None, // TODO: Read junction target
+                target: None, // TODO @codex: Read junction target
             }))
         }
     }
@@ -139,7 +139,7 @@ pub struct AlternateDataStreams {
 
 impl AlternateDataStreams {
     pub fn from_path(_path: &Path) -> Result<Self> {
-        // TODO: Implement ADS enumeration using FindFirstStreamW/FindNextStreamW
+        // TODO @gemini: Implement ADS enumeration using FindFirstStreamW/FindNextStreamW
         Ok(Self {
             streams: Vec::new(),
         })

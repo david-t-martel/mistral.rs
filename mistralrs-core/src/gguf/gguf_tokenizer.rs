@@ -6,7 +6,6 @@ use crate::utils::gguf_metadata::ContentMetadata;
 use crate::DEBUG;
 use ahash::AHashMap;
 use anyhow::Result;
-use candle_core::quantized::gguf_file::Value;
 use itertools::Itertools;
 use tokenizers::pre_tokenizers::{
     sequence::Sequence,
@@ -81,12 +80,14 @@ pub fn convert_gguf_to_hf_tokenizer<R: std::io::Seek + std::io::Read>(
 
     let mut token_types = Vec::<i32>::new();
     if metadata.metadata.contains_key("tokenizer.ggml.token_type") {
-        let vtypes: &Vec<Value> = md_get("tokenizer.ggml.token_type")
-            .unwrap()
-            .to_vec()
-            .unwrap();
-        let v: Vec<i32> = vtypes.iter().map(|v| v.to_i32().unwrap()).collect();
-        token_types.extend(v);
+        if let Ok(vtypes) = md_get("tokenizer.ggml.token_type").and_then(|v| v.to_vec()) {
+            let v: Vec<i32> = vtypes.iter().filter_map(|v| v.to_i32().ok()).collect();
+            token_types.extend(v);
+        } else {
+            tracing::warn!(
+                "Failed to parse tokenizer.ggml.token_type, continuing without type information"
+            );
+        }
     }
 
     let props = PropsGGUF::try_from(metadata)?;
@@ -130,11 +131,9 @@ pub fn convert_gguf_to_hf_tokenizer<R: std::io::Seek + std::io::Read>(
         _ => None,
     };
 
-    let bos = if props.bos.is_some() {
-        Some(props.tokens[props.bos.unwrap() as usize].clone())
-    } else {
-        None
-    };
+    let bos = props
+        .bos
+        .map(|bos_id| props.tokens[bos_id as usize].clone());
 
     Ok(GgufTokenizerConversion {
         tokenizer,
@@ -144,7 +143,7 @@ pub fn convert_gguf_to_hf_tokenizer<R: std::io::Seek + std::io::Read>(
     })
 }
 
-// TODO: Add support for additional tokenizer models: WordPiece, WordLevel
+// TODO @gemini: Add support for additional tokenizer models: WordPiece, WordLevel
 // https://docs.rs/tokenizers/latest/tokenizers/models/enum.ModelWrapper.html
 #[derive(Debug)]
 enum TokenizerKind {
@@ -243,7 +242,7 @@ fn bpe_tokenizer(p: &PropsGGUF) -> Result<(Tokenizer, TokenizerKind)> {
         SplitPattern::Regex("(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+".to_string()),
         SplitDelimiterBehavior::Isolated,
         false,
-    ).unwrap();
+    ).map_err(|e| anyhow::anyhow!("Failed to create regex split pattern for GPT-2 tokenizer: {}", e))?;
 
     // example:
     // "type": "ByteLevel",

@@ -63,8 +63,8 @@ impl OutputFormatter {
             color_choice,
             null_separator: options.null_separator,
             show_attributes: options.show_windows_attributes,
-            show_size: false, // TODO: Add option for this
-            show_time: false, // TODO: Add option for this
+            show_size: false, // TODO @gemini: Add option for this
+            show_time: false, // TODO @codex: Add option for this
         }
     }
 
@@ -128,7 +128,7 @@ impl OutputFormatter {
             }
             FileType::File => {
                 // Check for executable files
-                // TODO: Implement executable detection
+                // TODO @gemini: Implement executable detection
                 color_spec.set_fg(Some(Color::White));
             }
             FileType::Pipe => {

@@ -59,7 +59,7 @@ impl LoraModelBuilder {
             !self.text_model.with_logging,
             self.text_model
                 .device_mapping
-                .unwrap_or(DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
+                .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
             self.text_model.isq,
             self.text_model.paged_attn_cfg,
         )?;
@@ -72,7 +72,7 @@ impl LoraModelBuilder {
                     .get_metadata()
                     .cache_config
                     .as_ref()
-                    .unwrap()
+                    .expect("PagedAttention enabled but cache config not initialized")
                     .clone();
 
                 SchedulerConfig::PagedAttentionMeta {

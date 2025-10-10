@@ -242,8 +242,10 @@ impl AnyMoeTrainableLayer for MoeMlp {
         if self.gate.lin.weight().is_variable() {
             sum += self.gate.lin.weight().elem_count();
         }
-        if self.gate.lin.bias().as_ref().unwrap().is_variable() {
-            sum += self.gate.lin.bias().unwrap().elem_count();
+        if let Some(bias) = self.gate.lin.bias().as_ref() {
+            if bias.is_variable() {
+                sum += bias.elem_count();
+            }
         }
         sum
     }
@@ -251,7 +253,11 @@ impl AnyMoeTrainableLayer for MoeMlp {
         self.vars.clone()
     }
     fn take_cached_gating_output(&mut self) -> Tensor {
-        self.gating_output.read().unwrap().clone().unwrap()
+        self.gating_output
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+            .expect("Gating output was not cached before calling take_cached_gating_output")
     }
 }
 
@@ -268,7 +274,10 @@ impl MlpLayer for MoeMlp {
         let TopKOutput { values: _, indices } = gate.topk(1)?;
 
         if self.training {
-            *self.gating_output.write().unwrap() = Some(gate.clone());
+            *self
+                .gating_output
+                .write()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(gate.clone());
         }
 
         let mut expert_outputs = Vec::new();

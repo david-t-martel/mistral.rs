@@ -952,7 +952,7 @@ impl QuantMethod for HqqLayer {
     ) -> Result<Arc<dyn QuantMethod>> {
         let _acquired_quantize_guard = guard.acquire(&device);
         if imatrix_weight.is_some() {
-            // TODO just warn?
+            // TODO @gemini just warn?
             candle_core::bail!("HQQ does not support imatrix.");
         }
 
@@ -1138,7 +1138,7 @@ impl QuantizedSerde for HqqLayer {
         }
         let w_shape = Shape::from_dims(&dims);
 
-        // TODO: keep this in sync with get_isq_type_from_uqff!
+        // TODO @codex: keep this in sync with get_isq_type_from_uqff!
         let bits = HqqBits::try_from(buffer.read_u8()? as usize)?;
         let group_size = NonZeroUsize::try_from(buffer.read_u32::<LittleEndian>()? as usize)?;
         let axis = HqqAxis::try_from(buffer.read_u8()? as usize)?;
@@ -1211,7 +1211,7 @@ impl QuantizedSerde for HqqLayer {
         }
         let w_shape = Shape::from_dims(&dims);
 
-        // TODO: keep this in sync with get_isq_type_from_uqff!
+        // TODO @gemini: keep this in sync with get_isq_type_from_uqff!
         let bits = HqqBits::try_from(buffer.read_u8()? as usize)?;
         let group_size = NonZeroUsize::try_from(buffer.read_u32::<LittleEndian>()? as usize)?;
         let axis = HqqAxis::try_from(buffer.read_u8()? as usize)?;
@@ -1282,7 +1282,7 @@ impl HqqLayer {
         }
         let _w_shape = Shape::from_dims(&dims);
 
-        // TODO: keep this in sync with get_isq_type_from_uqff!
+        // TODO @codex: keep this in sync with get_isq_type_from_uqff!
         let bits = HqqBits::try_from(buffer.read_u8()? as usize)?;
 
         match bits {

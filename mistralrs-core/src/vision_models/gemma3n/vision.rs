@@ -1183,7 +1183,7 @@ The vision tower for this model will still be loaded, but you might experience d
             // Some models have invalid vision tower weights from the old gemma 3n upload
             // https://github.com/EricLBuehler/mistral.rs/issues/1592
 
-            // This is a hack necessary because the weights for Gemma 3n are broken and require the image to be rotated.
+            // This is a hack @gemini necessary because the weights for Gemma 3n are broken and require the image to be rotated.
             x.t()?
         } else {
             x.clone()

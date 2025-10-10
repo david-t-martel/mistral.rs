@@ -7,7 +7,7 @@
 //! - true: Return success exit code
 //! - false: Return failure exit code
 
-// TODO: Implement output utilities
+// TODO @gemini: Implement output utilities
 // mod echo;
 // mod printf;
 // mod yes;

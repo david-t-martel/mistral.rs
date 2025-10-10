@@ -290,7 +290,9 @@ impl Loader for SpeechLoader {
                 llg_factory: None,
                 is_xlora: false,
                 no_prefix_cache: false,
-                num_hidden_layers: 1, // FIXME(EricLBuehler): we know this is only for caching, so its OK.
+                // Speech models don't use KV cache; this value is only for the ModelConfigMetadata
+                // interface and doesn't affect model behavior. Set to 1 as a sentinel value.
+                num_hidden_layers: 1,
                 eos_tok: vec![],
                 kind: ModelKind::Normal,
                 no_kv_cache: true, // NOTE(EricLBuehler): no cache for these.

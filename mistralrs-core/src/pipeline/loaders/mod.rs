@@ -411,7 +411,7 @@ pub trait DeviceMappedModelLoader {
 /// use mistralrs_core::{Loader, TokenSource, DeviceMapSetting, AutoDeviceMapParams, ModelDType};
 /// use candle_core::Device;
 ///
-/// let loader: Box<dyn Loader> = todo!();
+/// let loader: Box<dyn Loader> = todo @codex!();
 /// let pipeline = loader.load_model_from_hf(
 ///     None,
 ///     TokenSource::CacheToken,

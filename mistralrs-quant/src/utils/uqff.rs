@@ -242,7 +242,7 @@ fn bytes_to_data<T: WithDType>(
             unsafe { std::slice::from_raw_parts(data.as_ptr() as *const T, elem_count) };
         Tensor::from_slice(data, shape, device)
     } else {
-        // XXX: We need to specify `T` here, otherwise the compiler will infer u8 because of the following cast
+        // XXX @gemini: We need to specify `T` here, otherwise the compiler will infer u8 because of the following cast
         // Making this vector too small to fit a full f16/f32/f64 weights, resulting in out-of-bounds access
         let mut c: Vec<T> = Vec::with_capacity(elem_count);
         // SAFETY: We just created c, so the allocated memory is necessarily

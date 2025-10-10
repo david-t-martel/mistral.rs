@@ -44,8 +44,15 @@ impl Qwen2VLModel {
         attention_mechanism: AttentionImplementation,
     ) -> Result<Self> {
         if cfg.use_sliding_window {
-            // TODO!
-            candle_core::bail!("Sliding window is unsupported for now!");
+            // NOTE: Sliding window attention is not yet implemented for Qwen2-VL vision models.
+            // This requires coordinating sliding window between the vision encoder and text decoder.
+            // For implementation reference, see models/gemma2.rs which implements sliding window
+            // attention with alternating global and sliding layers.
+            candle_core::bail!(
+                "Sliding window attention is not supported for Qwen2-VL models. \
+                 Please use a model configuration without sliding window, or contribute \
+                 an implementation following the pattern in models/gemma2.rs"
+            );
         }
         let vision = Qwen2VLVisionModel::new(
             &cfg.vision_config,

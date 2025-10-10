@@ -387,7 +387,7 @@ impl ChannelLoudnessMeter {
             self.square_sum.add(z * z);
             self.count += 1;
 
-            // TODO: Should this branch be marked cold?
+            // TODO @gemini: Should this branch be marked cold?
             if self.count == self.samples_per_100ms {
                 let mean_squares = Power(self.square_sum.sum * normalizer);
                 self.windows.inner.push(mean_squares);

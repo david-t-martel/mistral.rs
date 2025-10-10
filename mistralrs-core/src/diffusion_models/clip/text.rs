@@ -39,7 +39,7 @@ pub struct ClipConfig {
 }
 
 // ClipTextEmbeddings mostly based on the existing implementation in the stable diffision model.
-// TODO rewrite to be more similar to https://github.com/huggingface/transformers/blob/f6fa0f0bf0796ac66f201f23bdb8585de1609add/src/transformers/models/clip/modeling_clip.py#L142
+// TODO @codex rewrite to be more similar to https://github.com/huggingface/transformers/blob/f6fa0f0bf0796ac66f201f23bdb8585de1609add/src/transformers/models/clip/modeling_clip.py#L142
 #[derive(Clone, Debug)]
 struct ClipTextEmbeddings {
     token_embedding: candle_nn::Embedding,
@@ -273,7 +273,7 @@ impl ClipTextTransformer {
         })
     }
 
-    // TODO: rewrrite to newer version
+    // TODO @gemini: rewrrite to newer version
     fn build_causal_attention_mask(
         bsz: usize,
         seq_len: usize,

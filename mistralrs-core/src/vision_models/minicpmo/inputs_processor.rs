@@ -1,7 +1,12 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
-use std::{any::Any, sync::Arc};
+use std::{
+    any::Any,
+    fmt::Write as FmtWrite,
+    sync::{Arc, OnceLock},
+};
 
+use anyhow::{anyhow, Context};
 use candle_core::{Device, IndexOp, Result, Tensor};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use mistralrs_vision::{ApplyTransforms, Normalize, ToTensor, Transforms};
@@ -41,9 +46,27 @@ const DEFAULT_SLICE_END_TOKEN: &str = "</slice>";
 const DEFAULT_UNK_TOKEN: &str = "<unk>";
 const DEFAULT_USE_IMAGE_ID: bool = false;
 const DEFAULT_SLICE_MODE: bool = true;
+const IMAGE_TAG: &str = "(<image>./</image>)";
+const IMAGE_PATTERN: &str = r"\(<image>./</image>\)";
+const SPLIT_TAG_PATTERN: &str = r"(\(<image>./</image>\)|\(<audio>./</audio>\))";
+
+use once_cell::sync::Lazy;
+
+static IMAGE_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(IMAGE_PATTERN).expect("valid image placeholder pattern"));
+static SPLIT_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(SPLIT_TAG_PATTERN).expect("valid multimodal split pattern"));
+
+type MiniCpmOImageOutputs = (
+    Option<Vec<Vec<Tensor>>>,
+    Option<Vec<Tensor>>,
+    Option<Vec<Tensor>>,
+);
 
 pub struct MiniCpmOImageProcessor {
     config: PreProcessorConfig,
+    unk_block: OnceLock<String>,
+    slice_block: OnceLock<String>,
 }
 
 pub struct MiniCpmOProcessor {
@@ -66,6 +89,8 @@ impl Processor for MiniCpmOProcessor {
     fn inputs_processor(&self) -> Arc<dyn InputsProcessor> {
         Arc::new(MiniCpmOImageProcessor {
             config: self.preprocessor_config.clone(),
+            unk_block: OnceLock::new(),
+            slice_block: OnceLock::new(),
         })
     }
 
@@ -116,25 +141,24 @@ impl InputsProcessor for MiniCpmOImageProcessor {
             ));
         };
 
-        let config = other_config.expect("Need a PreProcessorConfig config.");
-        let config: &PreProcessorConfig = config.downcast_ref().expect("Downcast failed.");
+        let config = other_config
+            .as_ref()
+            .ok_or_else(|| anyhow!("MiniCpmOImageProcessor requires PreProcessorConfig"))?;
+        let config: &PreProcessorConfig = config
+            .downcast_ref()
+            .ok_or_else(|| anyhow!("Failed to downcast PreProcessorConfig"))?;
 
         let has_images = input_seqs.iter().all(|seq| seq.has_images());
 
-        let (pixel_values_all, image_bound, tgt_sizes) = if has_images {
-            const IMAGE_TAG: &str = "(<image>./</image>)";
-            const IMAGE_PATTERN: &str = r"\(<image>./</image>\)";
-            const AUDIO_PATTERN: &str = r"\(<audio>./</audio>\)";
-
-            let image_pattern = Regex::new(IMAGE_PATTERN).unwrap();
-            let _audio_pattern = Regex::new(AUDIO_PATTERN).unwrap();
-            let split_pattern = Regex::new(&format!(r"({IMAGE_PATTERN}|{AUDIO_PATTERN})")).unwrap();
-
+        let (pixel_values_all, image_bound, tgt_sizes): MiniCpmOImageOutputs = if has_images {
             let mut pixel_values_accum = Vec::new();
             let mut tgt_sizes_accum = Vec::new();
             let mut image_bounds_accum = Vec::new();
 
             for seq in input_seqs.iter_mut() {
+                let images = seq
+                    .take_images()
+                    .ok_or_else(|| anyhow!("MiniCpmO sequence missing expected images"))?;
                 let PreprocessedImages {
                     pixel_values: _,
                     pixel_attention_mask: _,
@@ -153,65 +177,63 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                     num_crops: _,
                 } = self
                     .preprocess(
-                        seq.take_images()
-                            .expect("Need to have images by this point."),
+                        images,
                         vec![],
                         config,
                         device,
                         (usize::MAX, usize::MAX), // Don't use it here...
                     )
-                    .expect("Preprocessing failed");
-                let pixel_values_list = pixel_values_list.unwrap();
-                let tgt_sizes = tgt_sizes.unwrap();
-                let image_sizes_all = image_sizes_all.unwrap();
+                    .context("MiniCpmO preprocessing failed")?;
+                let pixel_values_list = pixel_values_list
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no pixel values"))?;
+                let tgt_sizes = tgt_sizes
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no target sizes"))?;
+                let image_sizes_all = image_sizes_all
+                    .ok_or_else(|| anyhow!("MiniCpmO preprocessing returned no image sizes"))?;
 
                 let text = tokenizer
                     .decode(seq.get_toks(), false)
-                    .expect("Detokenization failed!");
+                    .map_err(|e| anyhow!("MiniCpmO detokenization failed: {e}"))?;
 
-                let mut text_chunks = {
-                    let mut results = Vec::new();
-                    let mut last_end = 0;
-
-                    for m in split_pattern.find_iter(&text) {
-                        // Anything between last_end and m.start() is unmatched
-                        if m.start() > last_end {
-                            results.push((false, &text[last_end..m.start()]));
-                        }
-                        results.push((true, m.as_str()));
-                        last_end = m.end();
-                    }
-                    // Handle the trailing unmatched part (if any)
-                    if last_end < text.len() {
-                        results.push((false, &text[last_end..]));
-                    }
-
-                    results
-                        .into_iter()
-                        .map(|(_, x)| x.to_string())
-                        .collect::<Vec<_>>()
-                };
-
-                let image_tags = image_pattern.find_iter(&text).collect::<Vec<_>>();
-
-                if !image_tags.is_empty() {
-                    assert_eq!(image_tags.len(), image_sizes_all.len());
+                let image_tag_count = IMAGE_REGEX.find_iter(&text).count();
+                if image_tag_count != 0 && image_tag_count != image_sizes_all.len() {
+                    return Err(anyhow!(
+                        "MiniCpmO expected {} image sizes, got {} from tokenizer output",
+                        image_tag_count,
+                        image_sizes_all.len()
+                    ));
                 }
 
+                let mut final_text = String::with_capacity(
+                    text.len() + self.estimate_placeholder_reserve(image_sizes_all.len()),
+                );
+                let mut last_end = 0;
                 let mut image_id = 0;
-                for chunk in &mut text_chunks {
-                    if chunk == IMAGE_TAG {
-                        *chunk =
-                            self.get_slice_image_placeholder(image_sizes_all[image_id], image_id);
-                        image_id += 1;
+                for m in SPLIT_REGEX.find_iter(&text) {
+                    if m.start() > last_end {
+                        final_text.push_str(&text[last_end..m.start()]);
                     }
+                    if m.as_str() == IMAGE_TAG {
+                        let size = image_sizes_all
+                            .get(image_id)
+                            .copied()
+                            .ok_or_else(|| anyhow!("Image placeholder count mismatch"))?;
+                        self.write_slice_image_placeholder(&mut final_text, size, image_id);
+                        image_id += 1;
+                    } else {
+                        final_text.push_str(m.as_str());
+                    }
+                    last_end = m.end();
+                }
+                if last_end < text.len() {
+                    final_text.push_str(&text[last_end..]);
                 }
 
-                let final_text = text_chunks.join("");
+                debug_assert_eq!(image_id, image_sizes_all.len());
 
                 let input_ids = tokenizer
                     .encode_fast(final_text.clone(), false)
-                    .unwrap()
+                    .map_err(|e| anyhow!("MiniCpmO failed to encode prompt: {e}"))?
                     .get_ids()
                     .to_vec();
 
@@ -228,41 +250,53 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                             self.config
                                 .im_start_token
                                 .clone()
-                                .unwrap_or(DEFAULT_IM_START_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_IM_START_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode im_start token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for im_start token"))?;
                     let im_end_id = tokenizer
                         .encode_fast(
                             self.config
                                 .im_end_token
                                 .clone()
-                                .unwrap_or(DEFAULT_IM_END_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_IM_END_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode im_end token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for im_end token"))?;
                     let slice_start_id = tokenizer
                         .encode_fast(
                             self.config
                                 .slice_start_token
                                 .clone()
-                                .unwrap_or(DEFAULT_SLICE_START_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_SLICE_START_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode slice_start token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for slice_start"))?;
                     let slice_end_id = tokenizer
                         .encode_fast(
                             self.config
                                 .slice_end_token
                                 .clone()
-                                .unwrap_or(DEFAULT_SLICE_END_TOKEN.to_string()),
+                                .unwrap_or_else(|| DEFAULT_SLICE_END_TOKEN.to_string()),
                             false,
                         )
-                        .unwrap()
-                        .get_ids()[0];
+                        .map_err(|e| anyhow!("MiniCpmO failed to encode slice_end token: {e}"))?
+                        .get_ids()
+                        .first()
+                        .copied()
+                        .ok_or_else(|| anyhow!("Tokenizer returned no ids for slice_end"))?;
 
                     let image_start_idx = input_ids
                         .iter()
@@ -295,30 +329,31 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                         (valid_image_nums, 1),
                         device,
                     )
-                    .unwrap();
+                    .context("Failed to build MiniCpmO image start tensor")?;
                     let image_end_idx = Tensor::from_slice(
                         &image_end_idx[..valid_image_nums],
                         (valid_image_nums, 1),
                         device,
                     )
-                    .unwrap();
+                    .context("Failed to build MiniCpmO image end tensor")?;
 
-                    Tensor::cat(&[image_start_idx, image_end_idx], 1).unwrap()
-                };
+                    Tensor::cat(&[image_start_idx, image_end_idx], 1)
+                        .context("Failed to concatenate MiniCpmO image bounds")
+                }?;
 
                 pixel_values_accum.push(pixel_values_list);
                 tgt_sizes_accum.push(tgt_sizes);
                 image_bounds_accum.push(image_bounds);
             }
 
-            (
+            Ok::<_, anyhow::Error>((
                 Some(pixel_values_accum),
                 Some(image_bounds_accum),
                 Some(tgt_sizes_accum),
-            )
+            ))
         } else {
-            (None, None, None)
-        };
+            Ok::<_, anyhow::Error>((None, None, None))
+        }?;
 
         let text_models_inputs_processor::InnerInputProcessorOutput {
             inputs:
@@ -344,7 +379,7 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                 paged_attn_metadata.as_mut(),
                 mapper,
             )
-            .unwrap()
+            .context("Failed to build MiniCpmO prompt input")?
         } else {
             get_completion_input(
                 input_seqs
@@ -359,7 +394,7 @@ impl InputsProcessor for MiniCpmOImageProcessor {
                 paged_attn_metadata.as_mut(),
                 mapper,
             )
-            .unwrap()
+            .context("Failed to build MiniCpmO completion input")?
         };
 
         let args = MiniCpmOSpecificArgs {
@@ -583,60 +618,110 @@ impl MiniCpmOImageProcessor {
             .reshape((image.dim(0)?, patch_size, ()))
     }
 
-    fn get_image_id_placeholder(&self, image_idx: usize) -> String {
-        format!(
-            "{}{image_idx}{}",
-            self.config
-                .im_id_start
-                .clone()
-                .unwrap_or(DEFAULT_IM_ID_START.to_string()),
-            self.config
-                .im_id_end
-                .clone()
-                .unwrap_or(DEFAULT_IM_ID_END.to_string())
-        )
-    }
-
-    fn get_grid_placeholder(&self, grid: Option<(usize, usize)>) -> String {
-        if let Some(grid) = grid {
-            let slice_image_placeholder = format!(
-                "{}{}{}",
-                self.config
-                    .slice_start_token
-                    .clone()
-                    .unwrap_or(DEFAULT_SLICE_START_TOKEN.to_string()),
-                self.config
+    fn cached_unk_block(&self) -> &str {
+        self.unk_block
+            .get_or_init(|| {
+                let token = self
+                    .config
                     .unk_token
-                    .clone()
-                    .unwrap_or(DEFAULT_UNK_TOKEN.to_string())
-                    .repeat(
-                        self.config
-                            .image_feature_size
-                            .unwrap_or(DEFAULT_IMAGE_FEATURE_SIZE)
-                    ),
-                self.config
-                    .slice_end_token
-                    .clone()
-                    .unwrap_or(DEFAULT_SLICE_END_TOKEN.to_string())
-            );
-
-            let (cols, rows) = grid;
-            let mut slices = Vec::new();
-            for _ in 0..rows {
-                let mut lines = Vec::new();
-                for _ in 0..cols {
-                    lines.push(slice_image_placeholder.clone());
-                }
-                slices.push(lines.join(""));
-            }
-
-            slices.join("\n")
-        } else {
-            "".to_string()
-        }
+                    .as_deref()
+                    .unwrap_or(DEFAULT_UNK_TOKEN);
+                let repeats = self
+                    .config
+                    .image_feature_size
+                    .unwrap_or(DEFAULT_IMAGE_FEATURE_SIZE);
+                token.repeat(repeats)
+            })
+            .as_str()
     }
 
-    fn get_slice_image_placeholder(&self, image_size: (u32, u32), image_idx: usize) -> String {
+    fn cached_slice_block(&self) -> &str {
+        self.slice_block
+            .get_or_init(|| {
+                let mut block = String::with_capacity(
+                    self.config
+                        .slice_start_token
+                        .as_deref()
+                        .unwrap_or(DEFAULT_SLICE_START_TOKEN)
+                        .len()
+                        + self.cached_unk_block().len()
+                        + self
+                            .config
+                            .slice_end_token
+                            .as_deref()
+                            .unwrap_or(DEFAULT_SLICE_END_TOKEN)
+                            .len(),
+                );
+                block.push_str(
+                    self.config
+                        .slice_start_token
+                        .as_deref()
+                        .unwrap_or(DEFAULT_SLICE_START_TOKEN),
+                );
+                block.push_str(self.cached_unk_block());
+                block.push_str(
+                    self.config
+                        .slice_end_token
+                        .as_deref()
+                        .unwrap_or(DEFAULT_SLICE_END_TOKEN),
+                );
+                block
+            })
+            .as_str()
+    }
+
+    fn base_placeholder_len(&self) -> usize {
+        self.config
+            .im_start_token
+            .as_deref()
+            .unwrap_or(DEFAULT_IM_START_TOKEN)
+            .len()
+            + self.cached_unk_block().len()
+            + self
+                .config
+                .im_end_token
+                .as_deref()
+                .unwrap_or(DEFAULT_IM_END_TOKEN)
+                .len()
+    }
+
+    fn estimate_placeholder_reserve(&self, image_count: usize) -> usize {
+        if image_count == 0 {
+            return 0;
+        }
+        let mut extra = self.base_placeholder_len() * image_count;
+        if self.config.use_image_id.unwrap_or(DEFAULT_USE_IMAGE_ID) {
+            let start_len = self
+                .config
+                .im_id_start
+                .as_deref()
+                .unwrap_or(DEFAULT_IM_ID_START)
+                .len();
+            let end_len = self
+                .config
+                .im_id_end
+                .as_deref()
+                .unwrap_or(DEFAULT_IM_ID_END)
+                .len();
+            extra += (start_len + end_len + 4) * image_count;
+        }
+        if self.config.slice_mode.unwrap_or(DEFAULT_SLICE_MODE) {
+            let slices = self.config.max_slice_nums.unwrap_or(DEFAULT_MAX_SLICE_NUMS);
+            if slices > 1 {
+                let block_len = self.cached_slice_block().len();
+                extra += block_len * slices * image_count;
+                extra += (slices - 1) * image_count;
+            }
+        }
+        extra
+    }
+
+    fn write_slice_image_placeholder(
+        &self,
+        buffer: &mut String,
+        image_size: (u32, u32),
+        image_idx: usize,
+    ) {
         let max_slice_nums = self.config.max_slice_nums.unwrap_or(DEFAULT_MAX_SLICE_NUMS);
         let use_image_id = self.config.use_image_id.unwrap_or(DEFAULT_USE_IMAGE_ID);
         let slice_mode = self.config.slice_mode.unwrap_or(DEFAULT_SLICE_MODE);
@@ -648,40 +733,57 @@ impl MiniCpmOImageProcessor {
             false,
         );
 
-        let image_placeholder = format!(
-            "{}{}{}",
+        if use_image_id {
+            buffer.push_str(
+                self.config
+                    .im_id_start
+                    .as_deref()
+                    .unwrap_or(DEFAULT_IM_ID_START),
+            );
+            let _ = FmtWrite::write_fmt(buffer, format_args!("{image_idx}"));
+            buffer.push_str(
+                self.config
+                    .im_id_end
+                    .as_deref()
+                    .unwrap_or(DEFAULT_IM_ID_END),
+            );
+        }
+
+        buffer.push_str(
             self.config
                 .im_start_token
-                .clone()
-                .unwrap_or(DEFAULT_IM_START_TOKEN.to_string()),
-            self.config
-                .unk_token
-                .clone()
-                .unwrap_or(DEFAULT_UNK_TOKEN.to_string())
-                .repeat(
-                    self.config
-                        .image_feature_size
-                        .unwrap_or(DEFAULT_IMAGE_FEATURE_SIZE)
-                ),
+                .as_deref()
+                .unwrap_or(DEFAULT_IM_START_TOKEN),
+        );
+        buffer.push_str(self.cached_unk_block());
+        buffer.push_str(
             self.config
                 .im_end_token
-                .clone()
-                .unwrap_or(DEFAULT_IM_END_TOKEN.to_string())
+                .as_deref()
+                .unwrap_or(DEFAULT_IM_END_TOKEN),
         );
 
-        let final_placeholder = if use_image_id {
-            format!(
-                "{}{image_placeholder}",
-                self.get_image_id_placeholder(image_idx)
-            )
-        } else {
-            image_placeholder
-        };
-
         if slice_mode {
-            format!("{final_placeholder}{}", self.get_grid_placeholder(grid))
-        } else {
-            final_placeholder
+            self.append_grid_placeholder(buffer, grid);
+        }
+    }
+
+    fn append_grid_placeholder(&self, buffer: &mut String, grid: Option<(usize, usize)>) {
+        if let Some((cols, rows)) = grid {
+            if cols == 0 || rows == 0 {
+                return;
+            }
+            let block = self.cached_slice_block();
+            let newline_cost = rows.saturating_sub(1);
+            buffer.reserve(block.len() * cols * rows + newline_cost);
+            for row in 0..rows {
+                if row > 0 {
+                    buffer.push('\n');
+                }
+                for _ in 0..cols {
+                    buffer.push_str(block);
+                }
+            }
         }
     }
 }

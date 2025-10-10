@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 #
-# Pre-commit hook for mistral.rs
+# Enhanced pre-commit hook for mistral.rs
 # This hook runs before each commit to ensure code quality
+#
+# Features:
+# - Auto-formats code with cargo fmt
+# - Auto-fixes linting issues with cargo clippy --fix
+# - Runs quick compilation check
+# - Tags TODO/FIXME comments (optional)
+# - Creates semantic index with RAG-Redis (optional)
 #
 # To install: run scripts/setup/install-git-hooks.ps1
 #
@@ -10,6 +17,14 @@
 #   1 - Failure (blocks commit)
 
 set -e
+
+# Add user binary paths to PATH for tools like rag-redis-cli-server.exe
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
+
+# Windows-specific paths (converted to Unix-style for Git Bash)
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    export PATH="/c/users/david/bin:/c/users/david/.local/bin:$PATH"
+fi
 
 echo "============================================"
 echo "Pre-commit: Running quality checks"
@@ -23,6 +38,7 @@ cd "$REPO_ROOT"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Check if Makefile exists
@@ -32,8 +48,14 @@ if [ ! -f "Makefile" ]; then
     exit 1
 fi
 
+# Environment variables for optional features
+# Set SKIP_TAG_ISSUES=1 to skip TODO/FIXME tagging
+# Set SKIP_RAG_INDEX=1 to skip RAG-Redis semantic indexing
+SKIP_TAG_ISSUES=${SKIP_TAG_ISSUES:-0}
+SKIP_RAG_INDEX=${SKIP_RAG_INDEX:-1}  # Default to skip (rag-redis may not be installed)
+
 echo ""
-echo "[1/3] Formatting code..."
+echo "[1/5] Formatting code..."
 echo "----------------------------------------"
 
 # Auto-format code using Makefile
@@ -48,7 +70,28 @@ fi
 git add -u
 
 echo ""
-echo "[2/3] Quick compilation check..."
+echo "[2/5] Auto-fixing lint issues..."
+echo "----------------------------------------"
+
+# Skip clippy on Windows if objc_exception causes issues
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    echo -e "${CYAN}ℹ Skipping clippy --fix on Windows (objc_exception incompatibility)${NC}"
+    echo "Run 'cargo clippy --workspace --exclude mistralrs-pyo3' manually after commit."
+else
+    # Try to auto-fix linting issues on Unix-like systems
+    if cargo clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged 2>/dev/null; then
+        echo -e "${GREEN}✓ Lint issues fixed${NC}"
+        # Stage any fixes made by clippy
+        git add -u
+    else
+        echo -e "${YELLOW}⚠ Some lint issues require manual fixes${NC}"
+        echo "Run 'make lint' to see remaining issues."
+        # Don't block commit on lint warnings
+    fi
+fi
+
+echo ""
+echo "[3/5] Quick compilation check..."
 echo "----------------------------------------"
 
 # Quick check to ensure code compiles
@@ -62,20 +105,52 @@ else
     exit 1
 fi
 
-echo ""
-echo "[3/3] Auto-fixing lint issues..."
-echo "----------------------------------------"
+# Optional: Tag TODO/FIXME comments for external review
+if [ "$SKIP_TAG_ISSUES" -eq 0 ]; then
+    echo ""
+    echo "[4/5] Tagging TODO/FIXME comments..."
+    echo "----------------------------------------"
 
-# Try to auto-fix linting issues
-if make lint-fix; then
-    echo -e "${GREEN}✓ Lint issues fixed${NC}"
-
-    # Stage any fixes made by clippy
-    git add -u
+    if [ -x "$REPO_ROOT/scripts/tag-issues.ps1" ]; then
+        if pwsh -File "$REPO_ROOT/scripts/tag-issues.ps1" 2>/dev/null; then
+            echo -e "${GREEN}✓ Issues tagged successfully${NC}"
+            git add -u
+        else
+            echo -e "${CYAN}ℹ Issue tagging skipped (non-critical)${NC}"
+        fi
+    else
+        echo -e "${CYAN}ℹ Issue tagging script not found, skipping${NC}"
+    fi
 else
-    echo -e "${YELLOW}⚠ Some lint issues require manual fixes${NC}"
-    echo "Run 'make lint' to see remaining issues."
-    # Don't block commit on lint warnings
+    echo ""
+    echo "[4/5] Tagging TODO/FIXME comments..."
+    echo "----------------------------------------"
+    echo -e "${CYAN}ℹ Skipped (SKIP_TAG_ISSUES=1)${NC}"
+fi
+
+# Optional: Create semantic index with RAG-Redis
+if [ "$SKIP_RAG_INDEX" -eq 0 ]; then
+    echo ""
+    echo "[5/5] Creating semantic index..."
+    echo "----------------------------------------"
+
+    if [ -x "$REPO_ROOT/scripts/rag-index.ps1" ]; then
+        if pwsh -File "$REPO_ROOT/scripts/rag-index.ps1" 2>/dev/null; then
+            echo -e "${GREEN}✓ Semantic index created${NC}"
+            if [ -f "$REPO_ROOT/.rag-index.json" ]; then
+                git add .rag-index.json
+            fi
+        else
+            echo -e "${CYAN}ℹ Semantic indexing skipped (non-critical)${NC}"
+        fi
+    else
+        echo -e "${CYAN}ℹ RAG indexing script not found, skipping${NC}"
+    fi
+else
+    echo ""
+    echo "[5/5] Creating semantic index..."
+    echo "----------------------------------------"
+    echo -e "${CYAN}ℹ Skipped (SKIP_RAG_INDEX=1)${NC}"
 fi
 
 echo ""

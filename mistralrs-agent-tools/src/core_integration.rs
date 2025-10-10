@@ -37,6 +37,11 @@ impl AgentToolProvider {
         self
     }
 
+    /// Access the underlying toolkit.
+    pub fn toolkit(&self) -> &AgentToolkit {
+        &self.toolkit
+    }
+
     /// Get the tool name with optional prefix
     fn tool_name(&self, base_name: &str) -> String {
         match &self.tool_prefix {
@@ -47,26 +52,21 @@ impl AgentToolProvider {
 
     /// Generate all Tool definitions for agent-tools utilities
     pub fn get_tools(&self) -> Vec<Tool> {
-        let mut tools = Vec::new();
-
-        // File operations
-        tools.push(self.create_cat_tool());
-        tools.push(self.create_ls_tool());
-
-        // Text processing
-        tools.push(self.create_grep_tool());
-        tools.push(self.create_head_tool());
-        tools.push(self.create_tail_tool());
-        tools.push(self.create_wc_tool());
-        tools.push(self.create_sort_tool());
-        tools.push(self.create_uniq_tool());
-
-        // Shell execution
-        tools.push(self.create_shell_tool());
-
+        vec![
+            // File operations
+            self.create_cat_tool(),
+            self.create_ls_tool(),
+            // Text processing
+            self.create_grep_tool(),
+            self.create_head_tool(),
+            self.create_tail_tool(),
+            self.create_wc_tool(),
+            self.create_sort_tool(),
+            self.create_uniq_tool(),
+            // Shell execution
+            self.create_shell_tool(),
+        ]
         // Additional utilities are tracked in TODO_ANALYSIS.md for future integration
-
-        tools
     }
 
     /// Generate ToolCallbackWithTool for mistralrs-core integration

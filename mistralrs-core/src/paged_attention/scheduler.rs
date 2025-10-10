@@ -75,7 +75,11 @@ impl PagedAttentionScheduler {
             let mut for_waiting_again: VecDeque<Arc<Mutex<Sequence>>> = VecDeque::new();
             let mut did_ignore = false;
             while !self.waiting.is_empty() {
-                let seq = self.waiting.front().unwrap().clone();
+                let seq = self
+                    .waiting
+                    .front()
+                    .expect("Waiting queue should not be empty in loop")
+                    .clone();
 
                 // If adding this seq means we will have too many, stop as no more could be added.
                 if self.config.max_num_seqs == self.running.len() + 1 {

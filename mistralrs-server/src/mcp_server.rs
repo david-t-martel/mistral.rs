@@ -20,7 +20,6 @@ use rust_mcp_sdk::schema::{
 };
 
 mod errors {
-    #![allow(dead_code)]
 
     /// JSON-RPC error codes based on MCPEx.Protocol.Errors
     pub const PARSE_ERROR: i32 = -32700;
@@ -104,7 +103,7 @@ impl ChatTool {
                 }
             })
             .as_object()
-            .unwrap()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
         properties.insert(
@@ -114,7 +113,7 @@ impl ChatTool {
                 "description": "Maximum number of tokens to generate"
             })
             .as_object()
-            .unwrap()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
         properties.insert(
@@ -126,7 +125,7 @@ impl ChatTool {
                 "maximum": 2.0
             })
             .as_object()
-            .unwrap()
+            .expect("Static JSON schema should be valid object")
             .clone(),
         );
 
@@ -207,7 +206,10 @@ pub struct HttpMcpHandler {
 
 impl HttpMcpHandler {
     pub fn new(state: SharedMistralRsState) -> Self {
-        let modalities = &state.config(None).unwrap().modalities;
+        let modalities = &state
+            .config(None)
+            .expect("Model configuration not initialized")
+            .modalities;
 
         let mut tools: HashMap<String, Arc<dyn McpTool>> = HashMap::new();
         if modalities.input.contains(&SupportedModality::Text)
@@ -255,7 +257,10 @@ impl HttpMcpHandler {
             "initialize" => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: request.id,
-                result: Some(serde_json::to_value(&self.server_info).unwrap()),
+                result: Some(
+                    serde_json::to_value(&self.server_info)
+                        .expect("Failed to serialize response to JSON"),
+                ),
                 error: None,
             },
             "ping" => JsonRpcResponse {
@@ -274,7 +279,9 @@ impl HttpMcpHandler {
                 JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: request.id,
-                    result: Some(serde_json::to_value(result).unwrap()),
+                    result: Some(
+                        serde_json::to_value(result).expect("Failed to serialize response to JSON"),
+                    ),
                     error: None,
                 }
             }
@@ -290,7 +297,10 @@ impl HttpMcpHandler {
                         Ok(result) => JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             id: request.id,
-                            result: Some(serde_json::to_value(result).unwrap()),
+                            result: Some(
+                                serde_json::to_value(result)
+                                    .expect("Failed to serialize response to JSON"),
+                            ),
                             error: None,
                         },
                         Err(e) => JsonRpcResponse {

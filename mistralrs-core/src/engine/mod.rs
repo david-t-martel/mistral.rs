@@ -74,7 +74,9 @@ static ENGINE_TERMINATE_FLAGS: Lazy<
 /// Get or create a termination flag for the current engine thread.
 pub fn get_engine_terminate_flag() -> Arc<AtomicBool> {
     let thread_id = std::thread::current().id();
-    let mut flags = ENGINE_TERMINATE_FLAGS.lock().unwrap();
+    let mut flags = ENGINE_TERMINATE_FLAGS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     flags
         .entry(thread_id)
         .or_insert_with(|| Arc::new(AtomicBool::new(false)))
@@ -413,7 +415,7 @@ impl Engine {
                         let mut guards = output
                             .scheduled
                             .iter_mut()
-                            .map(|seq| seq.lock().unwrap())
+                            .map(|seq| seq.lock().unwrap_or_else(|poisoned| poisoned.into_inner()))
                             .collect::<Vec<_>>();
 
                         let mut guards_mut =
@@ -422,12 +424,16 @@ impl Engine {
                         let res = {
                             let mut pipeline = get_mut_arcmutex!(self.pipeline);
 
-                            let block_size = scheduler.block_size().unwrap();
+                            let block_size = scheduler
+                                .block_size()
+                                .expect("Block size should be available for paged attention");
 
                             let metadata = PagedAttentionMeta {
                                 block_size,
                                 sliding_window: pipeline.get_metadata().sliding_window,
-                                block_engine: scheduler.block_engine().unwrap(),
+                                block_engine: scheduler
+                                    .block_engine()
+                                    .expect("Block engine should be available for paged attention"),
                             };
 
                             let return_raw_logits = guards_mut[0].return_raw_logits;
@@ -541,29 +547,51 @@ impl Engine {
 
     fn replicate_request_to_daemons(&self, request: &Request) {
         if !distributed::is_daemon() && mistralrs_quant::distributed::use_nccl() {
-            let name = distributed::ipc_name().unwrap();
-            let num_workers =
-                mistralrs_quant::distributed::get_global_tp_size_from_devices().unwrap() - 1;
-            let listener = ListenerOptions::new().name(name).create_sync().unwrap();
+            let name = distributed::ipc_name()
+                .expect("Failed to get IPC name for distributed communication");
+            let num_workers = mistralrs_quant::distributed::get_global_tp_size_from_devices()
+                .expect("Failed to determine tensor parallel size")
+                - 1;
+            let listener = ListenerOptions::new()
+                .name(name)
+                .create_sync()
+                .expect("Failed to create IPC listener for distributed workers");
 
             for _ in 0..num_workers {
-                let stream = listener.accept().unwrap();
+                let stream = listener
+                    .accept()
+                    .expect("Failed to accept connection from distributed worker");
                 let mut writer = BufWriter::new(stream);
-                let req = format!("{}\n", serde_json::to_string(&request).unwrap());
-                writer.write_all(req.as_bytes()).unwrap();
+                let req = format!(
+                    "{}\n",
+                    serde_json::to_string(&request)
+                        .expect("Failed to serialize request for distributed worker")
+                );
+                writer
+                    .write_all(req.as_bytes())
+                    .expect("Failed to write request to distributed worker");
             }
         } else if !distributed::is_daemon() && cfg!(feature = "ring") {
-            let num_workers =
-                mistralrs_quant::distributed::get_global_tp_size_from_devices().unwrap() - 1;
+            let num_workers = mistralrs_quant::distributed::get_global_tp_size_from_devices()
+                .expect("Failed to determine tensor parallel size")
+                - 1;
             let master_port = RingConfig::load().master_port;
             let listener =
                 TcpListener::bind(format!("0.0.0.0:{master_port}")).expect("bind replicator");
 
             for _ in 0..num_workers {
-                let (stream, _) = listener.accept().unwrap();
+                let (stream, _) = listener
+                    .accept()
+                    .expect("Failed to accept connection from distributed worker");
                 let mut writer = BufWriter::new(stream);
-                let req = format!("{}\n", serde_json::to_string(&request).unwrap());
-                writer.write_all(req.as_bytes()).unwrap();
+                let req = format!(
+                    "{}\n",
+                    serde_json::to_string(&request)
+                        .expect("Failed to serialize request for distributed worker")
+                );
+                writer
+                    .write_all(req.as_bytes())
+                    .expect("Failed to write request to distributed worker");
             }
         }
     }

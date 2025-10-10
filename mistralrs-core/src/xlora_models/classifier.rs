@@ -29,6 +29,16 @@ pub struct XLoraClassifier {
 }
 
 impl XLoraClassifier {
+    /// Helper to convert a linear layer's bias to F32, logging warnings on failure
+    fn convert_bias_to_f32(bias: Option<&Tensor>) -> Option<Tensor> {
+        bias.and_then(|b| {
+            b.to_dtype(DType::F32).ok().or_else(|| {
+                tracing::warn!("Failed to convert bias to F32, using None");
+                None
+            })
+        })
+    }
+
     pub fn new(
         config: XLoraConfig,
         n_layers: usize,
@@ -56,7 +66,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -69,7 +79,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -86,7 +96,7 @@ impl XLoraClassifier {
                 inner.push(Box::new(if is_quantized {
                     Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )
                 } else {
                     lin
@@ -96,7 +106,7 @@ impl XLoraClassifier {
                 inner.push(Box::new(if is_quantized {
                     Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )
                 } else {
                     lin
@@ -119,7 +129,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -132,7 +142,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -149,7 +159,7 @@ impl XLoraClassifier {
                 inner.push(Box::new(if is_quantized {
                     Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )
                 } else {
                     lin
@@ -159,7 +169,7 @@ impl XLoraClassifier {
                 inner.push(Box::new(if is_quantized {
                     Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )
                 } else {
                     lin
@@ -180,7 +190,7 @@ impl XLoraClassifier {
                     )?;
                     inner.push(Box::new(Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )));
                 } else {
                     let lin = linear_no_bias(
@@ -190,7 +200,7 @@ impl XLoraClassifier {
                     )?;
                     inner.push(Box::new(Linear::new(
                         lin.weight().to_dtype(DType::F32)?,
-                        lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                        Self::convert_bias_to_f32(lin.bias()),
                     )));
                 }
                 if config.enable_relu_and_dropout {
@@ -211,7 +221,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -224,7 +234,7 @@ impl XLoraClassifier {
                     if is_quantized {
                         Linear::new(
                             lin.weight().to_dtype(DType::F32)?,
-                            lin.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                            Self::convert_bias_to_f32(lin.bias()),
                         )
                     } else {
                         lin
@@ -236,7 +246,7 @@ impl XLoraClassifier {
         let last = if is_quantized {
             Linear::new(
                 last.weight().to_dtype(DType::F32)?,
-                last.bias().map(|x| x.to_dtype(DType::F32).unwrap()),
+                Self::convert_bias_to_f32(last.bias()),
             )
         } else {
             last

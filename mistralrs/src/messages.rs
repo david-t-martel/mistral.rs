@@ -199,7 +199,9 @@ impl VisionMessages {
         audios: Vec<AudioInput>,
         model: &Model,
     ) -> anyhow::Result<Self> {
-        let config = model.config().unwrap();
+        let config = model
+            .config()
+            .map_err(|e| anyhow::anyhow!("Failed to get model configuration: {}", e))?;
         let prefixer = match &config.category {
             ModelCategory::Vision { prefixer } => prefixer,
             ModelCategory::Text
@@ -491,7 +493,9 @@ impl RequestBuilder {
         audios: Vec<AudioInput>,
         model: &Model,
     ) -> anyhow::Result<Self> {
-        let config = model.config().unwrap();
+        let config = model
+            .config()
+            .map_err(|e| anyhow::anyhow!("Failed to get model configuration: {}", e))?;
         let prefixer = match &config.category {
             ModelCategory::Vision { prefixer } => prefixer,
             ModelCategory::Text

@@ -48,24 +48,30 @@ fn read_line<H: Helper, I: History>(editor: &mut Editor<H, I>) -> String {
     let r = editor.readline("> ");
     match r {
         Err(ReadlineError::Interrupted) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             // Ctrl+C
             std::process::exit(0);
         }
 
         Err(ReadlineError::Eof) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             // CTRL-D
             std::process::exit(0);
         }
 
         Err(e) => {
-            editor.save_history(&history_file_path()).unwrap();
+            if let Err(e) = editor.save_history(&history_file_path()) {
+                eprintln!("Warning: Failed to save history: {}", e);
+            }
             eprintln!("Error reading input: {e:?}");
             std::process::exit(1);
         }
         Ok(prompt) => {
-            editor.add_history_entry(prompt.clone()).unwrap();
+            let _ = editor.add_history_entry(prompt.clone());
             prompt
         }
     }
@@ -233,7 +239,9 @@ async fn text_interactive_mode(
     do_search: bool,
     enable_thinking: Option<bool>,
 ) {
-    let sender = mistralrs.get_sender(None).unwrap();
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
 
     let mut sampling_params = interactive_sample_parameters();
@@ -246,16 +254,24 @@ async fn text_interactive_mode(
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().unwrap()())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     'outer: loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -307,7 +323,9 @@ async fn text_interactive_mode(
         }
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().unwrap() = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let request_messages = RequestMessage::Chat {
             messages: messages.clone(),
@@ -331,7 +349,10 @@ async fn text_interactive_mode(
             web_search_options: do_search.then(WebSearchOptions::default),
             model_id: None,
         }));
-        sender.send(req).await.unwrap();
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
         let start_ttft = Instant::now();
         let mut first_token_duration: Option<std::time::Duration> = None;
 
@@ -358,9 +379,9 @@ async fn text_interactive_mode(
                         }
                         assistant_output.push_str(content);
                         print!("{content}");
-                        io::stdout().flush().unwrap();
+                        let _ = io::stdout().flush();
                         if finish_reason.is_some() {
-                            if matches!(finish_reason.as_ref().unwrap().as_str(), "length") {
+                            if matches!(finish_reason.as_deref(), Some("length")) {
                                 print!("...");
                             }
                             break;
@@ -413,7 +434,9 @@ async fn text_interactive_mode(
         println!();
     }
 
-    rl.save_history(&history_file_path()).unwrap();
+    if let Err(e) = rl.save_history(&history_file_path()) {
+        eprintln!("Warning: Failed to save history: {}", e);
+    }
 }
 
 fn parse_files_and_message(input: &str, regex: &Regex) -> (Vec<String>, String) {
@@ -444,22 +467,27 @@ async fn vision_interactive_mode(
     enable_thinking: Option<bool>,
 ) {
     // Capture HTTP/HTTPS URLs and local file paths ending with common image extensions
-    let image_regex = Regex::new(IMAGE_REGEX).unwrap();
-    let audio_regex = Regex::new(AUDIO_REGEX).unwrap();
+    let image_regex = Regex::new(IMAGE_REGEX).expect("IMAGE_REGEX pattern is invalid");
+    let audio_regex = Regex::new(AUDIO_REGEX).expect("AUDIO_REGEX pattern is invalid");
 
-    let sender = mistralrs.get_sender(None).unwrap();
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
     let mut messages: Vec<IndexMap<String, MessageContent>> = Vec::new();
     let mut images = Vec::new();
     let mut audios = Vec::new();
 
-    let config = mistralrs.config(None).unwrap();
+    let config = mistralrs
+        .config(None)
+        .expect("Model configuration not initialized");
     let prefixer = match &config.category {
         ModelCategory::Vision { prefixer } => prefixer,
         ModelCategory::Text
         | ModelCategory::Diffusion
         | ModelCategory::Speech
         | ModelCategory::Audio => {
-            panic!("`add_image_message` expects a vision model.")
+            eprintln!("Error: add_image_message expects a vision model.");
+            return;
         }
     };
 
@@ -473,16 +501,24 @@ async fn vision_interactive_mode(
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().unwrap()())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     'outer: loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -610,7 +646,9 @@ async fn vision_interactive_mode(
         }
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().unwrap() = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let request_messages = RequestMessage::VisionChat {
             images: images.clone(),
@@ -636,7 +674,10 @@ async fn vision_interactive_mode(
             web_search_options: do_search.then(WebSearchOptions::default),
             model_id: None,
         }));
-        sender.send(req).await.unwrap();
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
         let start_ttft = Instant::now();
         let mut first_token_duration: Option<std::time::Duration> = None;
 
@@ -663,9 +704,9 @@ async fn vision_interactive_mode(
                         }
                         assistant_output.push_str(content);
                         print!("{content}");
-                        io::stdout().flush().unwrap();
+                        let _ = io::stdout().flush();
                         if finish_reason.is_some() {
-                            if matches!(finish_reason.as_ref().unwrap().as_str(), "length") {
+                            if matches!(finish_reason.as_deref(), Some("length")) {
                                 print!("...");
                             }
                             break;
@@ -718,7 +759,9 @@ async fn vision_interactive_mode(
         println!();
     }
 
-    rl.save_history(&history_file_path()).unwrap();
+    if let Err(e) = rl.save_history(&history_file_path()) {
+        eprintln!("Warning: Failed to save history: {}", e);
+    }
 }
 
 async fn audio_interactive_mode(
@@ -726,12 +769,14 @@ async fn audio_interactive_mode(
     _do_search: bool,
     _enable_thinking: Option<bool>,
 ) {
-    // TODO: Implement interactive audio mode (speech-to-text + text generation + optional tool calls)
+    // TODO @codex: Implement interactive audio mode (speech-to-text + text generation + optional tool calls)
     unimplemented!("Using audio models isn't supported yet")
 }
 
 async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
-    let sender = mistralrs.get_sender(None).unwrap();
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
 
     let diffusion_params = DiffusionGenerationParams::default();
 
@@ -743,16 +788,24 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().unwrap()())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
     loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -773,7 +826,9 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         };
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().unwrap() = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {
@@ -798,11 +853,25 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
         }));
 
         let start = Instant::now();
-        sender.send(req).await.unwrap();
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
 
-        let ResponseOk::ImageGeneration(response) = rx.recv().await.unwrap().as_result().unwrap()
+        let ResponseOk::ImageGeneration(response) = rx
+            .recv()
+            .await
+            .expect("Channel closed")
+            .as_result()
+            .as_result()
+            .map_err(|e| {
+                eprintln!("Error: Request failed: {}", e);
+                e
+            })
+            .ok()
         else {
-            panic!("Got unexpected response type.")
+            eprintln!("Error: Got unexpected response type.");
+            return;
         };
         let end = Instant::now();
 
@@ -811,17 +880,21 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
 
         println!(
             "Image generated can be found at: image is at `{}`. Took {duration:.2}s ({pixels_per_s:.2} pixels/s).",
-            response.data[0].url.as_ref().unwrap(),
+            response.data[0].url.as_ref().expect("Image URL not present in response"),
         );
 
         println!();
     }
 
-    rl.save_history(&history_file_path()).unwrap();
+    if let Err(e) = rl.save_history(&history_file_path()) {
+        eprintln!("Warning: Failed to save history: {}", e);
+    }
 }
 
 async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
-    let sender = mistralrs.get_sender(None).unwrap();
+    let sender = mistralrs
+        .get_sender(None)
+        .expect("Failed to get model sender");
 
     info!("Starting interactive loop for speech");
     println!(
@@ -831,10 +904,16 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     );
 
     // Set the handler to process exit
-    *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+    *CTRLC_HANDLER
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
-    ctrlc::set_handler(move || CTRLC_HANDLER.lock().unwrap()())
-        .expect("Failed to set CTRL-C handler for interactive mode");
+    ctrlc::set_handler(move || {
+        CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())()
+    })
+    .expect("Failed to set CTRL-C handler for interactive mode");
 
     let mut rl = DefaultEditor::new().expect("Failed to open input");
     let _ = rl.load_history(&history_file_path());
@@ -842,7 +921,9 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
     let mut n = 0;
     loop {
         // Set the handler to process exit
-        *CTRLC_HANDLER.lock().unwrap() = &exit_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &exit_handler;
 
         let prompt = read_line(&mut rl);
 
@@ -863,7 +944,9 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         };
 
         // Set the handler to terminate all seqs, so allowing cancelling running
-        *CTRLC_HANDLER.lock().unwrap() = &terminate_handler;
+        *CTRLC_HANDLER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = &terminate_handler;
 
         let (tx, mut rx) = channel(10_000);
         let req = Request::Normal(Box::new(NormalRequest {
@@ -886,21 +969,32 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         }));
 
         let start = Instant::now();
-        sender.send(req).await.unwrap();
+        sender
+            .send(req)
+            .await
+            .expect("Failed to send request to model");
 
         let ResponseOk::Speech {
             pcm,
             rate,
             channels,
-        } = rx.recv().await.unwrap().as_result().unwrap()
+        } = rx
+            .recv()
+            .await
+            .expect("Channel closed")
+            .as_result()
+            .expect("Request failed")
         else {
-            panic!("Got unexpected response type.")
+            eprintln!("Error: Got unexpected response type.");
+            return;
         };
         let end = Instant::now();
 
         let out_file = format!("speech-{n}.wav");
-        let mut output = std::fs::File::create(&out_file).unwrap();
-        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16).unwrap();
+        let mut output =
+            std::fs::File::create(&out_file).expect("Failed to create output audio file");
+        speech_utils::write_pcm_as_wav(&mut output, &pcm, rate as u32, channels as u16)
+            .expect("Failed to write WAV file");
 
         let duration = end.duration_since(start).as_secs_f32();
         println!("Speech generated can be found at `{out_file}`. Took {duration:.2}s.");
@@ -910,7 +1004,9 @@ async fn speech_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) {
         println!();
     }
 
-    rl.save_history(&history_file_path()).unwrap();
+    if let Err(e) = rl.save_history(&history_file_path()) {
+        eprintln!("Warning: Failed to save history: {}", e);
+    }
 }
 
 #[cfg(test)]
@@ -919,7 +1015,7 @@ mod tests {
 
     #[test]
     fn parse_files_and_message_trims_trailing_punctuation() {
-        let regex = Regex::new(IMAGE_REGEX).unwrap();
+        let regex = Regex::new(IMAGE_REGEX).expect("IMAGE_REGEX pattern is invalid");
         let input = "Look at this https://example.com/test.png.";
         let (urls, text) = parse_files_and_message(input, &regex);
         assert_eq!(urls, vec!["https://example.com/test.png"]);

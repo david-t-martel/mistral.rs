@@ -711,7 +711,12 @@ impl IsqModel for XLoraLlama {
         &dyn DeviceMapper,
     ) {
         let mut tensors = Vec::new();
-        tensors.push((Arc::get_mut(&mut self.lm_head).unwrap().quant_inner(), None));
+        tensors.push((
+            Arc::get_mut(&mut self.lm_head)
+                .expect("Multiple references to lm_head")
+                .quant_inner(),
+            None,
+        ));
         for (i, layer) in self.blocks.iter_mut().enumerate() {
             tensors.push((
                 Arc::get_mut(&mut layer.attn.q_proj).unwrap().quant_inner(),
@@ -815,7 +820,9 @@ impl ScalingsMaker for XLoraLlama {
         &self.kv_cache
     }
     fn get_classifier(&self) -> &XLoraClassifier {
-        self.xlora_classifier.as_ref().unwrap()
+        self.xlora_classifier
+            .as_ref()
+            .expect("XLoraClassifier not initialized")
     }
     fn forward(
         &self,

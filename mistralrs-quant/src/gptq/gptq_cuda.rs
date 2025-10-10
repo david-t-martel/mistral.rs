@@ -343,7 +343,7 @@ impl QuantMethod for GptqLayer {
     }
 
     fn dequantize_w(&self) -> Result<Tensor> {
-        // TODO
+        // TODO @codex
         candle_core::bail!("GptqLayer cannot be dequantized!");
     }
 

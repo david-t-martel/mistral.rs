@@ -506,7 +506,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    // TODO: refactor this
+    // TODO @gemini: refactor this
     let bert_model = get_bert_model(args.enable_search, args.search_bert_model);
 
     if args.agent_mode {

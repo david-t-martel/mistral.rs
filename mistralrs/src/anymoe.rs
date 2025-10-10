@@ -86,7 +86,7 @@ impl AnyMoeModelBuilder {
             !self.base.with_logging,
             self.base
                 .device_mapping
-                .unwrap_or(DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
+                .unwrap_or_else(|| DeviceMapSetting::Auto(AutoDeviceMapParams::default_text())),
             self.base.isq,
             self.base.paged_attn_cfg,
         )?;
@@ -99,7 +99,7 @@ impl AnyMoeModelBuilder {
                     .get_metadata()
                     .cache_config
                     .as_ref()
-                    .unwrap()
+                    .expect("PagedAttention enabled but cache config not initialized")
                     .clone();
 
                 SchedulerConfig::PagedAttentionMeta {

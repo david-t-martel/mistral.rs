@@ -175,7 +175,7 @@ pub(crate) fn from_mmaped_safetensors(
 
     let backend = Box::new(ws);
 
-    // TODO(EricLBuehler): separation of concerns.
+    // TODO @codex(EricLBuehler): separation of concerns.
     // This is to have WNA16 for GPTQ which is required. No bf16 for GPTQ
     Ok(ShardedSafeTensors::wrap(
         backend,
@@ -207,7 +207,7 @@ pub(crate) fn load_preload_adapters(
 
             let backend = Box::new(loaded_tensors);
 
-            // TODO(EricLBuehler): separation of concerns.
+            // TODO @gemini(EricLBuehler): separation of concerns.
             // This is to have WNA16 for GPTQ which is required. No bf16 for GPTQ
             let vb = ShardedSafeTensors::wrap(backend, dtype, device.clone());
 
@@ -311,7 +311,7 @@ impl LoadTensors for XLora {
             .filter(|name| !name.contains("internal_xlora_classifier"))
             .map(|name| {
                 let mut new_name = name.replace("base_model.model.model", "model");
-                // TODO: Add better context to describe intent / requirement:
+                // TODO @codex: Add better context to describe intent / requirement:
                 let pos = new_name.find(".lora").expect(expectation);
                 new_name.insert_str(pos + 7, &format!(".{}", self.adapter_index));
 

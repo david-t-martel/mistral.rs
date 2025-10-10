@@ -497,21 +497,23 @@ impl Model {
             info!("Merging LoRA adapters.");
             for layer in layers.iter_mut().tqdm() {
                 Arc::get_mut(&mut layer.self_attn.k_proj)
-                    .unwrap()
+                    .expect("Multiple references to k_proj layer")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.o_proj)
-                    .unwrap()
+                    .expect("Multiple references to o_proj layer")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.q_proj)
-                    .unwrap()
+                    .expect("Multiple references to q_proj layer")
                     .merge_weights()?;
                 Arc::get_mut(&mut layer.self_attn.v_proj)
-                    .unwrap()
+                    .expect("Multiple references to v_proj layer")
                     .merge_weights()?;
 
-                Arc::get_mut(&mut layer.mlp.c_fc).unwrap().merge_weights()?;
+                Arc::get_mut(&mut layer.mlp.c_fc)
+                    .expect("Multiple references to c_fc layer")
+                    .expect("Multiple references to c_proj layer")
                 Arc::get_mut(&mut layer.mlp.c_proj)
-                    .unwrap()
+                    .expect("Multiple references to c_proj layer")
                     .merge_weights()?;
             }
         }
@@ -601,7 +603,10 @@ impl Model {
                 &xs,
                 attention_mask
                     .as_ref()
-                    .map(|m| m.to_device(xs.device()).unwrap())
+                    .map(|m| {
+                        m.to_device(xs.device())
+                            .expect("Failed to move mask to device")
+                    })
                     .as_ref(),
                 seqlen_offsets,
                 &mut cache[i],
@@ -715,38 +720,47 @@ impl IsqModel for Model {
         &dyn DeviceMapper,
     ) {
         let mut tensors = Vec::new();
-        tensors.push((Arc::get_mut(&mut self.lm_head).unwrap().quant_inner(), None));
+        tensors.push((
+            Arc::get_mut(&mut self.lm_head)
+                .expect("Multiple references to lm_head")
+                .quant_inner(),
+            None,
+        ));
         for (i, layer) in self.layers.iter_mut().enumerate() {
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.q_proj)
-                    .unwrap()
+                    .expect("Multiple references to q_proj layer")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.k_proj)
-                    .unwrap()
+                    .expect("Multiple references to k_proj layer")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.v_proj)
-                    .unwrap()
+                    .expect("Multiple references to v_proj layer")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
                 Arc::get_mut(&mut layer.self_attn.o_proj)
-                    .unwrap()
+                    .expect("Multiple references to o_proj layer")
                     .quant_inner(),
                 Some(i),
             ));
             tensors.push((
-                Arc::get_mut(&mut layer.mlp.c_fc).unwrap().quant_inner(),
+                Arc::get_mut(&mut layer.mlp.c_fc)
+                    .expect("Multiple references to c_fc layer")
+                    .quant_inner(),
                 Some(i),
             ));
             tensors.push((
-                Arc::get_mut(&mut layer.mlp.c_proj).unwrap().quant_inner(),
+                Arc::get_mut(&mut layer.mlp.c_proj)
+                    .expect("Multiple references to c_proj layer")
+                    .quant_inner(),
                 Some(i),
             ));
         }
@@ -825,7 +839,9 @@ impl ScalingsMaker for Model {
         &self.cache
     }
     fn get_classifier(&self) -> &XLoraClassifier {
-        self.xlora_classifier.as_ref().unwrap()
+        self.xlora_classifier
+            .as_ref()
+            .expect("XLoraClassifier not initialized")
     }
     fn forward(
         &self,

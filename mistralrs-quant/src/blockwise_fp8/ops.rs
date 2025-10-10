@@ -1030,7 +1030,7 @@ mod tests {
             lin_dq.forward(&xs)?
         };
 
-        // TODO: will be adding real blockwise fp8 gemm shortly ;)
+        // TODO @codex: will be adding real blockwise fp8 gemm shortly ;)
         assert_eq!((32, 7168), truth.dims2()?);
 
         Ok(())
