@@ -255,7 +255,7 @@ impl AnyMoeTrainableLayer for MoeMlp {
     fn take_cached_gating_output(&mut self) -> Tensor {
         self.gating_output
             .read()
-            .expect("Failed to acquire read lock on gating output")
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clone()
             .expect("Gating output was not cached before calling take_cached_gating_output")
     }
