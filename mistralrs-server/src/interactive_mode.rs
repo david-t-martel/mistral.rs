@@ -863,7 +863,12 @@ async fn diffusion_interactive_mode(mistralrs: Arc<MistralRs>, do_search: bool) 
             .await
             .expect("Channel closed")
             .as_result()
-            .expect("Request failed")
+            .as_result()
+            .map_err(|e| {
+                eprintln!("Error: Request failed: {}", e);
+                e
+            })
+            .ok()
         else {
             eprintln!("Error: Got unexpected response type.");
             return;
