@@ -277,7 +277,7 @@ impl MlpLayer for MoeMlp {
             *self
                 .gating_output
                 .write()
-                .expect("Failed to acquire write lock on gating output") = Some(gate.clone());
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(gate.clone());
         }
 
         let mut expert_outputs = Vec::new();
